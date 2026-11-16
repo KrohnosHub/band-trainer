@@ -112,6 +112,11 @@ Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): e
 
 ## Änderungslog
 
+### v1.5.0 – Sound-Setup, Voicing-Hilfe, Bassline-Vorschlag
+- **Sound-Setup pro Song** (Tab «Noten»): Split-Punkt, Sound links/rechts (mit Vorschlagsliste), Orgel-Registerzüge (9 Ziffern 0–8, als Balken dargestellt) und Sound-Notizen. Erscheint im Auftrittsmodus gross unter dem Titel.
+- **Griffe · Voicing-Hilfe:** Jeder Akkord des Songs einmal auf einer Mini-Klaviatur – rechte Hand als Umkehrung mit möglichst kleinen Wegen zum vorherigen Akkord (Voice Leading, Lage F3–C6), linke Hand Grundton bzw. Basston bei Slash-Akkorden. Folgt dem Transponieren. Akkorde mit unbekanntem Zusatz werden genannt statt falsch dargestellt.
+- **Bassline-Vorschlag:** Unter «Bassline bearbeiten» aus den Akkorden eine Bassline erzeugen – Stile Rock-Achtel, Grundton–Quinte, Country «Boom-Chick», Blues-Shuffle, Walking. Ergibt ABC im Bassschlüssel (Lage E2–D#3, Akkordsymbole über den Noten, Abschnitte als Kommentar), sofort anhörbar. Generiert, keine Transkription – als Startpunkt; vorhandene Bassline wird nur nach Rückfrage ersetzt.
+
 ### v1.4.0 – Takt-Raster, Abschnitts-Loops, Metronom im Songtakt, mitlaufendes Akkordraster
 - **Takt-Raster** (Player → «Tempo»): Beim Abspielen auf eine «1» tippen («1 tippen»). Das erste Tippen legt Takt 1 fest (am besten die erste «1» des Songs); weiteres Tippen auf irgendeine «1» korrigiert nur die Phase. Feinjustierung ◀ ▶ (20 ms), Taktart 4/4 · 3/4 · 6/4. Grundlage ist die BPM-Angabe des Songs.
 - **Abschnitte:** «+ Abschnitt» setzt an der aktuellen Stelle eine Marke (mit Raster auf den Takt gerundet; Namen aus dem Akkordblatt oder Intro/Strophe/Refrain/…). Antippen springt hin, ⟲ spielt den Abschnitt in Schleife (bis zum nächsten Abschnitt bzw. Songende), ✎ zum Umbenennen, Verschieben, Löschen.

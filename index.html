@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-QSphmpbPcfR9bs7PGVy3JCboUzNeLo/gwd5InEMfjxA=' 'sha256-uXgxGv0syCH7EFKUXS9aFJex/xJOHCY+nJqGU4sLLLs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-QSphmpbPcfR9bs7PGVy3JCboUzNeLo/gwd5InEMfjxA=' 'sha256-i4l37YvTQYMdFuWPt2tIZ68f0T3UZDsSLnJyJfYHNkE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -233,6 +233,21 @@ dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;fl
 .song.re button{flex:none}
 li.drag{opacity:.75;position:relative;z-index:3}
 li.drag .song{border-color:var(--accent);box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.vc{background:var(--surface2);border-radius:10px;padding:6px 8px}
+.vn{font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.kbd{width:100%;height:auto;display:block;margin:4px 0}
+.kbd .k.w{fill:#f4f2ec;stroke:#777;stroke-width:.6}.kbd .k.bk{fill:#222;stroke:#111;stroke-width:.6}
+.kbd .k.on{fill:var(--accent);stroke:#555;stroke-width:.6}.kbd .k.on.b{fill:#b07a1c}
+.vt{font-variant-numeric:tabular-nums}
+.drawbars{display:flex;gap:6px;align-items:flex-start;margin:4px 0 8px}
+.db{display:flex;flex-direction:column;align-items:center;width:26px}
+.dbar{width:12px;border-radius:0 0 4px 4px;border:1px solid var(--border)}
+.dbar.br{background:#7a4a2a}.dbar.wh{background:#eee}.dbar.bk{background:#222}
+.dv{font-weight:700;font-size:.8rem}.dl{font-size:.62rem;color:var(--muted)}
+.bsug select{width:auto;min-height:34px;padding:4px 8px}
+.ssound{font-size:1rem;color:var(--accent);font-weight:600;margin:2px 0 8px;display:flex;flex-wrap:wrap;gap:4px 12px}
+.ssound span{color:var(--muted);font-weight:400}
 .marks{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-top:6px}
 .marks::-webkit-scrollbar{display:none}
 .marks .mk{display:inline-flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;flex:none}
@@ -349,7 +364,7 @@ for (const C of [Map, WeakMap]) {
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.5.0';
 const SCHEMA = 4;   // 4 (v1.3.0): eigene Listen (lists) + Favoriten (fav) statt fester Status Setlist/To Do
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
@@ -466,6 +481,7 @@ function newSong(p = {}) {
     mix:defMix(),
     loop:{ a:null, b:null },
     grid:{ offset:null, beats:4 },   // Takt-Raster (v1.4.0): Zeitpunkt der ersten «1» im Audio (s) + Schläge pro Takt; Tempo = BPM
+    sound:{ split:'', left:'', right:'', drawbars:'', notes:'' },   // Sound-Setup am Keyboard (v1.5.0)
     marks:[],                // Abschnitte im Audio (v1.4.0): [{id, name, t}] – Sprungmarken und Abschnitts-Loops
     isDemo:false, updatedAt: Date.now()
   }, p);
@@ -520,6 +536,7 @@ function cleanSong(r) {
     suggest, stems, mix,
     loop: { a: r.loop && num(r.loop.a), b: r.loop && num(r.loop.b) },
     grid: { offset: r.grid && typeof r.grid.offset === 'number' && isFinite(r.grid.offset) && r.grid.offset >= 0 ? r.grid.offset : null, beats: r.grid && [2,3,4,5,6,7,8,9,10,11,12].includes(r.grid.beats) ? r.grid.beats : 4 },
+    sound: { split:str(r.sound && r.sound.split, 12), left:str(r.sound && r.sound.left, 60), right:str(r.sound && r.sound.right, 60), drawbars:String((r.sound && r.sound.drawbars) || '').replace(/[^0-8]/g, '').slice(0, 9), notes:str(r.sound && r.sound.notes, 300) },
     marks: (Array.isArray(r.marks) ? r.marks : []).filter(m => m && typeof m.t === 'number' && isFinite(m.t) && m.t >= 0).slice(0, 60)
       .map(m => ({ id: typeof m.id === 'string' && /^[\w-]{1,40}$/.test(m.id) ? m.id : uid(), name: str(m.name, 40) || 'Abschnitt', t: m.t })).sort((a, b) => a.t - b.t),
     isDemo: !!r.isDemo, updatedAt: num(r.updatedAt) || 0
@@ -1284,6 +1301,113 @@ const Marks = {
   loop(song, m) { song.loop = { a:m.t, b:this.end(song, m) }; Store.touch(song); }
 };
 
+/* ---------- Akkordlehre: Töne eines Akkords, Voicing-Hilfe, Bassline-Vorschlag (v1.5.0) ---------- */
+// Intervalle (Halbtöne über dem Grundton) für gängige Akkordzusätze; unbekannte → null (dann keine Anzeige statt falscher Töne)
+function chordTones(q) {
+  q = String(q || '').replace(/\(|\)/g, '').replace(/^M(?=7|9|aj)/, 'maj').replace(/Δ/g, 'maj7').replace(/^-/, 'm').replace(/°/g, 'dim').replace(/ø/g, 'm7b5');
+  const T = { '':[0,4,7], 'm':[0,3,7], 'min':[0,3,7], '5':[0,7], '6':[0,4,7,9], 'm6':[0,3,7,9], '7':[0,4,7,10], 'maj7':[0,4,7,11], 'm7':[0,3,7,10], 'min7':[0,3,7,10], 'mmaj7':[0,3,7,11],
+    'dim':[0,3,6], 'dim7':[0,3,6,9], 'm7b5':[0,3,6,10], 'aug':[0,4,8], '+':[0,4,8], 'sus4':[0,5,7], 'sus':[0,5,7], 'sus2':[0,2,7], '7sus4':[0,5,7,10], '7sus':[0,5,7,10],
+    'add9':[0,4,7,14], 'madd9':[0,3,7,14], '9':[0,4,10,14], 'm9':[0,3,10,14], 'maj9':[0,4,11,14], '11':[0,7,10,17], 'm11':[0,3,10,17], '13':[0,4,10,21], '7b9':[0,4,10,13], '7#9':[0,4,10,15], '6/9':[0,4,9,14], '69':[0,4,9,14] };
+  return T[q] ? T[q].slice() : null;
+}
+function parseChord(tok) {
+  const m = String(tok || '').replace(/♯/g, '#').replace(/♭/g, 'b').match(CHORD_RE); if (!m) return null;
+  const iv = chordTones(m[2]); if (!iv) return null;
+  return { name:tok, root:noteIx(m[1]), bass:m[3] ? noteIx(m[3]) : noteIx(m[1]), iv, minor:/^m(?!aj)/.test(m[2]) };
+}
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'], NOTE_NAMES_B = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+// Rechte Hand: alle Umkehrungen im Bereich F3–C6 (MIDI 53–84) prüfen, die mit der kleinsten Bewegung zum vorherigen Griff gewinnt
+function voicing(ch, prev) {
+  const pcs = [...new Set(ch.iv.map(i => (ch.root + i) % 12))], cands = [];
+  for (let inv = 0; inv < pcs.length; inv++) {
+    const order = pcs.slice(inv).concat(pcs.slice(0, inv));
+    for (let base = 53; base <= 72; base++) {
+      if (base % 12 !== order[0]) continue;
+      const v = [base]; for (const pc of order.slice(1)) { let n = v[v.length - 1] + 1; while (n % 12 !== pc) n++; v.push(n); }
+      if (v[v.length - 1] <= 84) cands.push(v);
+    }
+  }
+  const cost = v => prev ? v.reduce((a, n, i) => a + Math.abs(n - (prev[Math.min(i, prev.length - 1)] || prev[0])), 0) + Math.abs(v.length - prev.length) : Math.abs(v[0] - 62) + Math.abs(v[v.length - 1] - 72) * 0.3;
+  return cands.sort((a, b) => cost(a) - cost(b))[0] || null;
+}
+const noteLabel = (n, flats) => (flats ? NOTE_NAMES_B : NOTE_NAMES)[n % 12] + (Math.floor(n / 12) - 1);
+// Mini-Klaviatur als SVG (sicher erzeugt, nur Zahlen/feste Texte); hl = MIDI-Noten zum Hervorheben
+function kbdSvg(lo, hi, hl, cls) {
+  const white = [], black = [], W = 14, isB = n => [1,3,6,8,10].includes(n % 12); let x = 0;
+  for (let n = lo; n <= hi; n++) { if (!isB(n)) { white.push({ n, x }); x += W; } }
+  for (let n = lo; n <= hi; n++) if (isB(n)) { const w = white.find(o => o.n === n - 1); if (w) black.push({ n, x:w.x + W - 4.5 }); }
+  const on = new Set(hl);
+  return `<svg class="kbd ${cls || ''}" viewBox="0 0 ${x} 52" preserveAspectRatio="xMinYMin meet" role="img" aria-hidden="true">`
+    + white.map(o => `<rect x="${o.x + 0.5}" y="0.5" width="${W - 1}" height="51" rx="2" class="${on.has(o.n) ? 'k on' : 'k w'}"/>`).join('')
+    + black.map(o => `<rect x="${o.x}" y="0.5" width="9" height="31" rx="1.5" class="${on.has(o.n) ? 'k on b' : 'k bk'}"/>`).join('') + '</svg>';
+}
+// Griffe in Song-Reihenfolge (jeder Akkord einmal), angezeigt in der transponierten Tonart
+function voicingsHtml(s) {
+  const st = s.transpose || 0, fl = st ? useFlats(s, st) : false, seen = new Set(), out = [], miss = [];
+  const toks = parseChords(s.chords).flatMap(r => r.t === 'bars' ? r.bars.join(' ').split(/\s+/) : r.t === 'flow' ? r.parts : []).map(x => x.trim()).filter(x => x && !/^[–—-]+$/.test(x));
+  let prev = null;
+  for (const t0 of toks) {
+    const t = st ? trToken(t0.replace(/♯/g, '#').replace(/♭/g, 'b'), st, fl) : t0; if (seen.has(t)) continue;
+    const ch = parseChord(t); if (!ch) { if (CHORD_RE.test(t) && !seen.has(t)) miss.push(t); seen.add(t); continue; }
+    seen.add(t); const v = voicing(ch, prev); if (!v) continue; prev = v;
+    const bassN = 36 + ((ch.bass - 0 + 12) % 12) + (ch.bass < 4 ? 12 : 0);   // linke Hand: Basston E2–D#3
+    out.push(`<div class="vc"><div class="vn">${esc(t)}</div>${kbdSvg(53, 84, v)}<div class="vt small"><b>R:</b> ${v.map(n => noteLabel(n, fl)).join(' ')} · <b>L:</b> ${noteLabel(bassN, fl)}</div></div>`);
+  }
+  if (!out.length) return '<p class="small muted">Keine erkennbaren Akkorde – sobald Akkorde eingetragen sind, erscheinen hier die Griffe.</p>';
+  return '<div class="vgrid">' + out.join('') + '</div>' + (miss.length ? `<p class="small muted">Ohne Griffbild (Zusatz nicht erkannt): ${esc(miss.join(', '))}</p>` : '')
+    + '<p class="small muted">Rechts: Umkehrung mit möglichst kleinen Wegen zum vorherigen Akkord (Voice Leading), Lage um das mittlere C. Links: Grundton bzw. Basston bei Slash-Akkorden. Vorschlag – andere Lagen sind genauso richtig.</p>';
+}
+/* Bassline-Vorschlag aus den Akkorden: erzeugt ABC im Bassschlüssel (Grundton/Quinte/Oktave je Stil).
+   Generiert, keine Transkription des Originals – als Startpunkt zum Anpassen. Takte aus «|»-Zeilen; bei Folgen ohne Taktstriche gilt 1 Akkord = 1 Takt. */
+const BASS_STYLES = { rock:'Rock-Achtel (Grundton)', root5:'Grundton–Quinte (Halbe)', country:'Country «Boom-Chick»', shuffle:'Blues-Shuffle', walk:'Walking (Viertel)' };
+function bassSuggest(song, style) {
+  const rows = parseChords(song.chords), bars = [];
+  for (const r of rows) {
+    if (r.t === 'sect') { bars.push({ sect:r.text }); continue; }
+    const rep = Math.max(1, Math.min(8, parseInt(r.rep, 10) || 1)), list = r.t === 'bars' ? r.bars.map(b => b.split(/\s+/).filter(Boolean)) : r.t === 'flow' ? r.parts.map(x => x.trim()).filter(x => x && !/^[–—-]+$/.test(x)).map(x => [x]) : [];
+    for (let k = 0; k < rep; k++) for (const b of list) bars.push({ chords:b });
+  }
+  const pitch = pc => 40 + ((pc - 4 + 12) % 12);   // E2 … D#3
+  const abcNote = (n, acc) => { const pc = ((n % 12) + 12) % 12, oct = Math.floor(n / 12) - 1, sharp = [1,3,6,8,10].includes(pc);
+    const name = sharp ? (acc === 'b' ? NOTE_NAMES_B[pc] : NOTE_NAMES[pc]) : NOTE_NAMES[pc], L = name[0], a = name[1] === '#' ? '^' : name[1] === 'b' ? '_' : '';
+    return { a, L, oct, key:L + oct }; };
+  const useB = useFlats(Object.assign({}, song, { flats:null }), 0) || false;
+  const render = (n, len, st) => {   // MIDI → ABC (C = C4, C, = C3, C,, = C2, c = C5); Vorzeichen gelten im Takt weiter → nur bei Wechsel schreiben
+    const x = abcNote(n, useB ? 'b' : '#'), cur = st.has(x.key) ? st.get(x.key) : '';
+    const sym = x.a === cur ? '' : (x.a || '='); st.set(x.key, x.a);
+    const letter = x.oct >= 5 ? x.L.toLowerCase() + "'".repeat(x.oct - 5) : x.L + ','.repeat(4 - x.oct);
+    return sym + letter + (len === 1 ? '' : len);
+  };
+  const figure = (ch, nextCh, eighths) => {   // Noten (MIDI, Länge in Achteln) für einen Akkord über «eighths» Achtel
+    const r = pitch(ch.bass), root = pitch(ch.root), fifth = root + 7, third = root + (ch.minor ? 3 : 4), six = root + 9, oct = root + 12, out = [];
+    const fill = (pat) => { let left = eighths, i = 0; while (left > 0) { const [n, l] = pat[i % pat.length]; const ll = Math.min(l, left); out.push([n, ll]); left -= ll; i++; } };
+    if (style === 'rock') fill([[r, 1]]);
+    else if (style === 'root5') fill([[r, 4], [fifth, 4]]);
+    else if (style === 'country') fill([[r, 2], ['z', 2], [fifth, 2], ['z', 2]]);
+    else if (style === 'shuffle') fill([[r, 1], [r, 1], [third, 1], [third, 1], [fifth, 1], [fifth, 1], [six, 1], [six, 1]]);
+    else { const nx = nextCh ? pitch(nextCh.bass) : r, appr = nx > r ? nx - 1 : nx + 1; fill(eighths >= 8 ? [[r, 2], [third, 2], [fifth, 2], [appr === r ? fifth : appr, 2]] : [[r, 2], [appr === r ? fifth : appr, 2]]); }
+    return out;
+  };
+  const flat = bars.filter(b => b.chords).map(b => b.chords.map(parseChord));
+  let ci = 0; const lines = []; let line = [];
+  const allCh = flat.flat();
+  for (const b of bars) {
+    if (b.sect) { if (line.length) { lines.push(line.join(' | ') + ' |'); line = []; } lines.push('% ' + b.sect.replace(/[\r\n%]/g, ' ')); continue; }
+    const chs = b.chords.map(parseChord), per = chs.length ? Math.floor(8 / chs.length) : 8, st = new Map(); let txt = '';
+    chs.forEach((ch, k) => { const len = k === chs.length - 1 ? 8 - per * (chs.length - 1) : per; ci++;
+      const label = '"' + String(b.chords[k]).replace(/"/g, '') + '"';
+      if (!ch) { txt += label + 'z' + (len === 1 ? '' : len) + ' '; return; }
+      const fig = figure(ch, allCh[ci] || null, len);
+      txt += label + fig.map(([n, l]) => n === 'z' ? 'z' + (l === 1 ? '' : l) : render(n, l, st)).join(style === 'rock' || style === 'shuffle' ? '' : ' ') + ' '; });
+    line.push(txt.trim()); if (line.length === 4) { lines.push(line.join(' | ') + ' |'); line = []; }
+  }
+  if (line.length) lines.push(line.join(' | ') + ' |');
+  if (!flat.length) return null;
+  const last = lines.length - 1; if (last >= 0) lines[last] = lines[last].replace(/\|$/, '|]');
+  return ['X:1', 'T:' + song.title.replace(/[\r\n]/g, ' ') + ' – Bass (Vorschlag)', 'M:4/4', 'L:1/8', 'Q:1/4=' + (song.bpm || 100), 'K:C clef=bass',
+    '% Generiert aus den Akkorden, Stil: ' + BASS_STYLES[style] + (style === 'shuffle' ? ' (Achtel ternär spielen)' : '') + ' – Vorschlag, bitte nach Gehör anpassen.', ...lines].join('\n');
+}
+
 /* ---------- Bassline: ABC-Rendering und Wiedergabe ---------- */
 const Bass = {
   visual:null, synth:null, tr:0, playing:false, oscNodes:[], endTimer:null, loop:false,
@@ -1844,6 +1968,13 @@ function chordsHtml(s) {
     : '<div class="barrow"><div class="bars">' + r.bars.map((c, ci) => '<div class="bar" data-r="' + ri + '" data-c="' + ci + '">' + esc(st ? trBar(c, st, fl) : c) + '</div>').join('') + '</div>'
       + (r.rep ? '<div class="rep" title="' + esc(r.rep) + '-mal spielen">×' + esc(r.rep) + '</div>' : '') + '</div>').join('');
 }
+function soundSummary(s) {
+  const o = s.sound || {}; return [o.split ? 'Split ' + o.split : '', o.left ? 'L: ' + o.left : '', o.right ? 'R: ' + o.right : '', o.drawbars ? 'Register ' + o.drawbars : ''].filter(Boolean).join(' · ');
+}
+function drawbarsHtml(d) {   // Orgel-Registerzüge als kleine Balken (16' … 1')
+  const lab = ["16'", "5⅓'", "8'", "4'", "2⅔'", "2'", "1⅗'", "1⅓'", "1'"], col = ['br', 'br', 'wh', 'wh', 'bk', 'wh', 'bk', 'bk', 'wh'];
+  return '<div class="drawbars">' + [...d].map((v, i) => `<div class="db"><div class="dbar ${col[i]}" style="height:${8 + Number(v) * 6}px"></div><div class="dv">${v}</div><div class="dl">${lab[i]}</div></div>`).join('') + '</div>';
+}
 function chordBadge(s) {   // Status der Akkorde als Badge (nur wenn Akkorde eingetragen sind; das Demo ist ein eigenes Beispiel)
   if (s.isDemo || !s.chords.trim()) return '';
   return s.chordStatus === 'checked' ? '<span class="badge cs-ok">Akkorde geprüft</span>' : '<span class="badge cs-un">Akkorde ungeprüft</span>';
@@ -2117,6 +2248,12 @@ const App = {
       case 'trFlats': song.flats = !useFlats(song, song.transpose || 0); Store.touch(song); this.trChanged(song); break;
       case 'wake': this.setWake(!this.wake); break;
       case 'bassPlay': Bass.playing ? Bass.stop() : Bass.play(); break;
+      case 'bassSuggest': {
+        const style = ($('#bassStyle') || {}).value || 'rock', abc = bassSuggest(song, style);
+        if (!abc) { toast('Keine erkennbaren Akkorde – zuerst Akkorde eintragen.'); break; }
+        const ta = $('#abcIn'); if (song.bassAbc.trim() && !confirm('Vorhandene Bassline durch den Vorschlag («' + BASS_STYLES[style] + '») ersetzen?')) break;
+        song.bassAbc = abc; if (ta) ta.value = abc; Store.touch(song); Bass.render(song); toast('Bassline-Vorschlag erzeugt – nach Gehör anpassen.'); break;
+      }
       case 'abcTemplate': {
         const ta = $('#abcIn'); if (ta.value.trim() && !confirm('Vorhandene Eingabe durch die leere Vorlage ersetzen?')) break;
         ta.value = ['X:1', 'T:' + song.title + ' - Bass', 'M:4/4', 'L:1/8', 'Q:1/4=' + (song.bpm || 100), 'K:C clef=bass', '% Tonart in der Zeile K: anpassen, dann Takte eintragen:', 'z8 | z8 | z8 | z8 |'].join('\n');
@@ -2161,6 +2298,11 @@ const App = {
     else if (t.id === 'chordsIn') { song.chords = t.value; UI.chords(); edit(); }
     else if (t.id === 'abcIn') { song.bassAbc = t.value; renderAbcSoon(song); edit(); }
     else if (t.id === 'notesIn') { song.notes = t.value; edit(); }
+    else if (['sdSplit', 'sdLeft', 'sdRight', 'sdDraw', 'sdNotes'].includes(t.id)) {
+      const k = { sdSplit:'split', sdLeft:'left', sdRight:'right', sdDraw:'drawbars', sdNotes:'notes' }[t.id];
+      if (k === 'drawbars') { const v = t.value.replace(/[^0-8]/g, '').slice(0, 9); if (v !== t.value) t.value = v; }
+      song.sound[k] = k === 'drawbars' ? t.value : t.value.trim(); UI.sound(); edit();
+    }
     else if (t.id === 'ytUrl') { song.youtubeUrl = t.value.trim(); this.embedUrl = null; edit(); embedSoon(); }
   },
   onChange(e) {
@@ -2320,6 +2462,25 @@ const UI = {
           </details>
         </div>
         <div class="card">
+          <details id="vDet"><summary><h3 style="display:inline;margin:0">Griffe · Voicing-Hilfe</h3></summary><div id="voiceOut" style="margin-top:8px"></div></details>
+        </div>
+        <div class="card">
+          <details id="sDet"><summary><h3 style="display:inline;margin:0">Sound-Setup</h3> <span class="small muted" id="soundSum"></span></summary>
+            <div class="grid2" style="margin-top:8px">
+              <label class="f"><span>Split-Punkt</span><input type="text" id="sdSplit" list="splitList" maxlength="12" placeholder="z. B. C3" value="${esc(s.sound.split)}" autocomplete="off"></label>
+              <label class="f"><span>Orgel-Registerzüge (9 Ziffern 0–8)</span><input type="text" id="sdDraw" inputmode="numeric" maxlength="9" placeholder="z. B. 888000000" value="${esc(s.sound.drawbars)}" autocomplete="off"></label>
+              <label class="f"><span>Links (Bass)</span><input type="text" id="sdLeft" list="leftList" maxlength="60" placeholder="z. B. Synth-Bass" value="${esc(s.sound.left)}" autocomplete="off"></label>
+              <label class="f"><span>Rechts</span><input type="text" id="sdRight" list="rightList" maxlength="60" placeholder="z. B. Hammond-Orgel" value="${esc(s.sound.right)}" autocomplete="off"></label>
+            </div>
+            <label class="f"><span>Sound-Notizen (Effekte, Lautstärke, Wechsel im Song)</span><input type="text" id="sdNotes" maxlength="300" placeholder="z. B. Leslie schnell im Refrain, Bass etwas leiser" value="${esc(s.sound.notes)}" autocomplete="off"></label>
+            <div id="drawOut"></div>
+            <datalist id="splitList"><option value="B2"><option value="C3"><option value="E3"><option value="F#3"><option value="G3"></datalist>
+            <datalist id="leftList"><option value="Synth-Bass"><option value="E-Bass (Finger)"><option value="E-Bass (Pick)"><option value="Fretless-Bass"><option value="Kontrabass"><option value="Moog-Bass"></datalist>
+            <datalist id="rightList"><option value="Hammond-Orgel"><option value="E-Piano (Rhodes)"><option value="E-Piano (Wurlitzer)"><option value="Klavier"><option value="Clavinet"><option value="Strings"><option value="Synth-Pad"><option value="Brass"></datalist>
+            <p class="small muted">Erscheint im Auftrittsmodus gross unter dem Titel.</p>
+          </details>
+        </div>
+        <div class="card">
           <div class="row" style="justify-content:space-between;margin-bottom:10px">
             <h3 style="margin:0">Linke Hand · Bassline</h3>
             <div class="row"><label class="chk small"><input type="checkbox" id="bassLoop"> Wiederholen</label>
@@ -2329,6 +2490,7 @@ const UI = {
           <details><summary>Bassline bearbeiten (ABC-Notation)</summary>
             <textarea id="abcIn" class="mono" spellcheck="false" autocapitalize="off" autocorrect="off" style="min-height:180px">${esc(s.bassAbc)}</textarea>
             <div class="row" style="margin-top:8px"><button data-act="abcTemplate">Leere Vorlage einfügen</button></div>
+            <div class="row bsug" style="margin-top:8px"><span class="small muted">Vorschlag aus den Akkorden:</span><select id="bassStyle" aria-label="Stil">${Object.entries(BASS_STYLES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select><button data-act="bassSuggest">Bassline erzeugen</button></div>
             <details class="help"><summary>Kurzhilfe ABC</summary>
               <table class="kv">
                 <tr><td>K:A clef=bass</td><td>Tonart A-Dur, Bassschlüssel (Vorzeichen gelten automatisch)</td></tr>
@@ -2452,7 +2614,8 @@ const UI = {
       </div>`;
     const hh = () => { const t = $('#app .top'); if (t) document.documentElement.style.setProperty('--hh', t.offsetHeight + 'px'); };
     hh(); requestAnimationFrame(hh);
-    this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.spotify(); this.suggest(); this.info(); this.transport(); this.marks(); this.grid(); this.sheets();
+    this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.spotify(); this.suggest(); this.info(); this.transport(); this.marks(); this.grid(); this.sound(); this.sheets();
+    const vd = $('#vDet'); if (vd) vd.addEventListener('toggle', () => this.voicings());
     if (liveSheets(s).length) Sheets.scan(s);
     const bw = $('#bWake'); if (bw) bw.classList.toggle('on', !!App.wake);
     if (App.tab === 'videos') Suggest.run(s, false);
@@ -2469,7 +2632,7 @@ const UI = {
   chords() {
     const s = App.current(), el = $('#chordOut'); if (!s || !el) return;
     el.style.setProperty('--cs', Store.data.settings.chordSize);
-    this._fk = null; setTimeout(() => this.follow(true), 0);
+    this._fk = null; setTimeout(() => { this.follow(true); this.voicings(); }, 0);
     el.innerHTML = chordsHtml(s) || '<div class="muted small" style="font-family:system-ui,sans-serif">Noch keine Akkorde eingetragen. Geprüfte Akkorde unter «Akkorde bearbeiten» eintragen – Suchlinks und Video-Vorschläge findest du im Tab «Videos».</div>';
     const st = s.transpose || 0;
     $('#trOut').textContent = trLabel(st); $('#bTrReset').disabled = !st && s.flats == null;
@@ -2591,6 +2754,12 @@ const UI = {
   },
   time() { const sk = $('#seek'); if (!sk || Player.seeking) return; const t = Player.time(); sk.value = t; $('#tCur').textContent = fmt(t); },
   rate() { const r = $('#rate'); if (!r) return; r.value = Math.round(Player.rate * 100); const s = App.current(); $('#rateOut').textContent = Math.round(Player.rate * 100) + ' %' + (s && s.bpm ? ' · ' + Math.round(s.bpm * Player.rate) + ' BPM' : ''); },
+  sound() {
+    const s = App.current(); if (!s) return; const sum = soundSummary(s);
+    const el = $('#soundSum'); if (el) el.textContent = sum ? '· ' + sum : '';
+    const d = $('#drawOut'); if (d) setHtml(d, /^[0-8]{9}$/.test(s.sound.drawbars) ? drawbarsHtml(s.sound.drawbars) : '');
+  },
+  voicings() { const s = App.current(), el = $('#voiceOut'); if (s && el && $('#vDet').open) setHtml(el, voicingsHtml(s)); },
   // Abschnitte (Sprungmarken, Loop pro Abschnitt) und Takt-Raster
   marks() {
     const s = App.current(), box = $('#markBox'); if (!s || !box) return;
@@ -2643,6 +2812,7 @@ const UI = {
         ${sh ? '' : '<button data-act="stageZoom" data-d="-0.15" aria-label="Akkorde kleiner">A−</button><button data-act="stageZoom" data-d="0.15" aria-label="Akkorde grösser">A+</button>'}
       </div>
       <div class="ssub">${esc([s.artist, s.bpm ? s.bpm + ' BPM' : '', s.key ? 'Tonart ' + keyLabel(s) : '', s.transpose ? trLabel(s.transpose) : '', unchecked && !sh ? 'Akkorde ungeprüft' : ''].filter(Boolean).join(' · '))}</div>
+      ${soundSummary(s) || s.sound.notes ? `<div class="ssound">${esc(soundSummary(s))}${s.sound.notes ? `<span>${esc(s.sound.notes)}</span>` : ''}</div>` : ''}
       <div class="sbody">${sh ? '<div class="vembed" id="stageSheet"></div>' : `
         <div class="chordview" id="stageChords" style="--cs:${Number(Store.data.settings.stageSize) || 1}">${chordsHtml(s) || '<div class="muted small" style="font-family:system-ui,sans-serif">Für diesen Song sind noch keine Akkorde eingetragen.</div>'}</div>
         ${s.notes.trim() ? `<div class="snotes">${esc(s.notes)}</div>` : ''}`}
