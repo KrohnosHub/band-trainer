@@ -71,7 +71,7 @@ module.exports = async () => {
       pg.once('dialog', d => d.accept()); await pg.locator('#sheetList [data-act=sheetEdit]').nth(2).click(); await pg.click('#dlg [data-act=sheetDel]');
       await pg.waitForFunction(() => liveSheets(App.current()).length === 2);
       eq(await pg.evaluate(async i => { const s = App.current(); return [s.sheets.find(x => x.id === i).deleted, s.stageSheet, (await IDB.get(sheetKey(s.id, i))) || null]; }, id3), [true, '', null]);
-      await pg.click('[data-act=back]'); await pg.waitForSelector('#songList'); ok(/2 Blätter/.test(await pg.locator('#songList li[data-id=seed-01]').innerText()), 'Badge in der Liste');
+      await pg.click('[data-act=back]'); await pg.waitForSelector('#songList'); eq(await pg.locator('#songList li[data-id=seed-01] .badge').count(), 0, 'Übersicht ohne Indikatoren (v1.3.0)');
       eq(pg.errs, []); eq(pg.csp, []); await pg.context().close();
     });
     await test('Handy (390×844): Tab «Blätter» und Notenblatt laufen nicht über; Wischen blättert', async () => {
@@ -180,7 +180,7 @@ module.exports = async () => {
       await pg.waitForTimeout(650); await pg.reload(); await pg.waitForSelector('#sTitle');
       eq(await pg.evaluate(() => [App.current().chordSource, App.current().chordStatus, document.querySelector('#chordStatus').value, cleanSong({ id: 'x', title: 'X', chordSource: 'ftp://x', chordStatus: 'egal' }).chordStatus, cleanSong({ id: 'x', title: 'X', chordSource: 'ftp://x' }).chordSource]), ['https://www.example.org/tab/123', 'checked', 'checked', 'unchecked', '']);
       await pg.click('[data-act=back]'); await pg.waitForSelector('#songList');
-      eq(await pg.locator('#songList li[data-id=seed-12] .badge.cs-ok').innerText(), 'Akkorde geprüft'); eq(await pg.locator('#songList li[data-id=demo-blues] .badge.cs-un').count(), 0, 'Demo ohne Status-Badge');
+      eq(await pg.locator('#songList li[data-id=seed-12] .badge').count(), 0, 'Übersicht ohne Status-Badges (v1.3.0)');
       // Auftrittsmodus: Abschnitte gross
       await pg.evaluate(() => { location.hash = '#/stage/seed-12'; }); await pg.waitForSelector('#stageChords');
       eq(await view('#stageChords'), ['§Intro', 'C#m B|F#|C#m B|F#', '§Verse', 'C#m B|F# ×4']);

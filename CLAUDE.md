@@ -22,7 +22,7 @@ Aufbau und Abläufe sind bewusst gleich wie bei der Gesangs-App. Ausführliches 
 
 ## Daten und Sync
 - Datenformat (`library.json`, `SCHEMA`) nur abwärtskompatibel erweitern; eingehende Daten immer durch `cleanData`/`cleanSong` führen.
-- Merge-Regeln nicht aufweichen: pro Song gewinnt das neuere `updatedAt`, Löschungen sind Löschmarken (`deleted`), Stems werden pro Slot nach `u` zusammengeführt.
+- Merge-Regeln nicht aufweichen: pro Song und pro Liste (`lists`, ab v1.3.0) gewinnt das neuere `updatedAt`, gelöschte Listen als Löschmarke `list:<id>`, Löschungen sind Löschmarken (`deleted`), Stems werden pro Slot nach `u` zusammengeführt.
 - Scope bleibt `drive.file`; die App fasst nur Dateien an, die sie selbst angelegt hat. Der Ordner wird über seine ID wiedergefunden (darf in Drive verschoben werden).
 
 ## Sicherheit

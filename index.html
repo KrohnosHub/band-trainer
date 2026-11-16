@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-QSphmpbPcfR9bs7PGVy3JCboUzNeLo/gwd5InEMfjxA=' 'sha256-kzGXOoHmrw8xTPuQdrZfFV9+KLXmK+fVQQwYAwXxAHE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-QSphmpbPcfR9bs7PGVy3JCboUzNeLo/gwd5InEMfjxA=' 'sha256-nWFVI1zt6ltBXdTD2pV6mGwMk6+lhN++eaKpsDlrgxI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -233,6 +233,17 @@ dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;fl
 .song.re button{flex:none}
 li.drag{opacity:.75;position:relative;z-index:3}
 li.drag .song{border-color:var(--accent);box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.songrow{display:flex;align-items:stretch;gap:6px}
+.songrow .song{flex:1;min-width:0}
+.songrow .song .t,.songrow .song .a{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.favb{background:transparent;border:0;color:var(--muted);font-size:1.25rem;min-width:var(--tap);padding:0;line-height:1}
+.favb.on{color:var(--accent)}
+.chips.sub{padding-top:0}
+.chips.sub:empty{display:none}
+fieldset.lists{border:1px solid var(--border);border-radius:10px;padding:4px 10px 6px;margin:0 0 10px}
+fieldset.lists legend{font-size:.84rem;color:var(--muted);padding:0 4px}
+.picklist{max-height:55vh;overflow:auto;display:flex;flex-direction:column}
+.picklist label.chk{min-height:38px;align-items:center}
 .song .n{color:var(--muted);font-variant-numeric:tabular-nums;margin-right:6px}
 .trrow{margin:0 0 10px;gap:6px}
 .trrow b{min-width:5.2em;text-align:center;font-variant-numeric:tabular-nums}
@@ -327,8 +338,8 @@ for (const C of [Map, WeakMap]) {
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.2.2';
-const SCHEMA = 3;
+const APP_VERSION = '1.3.0';
+const SCHEMA = 4;   // 4 (v1.3.0): eigene Listen (lists) + Favoriten (fav) statt fester Status Setlist/To Do
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
 const PDFJS_VERSION = '6.3.289';
@@ -433,6 +444,7 @@ function newSong(p = {}) {
     transpose:0, flats:null, // Anzeige transponieren (Halbtöne); Schreibweise ♯/♭ (null = automatisch)
     order:null,              // Position in der Setlist
     youtubeUrl:'',           // Referenzvideo (von dir eingefügt)
+    fav:false,               // Favorit (★)
     spotify:null,            // Spotify-Titel {id,name,artists,auto} – auto = automatisch gefundener Vorschlag
     spTried:0,               // Zeitpunkt der letzten automatischen Spotify-Suche (0 = noch nie)
     links:[],                // [{id,label,url,kind}]
@@ -490,7 +502,7 @@ function cleanSong(r) {
     transpose: tr != null ? Math.max(-11, Math.min(11, Math.round(tr))) : 0, flats: r.flats === true || r.flats === false ? r.flats : null,
     order: num(r.order), youtubeUrl:str(r.youtubeUrl, 500),
     spotify: r.spotify && /^[A-Za-z0-9]{22}$/.test(r.spotify.id) ? { id:r.spotify.id, name:str(r.spotify.name, 300), artists:str(r.spotify.artists, 300), auto:!!r.spotify.auto } : null,
-    spTried: num(r.spTried) || 0,
+    spTried: num(r.spTried) || 0, fav: !!r.fav,
     links: (Array.isArray(r.links) ? r.links : []).filter(l => l && safeUrl(l.url)).slice(0, 100).map(l => ({ id:str(l.id, 40) || uid(), label:str(l.label, 300), url:safeUrl(l.url), kind:hasOwn(LINK_KINDS, l.kind) ? l.kind : 'other' })),
     suggest, stems, mix,
     loop: { a: r.loop && num(r.loop.a), b: r.loop && num(r.loop.b) },
@@ -517,6 +529,20 @@ function cleanAnn(d) {
   }
   return out;
 }
+/* Listen (ab v1.3.0): frei anlegbar, ein Song kann in mehreren Listen stehen; die Reihenfolge ist die der Liste.
+   Abgleich pro Liste nach updatedAt, gelöschte Listen als Löschmarke «list:<id>» in deleted. */
+function cleanList(l) {
+  const id = typeof l.id === 'string' && /^[\w-]{1,60}$/.test(l.id) && !UNSAFE_KEYS.has(l.id) ? l.id : 'list-' + uid();
+  const songs = [...new Set((Array.isArray(l.songs) ? l.songs : []).filter(x => typeof x === 'string' && x.length < 80 && !UNSAFE_KEYS.has(x)))];
+  return { id, name:String(l.name || 'Liste').trim().slice(0, 60) || 'Liste', songs, created: typeof l.created === 'number' && isFinite(l.created) ? l.created : 0, updatedAt: typeof l.updatedAt === 'number' && isFinite(l.updatedAt) ? l.updatedAt : 0 };
+}
+// Ältere Daten (Status Setlist/To Do) → zwei Listen mit festen IDs (auf allen Geräten gleich, updatedAt 0 → jede echte Änderung gewinnt)
+function listsFromStatus(songs) {
+  const by = st => songs.filter(x => x.status === st);
+  const sl = by('setlist').sort((a, b) => ((a.order == null ? 1e9 : a.order) - (b.order == null ? 1e9 : b.order)) || a.title.localeCompare(b.title, 'de'));
+  const td = by('todo').sort((a, b) => a.title.localeCompare(b.title, 'de'));
+  return [{ id:'list-setlist', name:'Setlist', songs:sl.map(x => x.id), updatedAt:0 }, { id:'list-todo', name:'To Do', songs:td.map(x => x.id), updatedAt:0 }];
+}
 function cleanData(raw) {
   raw = raw && typeof raw === 'object' ? raw : {};
   const deleted = {};
@@ -526,6 +552,7 @@ function cleanData(raw) {
   return {
     songs: (Array.isArray(raw.songs) ? raw.songs : []).filter(s => s && typeof s === 'object' && typeof s.id === 'string' && !UNSAFE_KEYS.has(s.id) && typeof s.title === 'string' && s.title.trim()).map(cleanSong),
     deleted,
+    lists: Array.isArray(raw.lists) ? (() => { const seen = new Set(); return raw.lists.filter(l => l && typeof l === 'object').map(cleanList).filter(l => !seen.has(l.id) && seen.add(l.id)); })() : null,
     settings: { theme: st.theme === 'light' ? 'light' : 'dark', chordSize:size(st.chordSize), stageSize:size(st.stageSize), countIn:!!st.countIn },
     settingsAt: typeof raw.settingsAt === 'number' && isFinite(raw.settingsAt) ? raw.settingsAt : 0
   };
@@ -538,7 +565,7 @@ function seedData() {
   songs.push(newSong({ id:'demo-blues', title:'Demo: 12-Takt-Blues in A', artist:'Eigenes Übungsbeispiel (kein echter Song)', bpm:100, key:'A', status:'demo', isDemo:true, updatedAt:0,
     notes:'Generisches Beispiel, um Akkord- und Bassanzeige zu zeigen. Links: Grundton–Quinte in Halben. Rechts: Dominantseptakkorde.',
     chords:DEMO_CHORDS, bassAbc:DEMO_ABC }));
-  return { schema:SCHEMA, songs, deleted:{}, settings:Object.assign({}, DEF_SETTINGS), settingsAt:0 };
+  return { schema:SCHEMA, songs, lists:listsFromStatus(songs), deleted:{}, settings:Object.assign({}, DEF_SETTINGS), settingsAt:0 };
 }
 
 /* Zusammenführen zweier Stände (lokal/Drive/Import): pro Song gewinnt das neuere updatedAt,
@@ -585,8 +612,15 @@ function mergeData(a, b) {
     songs.push(s);
   }
   songs.sort((p, q) => p.id < q.id ? -1 : p.id > q.id ? 1 : 0);
+  // Listen: pro Liste das neuere updatedAt; Löschmarke «list:<id>» gewinnt gegen ältere Stände; fehlt die Liste auf einer Seite (z. B. alter Stand ohne Listen), bleibt sie
+  const lm = new Map();
+  for (const l of [...(a.lists || []), ...(b.lists || [])]) { const c = lm.get(l.id); if (!c || (l.updatedAt || 0) > (c.updatedAt || 0)) lm.set(l.id, JSON.parse(JSON.stringify(l))); }
+  const lists = [];
+  for (const l of lm.values()) { const t = deleted['list:' + l.id]; if (t != null) { if (t >= (l.updatedAt || 0)) continue; delete deleted['list:' + l.id]; } lists.push(l); }
+  const ord = new Map([...(a.lists || []), ...(b.lists || [])].map((l, i) => [l.id, i]));
+  lists.sort((p, q) => ((p.created || 0) - (q.created || 0)) || (ord.get(p.id) - ord.get(q.id)));
   const bNewer = (b.settingsAt || 0) > (a.settingsAt || 0);
-  return { songs, deleted, settings:Object.assign({}, DEF_SETTINGS, bNewer ? b.settings : a.settings), settingsAt:Math.max(a.settingsAt || 0, b.settingsAt || 0) };
+  return { songs, lists, deleted, settings:Object.assign({}, DEF_SETTINGS, bNewer ? b.settings : a.settings), settingsAt:Math.max(a.settingsAt || 0, b.settingsAt || 0) };
 }
 /* Vergleichbare Textform (Schlüssel sortiert) – um zu erkennen, ob sich durch das Zusammenführen etwas geändert hat. */
 const canon = v => JSON.stringify(v, (k, x) => x && typeof x === 'object' && !Array.isArray(x) ? Object.keys(x).sort().reduce((o, kk) => (o[kk] = x[kk], o), {}) : x);
@@ -601,8 +635,7 @@ const Store = {
     const d = cleanData(raw);
     // Aus dem Prototyp übernommene Daten: bestätigte Titel ohne Prüfhinweis; Setlist-Reihenfolge ergänzen
     for (const s of d.songs) if ((s.id === 'seed-09' || s.id === 'seed-13') && /in der PDF-Liste abgeschnitten/.test(s.uncertain)) s.uncertain = '';
-    this.data = { schema:SCHEMA, songs:d.songs, deleted:d.deleted, settings:d.settings, settingsAt:d.settingsAt };
-    this.fixOrder(false);
+    this.data = { schema:SCHEMA, songs:d.songs, lists:d.lists || listsFromStatus(d.songs), deleted:d.deleted, settings:d.settings, settingsAt:d.settingsAt };
     let chg = false;
     if (!LS.get('chordSeed1')) { const now = Date.now(); for (const x of this.data.songs) if (applySeedChords(x, now)) chg = true; LS.set('chordSeed1', '1'); }
     if (chg || (raw.schema || 1) < SCHEMA) this.persist();
@@ -612,22 +645,28 @@ const Store = {
   saveSettings() { this.data.settingsAt = Date.now(); this.save(); },
   get(id) { return this.data.songs.find(s => s.id === id); },
   touch(song) { song.updatedAt = Date.now(); this.save(); },
-  remove(id) { this.data.songs = this.data.songs.filter(s => s.id !== id); this.data.deleted[id] = Date.now(); this.save(); },
-  setlist() { return this.data.songs.filter(s => s.status === 'setlist').sort((a, b) => ((a.order == null ? 1e9 : a.order) - (b.order == null ? 1e9 : b.order)) || a.title.localeCompare(b.title, 'de')); },
-  fixOrder(touch) {   // Setlist-Songs ohne Position hinten anhängen
-    let max = -1; for (const s of this.data.songs) if (s.status === 'setlist' && s.order != null) max = Math.max(max, s.order);
-    for (const s of this.setlist()) if (s.order == null) { s.order = ++max; if (touch) s.updatedAt = Date.now(); }
+  remove(id) {
+    this.data.songs = this.data.songs.filter(s => s.id !== id); this.data.deleted[id] = Date.now();
+    for (const l of this.data.lists) if (l.songs.includes(id)) { l.songs = l.songs.filter(x => x !== id); l.updatedAt = Date.now(); }
+    this.save();
   },
-  reorder(ids) {      // neue Setlist-Reihenfolge; nur verschobene Songs gelten als geändert
-    const now = Date.now(); let changed = false;
-    ids.map(id => this.get(id)).filter(Boolean).forEach((s, i) => { if (s.order !== i) { s.order = i; s.updatedAt = now; changed = true; } });
-    if (changed) this.save();
-  },
-  snapshot() { return { songs:this.data.songs, deleted:this.data.deleted, settings:this.data.settings, settingsAt:this.data.settingsAt }; },
+  /* ----- Listen ----- */
+  list(id) { return this.data.lists.find(l => l.id === id); },
+  listSongs(l) { return l ? l.songs.map(id => this.get(id)).filter(Boolean) : []; },
+  activeList() { return this.list(App.filter) || this.data.lists[0] || null; },   // Liste für Reihenfolge und Auftrittsmodus
+  setlist() { return this.listSongs(this.activeList()); },
+  fixOrder() {},      // seit v1.3.0 hält jede Liste ihre Reihenfolge selbst
+  touchList(l) { l.updatedAt = Date.now(); this.save(); },
+  reorder(ids) { const l = this.activeList(); if (!l) return; const keep = l.songs.filter(x => !ids.includes(x)); const nw = [...ids, ...keep]; if (nw.join() !== l.songs.join()) { l.songs = nw; this.touchList(l); } },
+  addList(name) { const l = cleanList({ id:'list-' + uid(), name, songs:[] }); l.created = Date.now(); this.data.lists.push(l); this.touchList(l); return l; },
+  removeList(id) { this.data.lists = this.data.lists.filter(l => l.id !== id); this.data.deleted['list:' + id] = Date.now(); this.save(); },
+  setMembers(l, ids) { const want = new Set(ids); const nw = [...l.songs.filter(x => want.has(x)), ...ids.filter(x => !l.songs.includes(x))]; if (nw.join() !== l.songs.join()) { l.songs = nw; this.touchList(l); } },
+  inList(l, songId, on) { const has = l.songs.includes(songId); if (on && !has) { l.songs.push(songId); this.touchList(l); } else if (!on && has) { l.songs = l.songs.filter(x => x !== songId); this.touchList(l); } },
+  snapshot() { return { songs:this.data.songs, lists:this.data.lists, deleted:this.data.deleted, settings:this.data.settings, settingsAt:this.data.settingsAt }; },
   apply(m) {          // zusammengeführten Stand übernehmen; bestehende Song-Objekte bleiben dieselben (Player/Editor halten Referenzen)
     const byId = new Map(this.data.songs.map(s => [s.id, s]));
     this.data.songs = m.songs.map(n => { const cur = byId.get(n.id); if (!cur) return cleanSong(n); if (canon(cur) !== canon(n)) { for (const k of Object.keys(cur)) delete cur[k]; Object.assign(cur, cleanSong(n)); } return cur; });
-    this.data.deleted = m.deleted; this.data.settings = Object.assign({}, DEF_SETTINGS, m.settings); this.data.settingsAt = m.settingsAt || 0;
+    this.data.lists = (m.lists || this.data.lists).map(cleanList); this.data.deleted = m.deleted; this.data.settings = Object.assign({}, DEF_SETTINGS, m.settings); this.data.settingsAt = m.settingsAt || 0;
     this.persist();
   },
   payload() { return { app:'band-trainer', schema:SCHEMA, v:APP_VERSION, savedAt:new Date().toISOString(), songs:this.data.songs, deleted:this.data.deleted, settings:this.data.settings, settingsAt:this.data.settingsAt }; }
@@ -1814,13 +1853,13 @@ const App = {
   stageList() { const sl = Store.setlist(), cur = this.current(); return cur && !sl.includes(cur) ? [cur] : sl; },
   stageOpen(id) {
     const sl = Store.setlist(), s = id ? Store.get(id) : sl[0];
-    if (!s) { toast('Die Setlist ist leer – Songs mit Status «Setlist» versehen.'); return; }
+    if (!s) { toast(Store.activeList() ? 'Die Liste «' + Store.activeList().name + '» ist leer.' : 'Noch keine Liste – lege eine an.'); return; }
     try { const el = document.documentElement; if (el.requestFullscreen && !document.fullscreenElement) el.requestFullscreen().catch(() => {}); } catch (e) {}
     location.hash = '#/stage/' + encodeURIComponent(s.id);
   },
   stageGo(d, last) {
     const l = this.stageList(), i = l.findIndex(s => s.id === this.songId), n = l[i + d];
-    if (!n) { toast(d > 0 ? 'Ende der Setlist.' : 'Anfang der Setlist.'); return; }
+    if (!n) { toast(d > 0 ? 'Ende der Liste.' : 'Anfang der Liste.'); return; }
     this.stageLast = !!last;   // beim Zurückblättern auf der letzten Seite des vorherigen Blatts landen
     history.replaceState(null, '', '#/stage/' + encodeURIComponent(n.id)); this.route(); this.stageLast = false;
   },
@@ -1871,7 +1910,15 @@ const App = {
     switch (act) {
       case 'open': location.hash = '#/song/' + encodeURIComponent(el.dataset.id); break;
       case 'back': location.hash = '#/'; break;
-      case 'filter': this.filter = el.dataset.f; if (this.filter !== 'setlist') this.reorder = false; UI.list(); break;
+      case 'filter': this.filter = el.dataset.f; this.reorder = false; UI.list(); break;
+      case 'fav': { const x = Store.get(el.dataset.id) || song; if (!x) break; x.fav = !x.fav; Store.touch(x); if ($('#songList')) { UI.counts(); UI.listItems(); } else UI.header(); break; }
+      case 'listNew': Dialogs.listName(null); break;
+      case 'listRename': { const l = Store.list(this.filter); if (l) Dialogs.listName(l); break; }
+      case 'listPick': { const l = Store.list(this.filter); if (l) Dialogs.listPick(l); break; }
+      case 'listDel': { const l = Store.list(this.filter); if (!l) break;
+        if (!confirm('Liste «' + l.name + '» löschen? Die Songs selbst bleiben erhalten.')) break;
+        Store.removeList(l.id); this.filter = 'all'; this.reorder = false; UI.list(); toast('Liste gelöscht.'); break; }
+      case 'listOut': { const l = Store.list(this.filter); if (l) { Store.inList(l, el.dataset.id, false); UI.counts(); UI.listItems(); } break; }
       case 'reorder': this.reorder = !this.reorder; UI.list(); break;
       case 'up': this.moveBy(el.dataset.id, -1); break;
       case 'down': this.moveBy(el.dataset.id, 1); break;
@@ -2085,7 +2132,7 @@ const UI = {
         <button class="icon ghost" data-act="menu" aria-label="Menü" title="Menü">${ICON.menu}</button>
       </header>
       <input type="search" id="q" name="bt-songsuche" placeholder="Song oder Interpret suchen" value="${esc(App.query)}" aria-label="Suche" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore readonly>
-      <div class="chips" role="group" aria-label="Filter" id="chipBox"></div>
+      <div class="chips" role="group" aria-label="Filter" id="chipBox"></div><div class="chips sub" id="listBar"></div>
       <ul class="songs" id="songList"></ul>
       <button class="fab primary" data-act="add" aria-label="Neuen Song hinzufügen">+ Neuer Song</button>
       <input type="file" id="importFile" accept="application/json,.json" class="hidden">
@@ -2094,17 +2141,25 @@ const UI = {
   },
   counts() {
     const box = $('#chipBox'); if (!box) return;
-    const songs = Store.data.songs, n = f => songs.filter(s => f === 'all' || s.status === f).length;
-    box.innerHTML = [['all','Alle'],['setlist','Setlist'],['todo','To Do']].map(([f,l]) => `<button class="chip ${App.filter===f?'on':''}" data-act="filter" data-f="${f}">${l} · ${n(f)}</button>`).join('')
-      + '<span class="sep"></span>'
-      + (App.filter === 'setlist' ? `<button class="chip ${App.reorder ? 'on' : ''}" data-act="reorder" aria-pressed="${App.reorder}">Reihenfolge</button>` : '')
-      + '<button class="chip" data-act="stage" title="Auftrittsmodus: Setlist im Vollbild">▶ Auftritt</button>';
+    const songs = Store.data.songs, L = Store.list(App.filter);
+    if (!['all', 'fav'].includes(App.filter) && !L) App.filter = 'all';
+    const chip = (f, l, n) => `<button class="chip ${App.filter === f ? 'on' : ''}" data-act="filter" data-f="${esc(f)}">${l} · ${n}</button>`;
+    box.innerHTML = chip('all', 'Alle', songs.length) + chip('fav', '★ Favoriten', songs.filter(s => s.fav).length)
+      + Store.data.lists.map(l => chip(l.id, esc(l.name), Store.listSongs(l).length)).join('')
+      + '<button class="chip" data-act="listNew" title="Neue Liste anlegen">+ Liste</button>';
+    const tb = $('#listBar');
+    if (tb) setHtml(tb, L ? `<button class="chip ${App.reorder ? 'on' : ''}" data-act="reorder" aria-pressed="${App.reorder}">Reihenfolge</button>
+        <button class="chip" data-act="listPick">Songs wählen</button><button class="chip" data-act="listRename">Umbenennen</button>
+        <button class="chip ghost danger" data-act="listDel">Liste löschen</button><span class="sep"></span>
+        <button class="chip" data-act="stage" title="Auftrittsmodus: diese Liste im Vollbild">▶ Auftritt</button>`
+      : '<span class="sep"></span><button class="chip" data-act="stage" title="Auftrittsmodus: erste Liste im Vollbild">▶ Auftritt</button>');
   },
   listItems() {
     const el = $('#songList'); if (!el) return;
     const q = App.query.trim().toLowerCase(), match = s => !q || (s.title + ' ' + s.artist).toLowerCase().includes(q);
-    if (App.filter === 'setlist' && App.reorder) {
-      const list = Store.setlist();
+    const L = Store.list(App.filter);
+    if (L && App.reorder) {
+      const list = Store.listSongs(L);
       el.innerHTML = list.length ? list.map((s, i) => `
         <li data-id="${esc(s.id)}"><div class="song re">
           <button class="icon ghost handle" aria-label="Ziehen zum Verschieben" title="Ziehen">⠿</button>
@@ -2112,21 +2167,19 @@ const UI = {
           <div class="grow"><div class="t">${esc(s.title)}</div><div class="a">${esc(s.artist)}</div></div>
           <button class="icon" data-act="up" data-id="${esc(s.id)}" aria-label="«${esc(s.title)}» nach oben" ${i === 0 ? 'disabled' : ''}>▲</button>
           <button class="icon" data-act="down" data-id="${esc(s.id)}" aria-label="«${esc(s.title)}» nach unten" ${i === list.length - 1 ? 'disabled' : ''}>▼</button>
-        </div></li>`).join('') : '<li class="empty">Die Setlist ist leer.</li>';
+          <button class="icon ghost danger" data-act="listOut" data-id="${esc(s.id)}" aria-label="«${esc(s.title)}» aus der Liste entfernen">✕</button>
+        </div></li>`).join('') : '<li class="empty">Die Liste ist leer – «Songs wählen».</li>';
       return;
     }
-    const list = App.filter === 'setlist' ? Store.setlist().filter(match)
-      : Store.data.songs.filter(s => App.filter === 'all' || s.status === App.filter).filter(match).sort((a, b) => (a.isDemo - b.isDemo) || a.title.localeCompare(b.title, 'de'));
-    const pos = new Map(Store.setlist().map((s, i) => [s.id, i + 1]));
+    const byTitle = (a, b) => (a.isDemo - b.isDemo) || a.title.localeCompare(b.title, 'de');
+    const list = L ? Store.listSongs(L).filter(match) : Store.data.songs.filter(s => App.filter !== 'fav' || s.fav).filter(match).sort(byTitle);
+    const pos = L ? new Map(Store.listSongs(L).map((s, i) => [s.id, i + 1])) : null;
+    // Ab v1.3.0 kompakt: zwei Zeilen (Titel / Interpret) + Favoriten-Stern; Details stehen in der Song-Ansicht
     el.innerHTML = list.length ? list.map(s => `
-      <li data-id="${esc(s.id)}"><button class="song" data-act="open" data-id="${esc(s.id)}"><div>
-        <div class="l"><div><div class="t">${App.filter === 'setlist' ? `<span class="n">${pos.get(s.id)}.</span>` : ''}${esc(s.title)}</div><div class="a">${esc(s.artist)}</div></div>${statusBadge(s)}</div>
-        <div class="m">
-          ${s.bpm ? `<span class="badge">${esc(s.bpm)} BPM</span>` : ''}${s.key ? `<span class="badge">Tonart ${esc(keyLabel(s))}</span>` : ''}
-          ${s.uncertain ? '<span class="badge warn">Angabe prüfen</span>' : ''}
-          ${hasAudio(s) ? '<span class="badge">Audio</span>' : ''}${chordBadge(s) || (s.chords.trim() ? '<span class="badge">Akkorde</span>' : '')}${s.bassAbc.trim() ? '<span class="badge">Bassline</span>' : ''}${s.spotify ? '<span class="badge sp">Spotify</span>' : ''}${liveSheets(s).length ? `<span class="badge">${liveSheets(s).length === 1 ? '1 Blatt' : liveSheets(s).length + ' Blätter'}</span>` : ''}
-        </div></div></button></li>`).join('')
-      : '<li class="empty">Keine Songs gefunden.</li>';
+      <li data-id="${esc(s.id)}"><div class="songrow"><button class="song" data-act="open" data-id="${esc(s.id)}"><div>
+        <div class="t">${pos ? `<span class="n">${pos.get(s.id)}.</span>` : ''}${esc(s.title)}${s.isDemo ? ' <span class="badge demo">Demo</span>' : ''}</div><div class="a">${esc(s.artist)}</div>
+        </div></button><button class="favb ${s.fav ? 'on' : ''}" data-act="fav" data-id="${esc(s.id)}" aria-pressed="${s.fav}" aria-label="${s.fav ? 'Favorit entfernen' : 'Als Favorit markieren'}">${s.fav ? '★' : '☆'}</button></div></li>`).join('')
+      : `<li class="empty">${App.filter === 'fav' && !q ? 'Noch keine Favoriten – tippe beim Song auf ☆.' : L && !q ? 'Die Liste ist leer – «Songs wählen».' : 'Keine Songs gefunden.'}</li>`;
   },
 
   /* ----- Songansicht ----- */
@@ -2136,6 +2189,7 @@ const UI = {
       <header class="top">
         <button class="icon ghost" data-act="back" aria-label="Zurück zur Liste">${ICON.back}</button>
         <div class="grow"><h1 id="sTitle"></h1><div class="sub" id="sSub"></div></div>
+        <button class="favb" id="sFav" data-act="fav" aria-label="Favorit"></button>
         <button class="ghost" data-act="edit">Bearbeiten</button>
       </header>
       <div id="sNotice"></div>
@@ -2310,6 +2364,7 @@ const UI = {
     setHtml($('#sNotice'), (s.isDemo ? '<div class="notice">Demo: eigenes, generisches Übungsbeispiel – keinem echten Song zugeordnet.</div>' : '') +
       (s.uncertain ? '<div class="notice"><b>Bitte prüfen:</b> ' + esc(s.uncertain) + '</div>' : ''));
     document.title = s.title + ' – Band-Trainer';
+    const fb = $('#sFav'); if (fb) { fb.textContent = s.fav ? '★' : '☆'; fb.classList.toggle('on', !!s.fav); fb.setAttribute('aria-pressed', !!s.fav); fb.dataset.id = s.id; fb.setAttribute('aria-label', s.fav ? 'Favorit entfernen' : 'Als Favorit markieren'); }
   },
   tabs() { $$('[data-pane]').forEach(p => p.classList.toggle('hidden', p.dataset.pane !== App.tab)); $$('.tabs button').forEach(b => { const on = b.dataset.tab === App.tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }); },
   chords() {
@@ -2426,7 +2481,7 @@ const UI = {
     el.innerHTML = `<h3>Angaben</h3><table class="kv">
       <tr><td>Titel</td><td>${esc(s.title)}</td></tr><tr><td>Interpret</td><td>${esc(s.artist) || '–'}</td></tr>
       <tr><td>BPM</td><td>${s.bpm ? esc(s.bpm) : '– (noch nicht eingetragen)'}</td></tr><tr><td>Tonart</td><td>${esc(keyLabel(s)) || '– (noch nicht eingetragen)'}${s.transpose ? ' <span class="badge">' + esc(trLabel(s.transpose)) + '</span>' : ''}</td></tr>
-      <tr><td>Status</td><td>${statusBadge(s)}</td></tr></table>
+      <tr><td>Listen</td><td>${esc(Store.data.lists.filter(l => l.songs.includes(s.id)).map(l => l.name).join(', ')) || '–'}${s.fav ? ' · ★ Favorit' : ''}</td></tr></table>
       <div class="row" style="margin-top:12px"><button data-act="edit">Angaben bearbeiten</button></div>`;
   },
   transport() {
@@ -2483,6 +2538,28 @@ function statusBadge(s) {
 /* ---------- Dialoge ---------- */
 const Dialogs = {
   taps:[],
+  listName(l) {   // neue Liste anlegen oder umbenennen
+    const d = $('#dlg');
+    d.innerHTML = `<form id="listForm" novalidate><h2>${l ? 'Liste umbenennen' : 'Neue Liste'}</h2>
+      <label class="f"><span>Name</span><input type="text" name="name" maxlength="60" required value="${esc(l ? l.name : '')}" placeholder="z. B. Probe 21.11." autocomplete="off"></label>
+      <div class="actions"><button type="button" data-act="close">Abbrechen</button><button type="submit" class="primary">${l ? 'Speichern' : 'Anlegen'}</button></div></form>`;
+    $('#listForm').addEventListener('submit', e => {
+      e.preventDefault(); const name = String(new FormData(e.target).get('name')).trim().slice(0, 60); if (!name) { toast('Bitte einen Namen eingeben.'); return; }
+      if (l) { l.name = name; Store.touchList(l); d.close(); UI.counts(); return; }
+      const n = Store.addList(name); App.filter = n.id; App.reorder = false; d.close(); UI.list(); this.listPick(n);
+    });
+    if (!d.open) d.showModal(); setTimeout(() => { const i = $('#listForm [name=name]'); if (i) i.focus(); }, 30);
+  },
+  listPick(l) {   // Songs der Liste per Häkchen wählen (neue kommen ans Ende, die Reihenfolge der übrigen bleibt)
+    const d = $('#dlg'), all = Store.data.songs.slice().sort((a, b) => (a.isDemo - b.isDemo) || a.title.localeCompare(b.title, 'de'));
+    d.innerHTML = `<form id="pickForm" novalidate><h2>Songs in «${esc(l.name)}»</h2>
+      <input type="search" id="pickQ" placeholder="Filtern" aria-label="Songs filtern" autocomplete="off" style="margin-bottom:8px">
+      <div class="picklist">${all.map(s => `<label class="chk" data-t="${esc((s.title + ' ' + s.artist).toLowerCase())}"><input type="checkbox" name="sid" value="${esc(s.id)}" ${l.songs.includes(s.id) ? 'checked' : ''}> <span><b>${esc(s.title)}</b> <span class="muted small">${esc(s.artist)}</span></span></label>`).join('')}</div>
+      <div class="actions"><button type="button" data-act="close">Abbrechen</button><button type="submit" class="primary">Übernehmen</button></div></form>`;
+    $('#pickQ').addEventListener('input', e => { const q = e.target.value.trim().toLowerCase(); $$('#pickForm .picklist label').forEach(x => x.classList.toggle('hidden', !!q && !x.dataset.t.includes(q))); });
+    $('#pickForm').addEventListener('submit', e => { e.preventDefault(); Store.setMembers(l, new FormData(e.target).getAll('sid')); d.close(); UI.counts(); UI.listItems(); });
+    if (!d.open) d.showModal();
+  },
   song(song) {
     const isNew = !song, s = song || newSong(), d = $('#dlg');
     d.innerHTML = `<form id="songForm" novalidate>
@@ -2493,9 +2570,10 @@ const Dialogs = {
         <label class="f"><span>BPM</span><div class="row nowrap"><input type="number" name="bpm" min="30" max="260" inputmode="numeric" value="${s.bpm ?? ''}"><button type="button" data-act="tap">Tap</button></div></label>
         <label class="f"><span>Tonart (Original)</span><input type="text" name="key" placeholder="z.B. A, Em" value="${esc(s.key)}" autocomplete="off" autocapitalize="off"></label>
       </div>
-      <label class="f"><span>Status</span><select name="status">
-        <option value="setlist" ${s.status==='setlist'?'selected':''}>Setlist</option><option value="todo" ${s.status==='todo'?'selected':''}>To Do</option>
-        ${s.isDemo ? '<option value="demo" selected>Demo</option>' : ''}</select></label>
+      <fieldset class="f lists"><legend>In Listen</legend>
+        ${Store.data.lists.map(l => `<label class="chk"><input type="checkbox" name="lst" value="${esc(l.id)}" ${l.songs.includes(s.id) || (isNew && Store.list(App.filter) === l) ? 'checked' : ''}> ${esc(l.name)}</label>`).join('') || '<p class="small muted">Noch keine Listen.</p>'}
+      </fieldset>
+      <label class="chk"><input type="checkbox" name="fav" ${s.fav ? 'checked' : ''}> ★ Favorit</label>
       <label class="f"><span>Hinweis «bitte prüfen» (leer = keine Unsicherheit)</span><input type="text" name="uncertain" value="${esc(s.uncertain)}" autocomplete="off"></label>
       <div class="actions">
         ${isNew ? '' : '<button type="button" class="danger ghost" data-act="delete" style="margin-right:auto">Löschen</button>'}
@@ -2505,10 +2583,10 @@ const Dialogs = {
       e.preventDefault(); const f = new FormData(e.target), title = String(f.get('title')).trim();
       if (!title) { toast('Bitte einen Titel eingeben.'); return; }
       const oldKey = s.title + '|' + s.artist;
-      const bpm = parseInt(f.get('bpm'), 10), status = ['setlist', 'todo', 'demo'].includes(f.get('status')) ? f.get('status') : 'todo';
-      Object.assign(s, { title, artist:String(f.get('artist')).trim(), bpm:bpm >= 30 && bpm <= 260 ? bpm : null, key:String(f.get('key')).trim(), status, uncertain:String(f.get('uncertain')).trim() });
-      if (status !== 'setlist') s.order = null;
+      const bpm = parseInt(f.get('bpm'), 10);
+      Object.assign(s, { title, artist:String(f.get('artist')).trim(), bpm:bpm >= 30 && bpm <= 260 ? bpm : null, key:String(f.get('key')).trim(), fav:!!f.get('fav'), uncertain:String(f.get('uncertain')).trim() });
       if (isNew) Store.data.songs.push(s);
+      const inL = new Set(f.getAll('lst')); for (const l of Store.data.lists) Store.inList(l, s.id, inL.has(l.id));
       if (oldKey !== s.title + '|' + s.artist && (!s.spotify || s.spotify.auto)) { s.spotify = null; s.spTried = 0; }
       Store.fixOrder(true); Store.touch(s); d.close();
       Spotify.run(s, false);   // neuer oder umbenannter Song: Spotify-Link gleich suchen

@@ -23,7 +23,7 @@ module.exports = async () => {
       eq((await spOf(pg, 'seed-17')).id, 'seger'.padEnd(22, '0'), 'Remaster-Zusatz und «N Roll» toleriert');
       eq(await spOf(pg, 'seed-01'), null, 'falscher Interpret wird nicht verknüpft');
       eq(await pg.evaluate(() => Store.get('demo-blues').spTried), 0, 'Demo nie gesucht');
-      ok(await pg.locator('#songList .badge.sp').count() >= 3, 'Spotify-Badge in der Liste');
+      eq(await pg.locator('#songList .badge.sp').count(), 0, 'kein Spotify-Badge in der Übersicht (v1.3.0)');
       // Einmalig: nach Neuladen keine erneute Suche
       const n = pg.spQueries.length; await pg.reload(); await pg.waitForSelector('#songList li'); await pg.waitForTimeout(3200); eq(pg.spQueries.length, n);
       // Song-Ansicht: Player eingebettet, übernehmen, entfernen
