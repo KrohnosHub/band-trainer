@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-+PaxgWlf5M/e4YWvZBeKxyybB7TPBqyUMSKMFUjPiAs='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-NJ3/VIK/uaM6qT/a6rDm48aTromuKVA5SyNg46TwJGE='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -239,6 +239,21 @@ dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;fl
 .song.re button{flex:none}
 li.drag{opacity:.75;position:relative;z-index:3}
 li.drag .song{border-color:var(--accent);box-shadow:0 6px 20px rgba(0,0,0,.35)}
+#chordPop{position:fixed;z-index:50;width:min(300px,calc(100vw - 16px));background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+#chordPop .pn{font-size:1.15rem;font-weight:700;margin:4px 0 2px;letter-spacing:.02em}
+.chd{cursor:pointer;border-radius:4px}
+.chordview .bar,.chordview .fc{cursor:pointer}
+.chd:hover{text-decoration:underline dotted;text-underline-offset:3px}
+.lexroots{display:flex;flex-wrap:wrap;gap:6px}
+.lexroots button{min-width:44px;min-height:36px;padding:0 8px}
+table.lex{width:100%;border-collapse:collapse}
+table.lex th{text-align:left;font-size:.78rem;color:var(--muted);font-weight:600;padding:4px 6px}
+table.lex td{padding:7px 6px;border-top:1px solid var(--border);vertical-align:top}
+table.lex tr[data-act]{cursor:pointer}
+table.lex .ln{font-weight:700;font-size:1.05rem;white-space:nowrap}
+table.lex tr.lexk{display:none} table.lex tr.open+tr.lexk{display:table-row}
+table.lex tr.lexk td{border-top:0;padding-top:0}
+@media (max-width:600px){ .hidesm{display:none} }
 #printArea{display:none}
 @media print{
   body.printing > *:not(#printArea){display:none!important}
@@ -381,7 +396,7 @@ for (const C of [Map, WeakMap]) {
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.7.0';
 const SCHEMA = 4;   // 4 (v1.3.0): eigene Listen (lists) + Favoriten (fav) statt fester Status Setlist/To Do
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
@@ -1338,15 +1353,54 @@ const Marks = {
 
 /* ---------- Akkordlehre: Töne eines Akkords, Voicing-Hilfe, Bassline-Vorschlag (v1.5.0) ---------- */
 // Intervalle (Halbtöne über dem Grundton) für gängige Akkordzusätze; unbekannte → null (dann keine Anzeige statt falscher Töne)
-function chordTones(q) {
-  q = String(q || '').replace(/\(|\)/g, '').replace(/^M(?=7|9|aj)/, 'maj').replace(/Δ/g, 'maj7').replace(/^-/, 'm').replace(/°/g, 'dim').replace(/ø/g, 'm7b5');
-  const T = { '':[0,4,7], 'm':[0,3,7], 'min':[0,3,7], '5':[0,7], '6':[0,4,7,9], 'm6':[0,3,7,9], '7':[0,4,7,10], 'maj7':[0,4,7,11], 'm7':[0,3,7,10], 'min7':[0,3,7,10], 'mmaj7':[0,3,7,11],
-    'dim':[0,3,6], 'dim7':[0,3,6,9], 'm7b5':[0,3,6,10], 'aug':[0,4,8], '+':[0,4,8], 'sus4':[0,5,7], 'sus':[0,5,7], 'sus2':[0,2,7], '7sus4':[0,5,7,10], '7sus':[0,5,7,10],
-    'add9':[0,4,7,14], 'madd9':[0,3,7,14], '9':[0,4,10,14], 'm9':[0,3,10,14], 'maj9':[0,4,11,14], '11':[0,7,10,17], 'm11':[0,3,10,17], '13':[0,4,10,21], '7b9':[0,4,10,13], '7#9':[0,4,10,15], '6/9':[0,4,9,14], '69':[0,4,9,14] };
-  return T[q] ? T[q].slice() : null;
+/* Akkordtypen mit Intervallen [Halbtöne, Stufe] – Stufe bestimmt die Schreibweise (z. B. Cdim7 = C E♭ G♭ B𝄫, nicht A).
+   Gleiche Tabelle für Lexikon, Noten-Anzeige an den Kacheln, Voicing-Hilfe und Bassline-Vorschlag. */
+const CHORD_TYPES = [
+  { q:'', name:'Dur', f:'1 3 5', iv:[[0,1],[4,3],[7,5]] },
+  { q:'m', name:'Moll', f:'1 ♭3 5', iv:[[0,1],[3,3],[7,5]], al:['min','-'] },
+  { q:'5', name:'Powerchord (ohne Terz)', f:'1 5', iv:[[0,1],[7,5]] },
+  { q:'dim', name:'vermindert', f:'1 ♭3 ♭5', iv:[[0,1],[3,3],[6,5]], al:['°'] },
+  { q:'aug', name:'übermässig', f:'1 3 ♯5', iv:[[0,1],[4,3],[8,5]], al:['+'] },
+  { q:'sus2', name:'Sekunde statt Terz', f:'1 2 5', iv:[[0,1],[2,2],[7,5]] },
+  { q:'sus4', name:'Quarte statt Terz', f:'1 4 5', iv:[[0,1],[5,4],[7,5]], al:['sus'] },
+  { q:'6', name:'Dur mit Sexte', f:'1 3 5 6', iv:[[0,1],[4,3],[7,5],[9,6]] },
+  { q:'m6', name:'Moll mit Sexte', f:'1 ♭3 5 6', iv:[[0,1],[3,3],[7,5],[9,6]] },
+  { q:'7', name:'Dominantseptakkord', f:'1 3 5 ♭7', iv:[[0,1],[4,3],[7,5],[10,7]] },
+  { q:'maj7', name:'Dur mit grosser Septime', f:'1 3 5 7', iv:[[0,1],[4,3],[7,5],[11,7]], al:['M7','Δ','Δ7','maj'] },
+  { q:'m7', name:'Moll-Septakkord', f:'1 ♭3 5 ♭7', iv:[[0,1],[3,3],[7,5],[10,7]], al:['min7','-7'] },
+  { q:'mmaj7', name:'Moll mit grosser Septime', f:'1 ♭3 5 7', iv:[[0,1],[3,3],[7,5],[11,7]], al:['mM7','m(maj7)'] },
+  { q:'m7b5', name:'halbvermindert', f:'1 ♭3 ♭5 ♭7', iv:[[0,1],[3,3],[6,5],[10,7]], al:['ø','ø7'] },
+  { q:'dim7', name:'vermindert mit verminderter Septime', f:'1 ♭3 ♭5 𝄫7', iv:[[0,1],[3,3],[6,5],[9,7]], al:['°7'] },
+  { q:'7sus4', name:'Dominantsept mit Quarte', f:'1 4 5 ♭7', iv:[[0,1],[5,4],[7,5],[10,7]], al:['7sus'] },
+  { q:'add9', name:'Dur mit None (ohne Septime)', f:'1 3 5 9', iv:[[0,1],[4,3],[7,5],[14,9]], al:['add2'] },
+  { q:'madd9', name:'Moll mit None', f:'1 ♭3 5 9', iv:[[0,1],[3,3],[7,5],[14,9]] },
+  { q:'6/9', name:'Sexte und None', f:'1 3 5 6 9', iv:[[0,1],[4,3],[7,5],[9,6],[14,9]], al:['69'] },
+  { q:'9', name:'Dominant-Nonakkord', f:'1 3 5 ♭7 9', iv:[[0,1],[4,3],[7,5],[10,7],[14,9]] },
+  { q:'m9', name:'Moll-Nonakkord', f:'1 ♭3 5 ♭7 9', iv:[[0,1],[3,3],[7,5],[10,7],[14,9]] },
+  { q:'maj9', name:'Dur-Nonakkord mit grosser Septime', f:'1 3 5 7 9', iv:[[0,1],[4,3],[7,5],[11,7],[14,9]] },
+  { q:'7b9', name:'Dominantsept mit kleiner None', f:'1 3 5 ♭7 ♭9', iv:[[0,1],[4,3],[7,5],[10,7],[13,9]] },
+  { q:'7#9', name:'Dominantsept mit übermässiger None («Hendrix»)', f:'1 3 5 ♭7 ♯9', iv:[[0,1],[4,3],[7,5],[10,7],[15,9]] },
+  { q:'11', name:'Undezimakkord', f:'1 (3) 5 ♭7 9 11', iv:[[0,1],[7,5],[10,7],[14,9],[17,11]] },
+  { q:'m11', name:'Moll-Undezimakkord', f:'1 ♭3 5 ♭7 9 11', iv:[[0,1],[3,3],[7,5],[10,7],[14,9],[17,11]] },
+  { q:'13', name:'Tredezimakkord', f:'1 3 (5) ♭7 9 13', iv:[[0,1],[4,3],[10,7],[14,9],[21,13]] }
+];
+const CHORD_BY_Q = new Map(); for (const t of CHORD_TYPES) for (const k of [t.q, ...(t.al || [])]) CHORD_BY_Q.set(k, t);
+function chordType(q) { return CHORD_BY_Q.get(String(q || '').replace(/^\((.*)\)$/, '$1')) || null; }
+function chordTones(q) { const t = chordType(q); return t ? t.iv.map(x => x[0]) : null; }
+// Töne mit richtiger Schreibweise: Buchstabe aus der Stufe, Vorzeichen aus dem Halbtonabstand
+const LETTERS = 'CDEFGAB', LETTER_PC = [0, 2, 4, 5, 7, 9, 11];
+function spellChord(rootName, t) {
+  const L = LETTERS.indexOf(rootName[0]), rpc = noteIx(rootName);
+  return t.iv.map(([semi, deg]) => { const li = (L + deg - 1) % 7, target = (rpc + semi) % 12, d = ((target - LETTER_PC[li] + 18) % 12) - 6;
+    return LETTERS[li] + (d === 1 ? '♯' : d === 2 ? '𝄪' : d === -1 ? '♭' : d === -2 ? '𝄫' : d ? '?' : ''); });
+}
+function chordInfo(tok) {   // {root, type, notes[], bass} für ein Akkordsymbol wie «Ebm7/Bb»
+  const m = String(tok || '').replace(/♯/g, '#').replace(/♭/g, 'b').replace('6/9', '69').match(CHORD_RE); if (!m) return null;
+  const t = chordType(m[2]); if (!t) return null;
+  return { sym:tok, root:m[1], type:t, notes:spellChord(m[1], t), bass:m[3] ? m[3].replace('#', '♯').replace('b', '♭') : '' };
 }
 function parseChord(tok) {
-  const m = String(tok || '').replace(/♯/g, '#').replace(/♭/g, 'b').match(CHORD_RE); if (!m) return null;
+  const m = String(tok || '').replace(/♯/g, '#').replace(/♭/g, 'b').replace('6/9', '69').match(CHORD_RE); if (!m) return null;
   const iv = chordTones(m[2]); if (!iv) return null;
   return { name:tok, root:noteIx(m[1]), bass:m[3] ? noteIx(m[3]) : noteIx(m[1]), iv, minor:/^m(?!aj)/.test(m[2]) };
 }
@@ -1995,10 +2049,15 @@ const QUALITY_RE = /^(?:maj|min|dim|aug|sus|add|omit|alt|no|m|M|\+|-|°|ø|Δ|\d
 const noteIx = n => (NOTE_IX[n[0]] + (n[1] === '#' ? 1 : n[1] === 'b' ? -1 : 0) + 12) % 12;
 const trNote = (n, st, flats) => (flats ? NOTES_FLAT : NOTES_SHARP)[((noteIx(n) + st) % 12 + 12) % 12];
 function trToken(tok, st, flats) {
+  if (/6\/9/.test(tok)) return trToken(tok.replace('6/9', '69'), st, flats).replace(/69(?=$|\/)/, '6/9');   // «6/9» ist kein Slash-Akkord
   const m = tok.match(CHORD_RE); if (!m || !QUALITY_RE.test(m[2])) return tok;
   return trNote(m[1], st, flats) + m[2] + (m[3] ? '/' + trNote(m[3], st, flats) : '');
 }
 const trBar = (text, st, flats) => text.split(/(\s+)/).map(t => /\s/.test(t) || !t ? t : trToken(t.replace(/♯/g, '#').replace(/♭/g, 'b'), st, flats)).join('');
+// Akkord als antippbarer Text mit Tönen als Tooltip (Maus) – Antippen zeigt die Töne mit Klaviatur (v1.7.0)
+const chordTip = c => { const i = chordInfo(c); return i ? i.sym + ': ' + i.notes.join(' ') + (i.bass ? ' · Bass ' + i.bass : '') + ' (' + i.type.name + ')' : ''; };
+const chordSpan = c => { const tip = chordTip(c); return tip ? `<span class="chd" data-ch="${esc(c)}" title="${esc(tip)}">${esc(c)}</span>` : esc(c); };
+const barHtml = c => c.split(/(\s+)/).map(x => /^\s+$/.test(x) || !x ? x : chordSpan(x)).join('');
 function useFlats(song, st) {   // Schreibweise: fest gewählt oder passend zur Zieltonart (F, B♭, E♭, A♭, D♭ bzw. deren Mollparallelen → ♭)
   if (song.flats === true || song.flats === false) return song.flats;
   let ref = (song.key || '').trim().split(/\s+/)[0].match(CHORD_RE);
@@ -2039,13 +2098,13 @@ function parseChords(text) {
 }
 function chordsHtml(s) {
   const st = s.transpose || 0, fl = st ? useFlats(s, st) : false;
-  const tr = c => esc(st ? trBar(c, st, fl) : c);
+  const tr = c => barHtml(st ? trBar(c, st, fl) : c);
   return parseChords(s.chords).map((r, ri) => r.t === 'sect' ? '<div class="sect">' + esc(r.text) + '</div>'
     : r.t === 'note' ? '<div class="cnote">' + esc(r.text) + '</div>'
     : r.t === 'flow' ? '<div class="barrow"><div class="flow">' + r.parts.map(x => /^\s*[–—]\s*$/.test(x) ? '<span class="sep">–</span>' : /^\s+$/.test(x) ? ' ' : '<span class="fc">' + tr(x) + '</span>').join('')
         + (r.tail ? ' <span class="cnote">' + esc(r.tail) + '</span>' : '') + '</div>'
         + (r.rep ? '<div class="rep" title="' + esc(r.rep) + '-mal spielen">×' + esc(r.rep) + '</div>' : '') + '</div>'
-    : '<div class="barrow"><div class="bars">' + r.bars.map((c, ci) => '<div class="bar" data-r="' + ri + '" data-c="' + ci + '">' + esc(st ? trBar(c, st, fl) : c) + '</div>').join('') + '</div>'
+    : '<div class="barrow"><div class="bars">' + r.bars.map((c, ci) => '<div class="bar" data-r="' + ri + '" data-c="' + ci + '">' + barHtml(st ? trBar(c, st, fl) : c) + '</div>').join('') + '</div>'
       + (r.rep ? '<div class="rep" title="' + esc(r.rep) + '-mal spielen">×' + esc(r.rep) + '</div>' : '') + '</div>').join('');
 }
 function setlistLine(s, i, o) {
@@ -2129,6 +2188,8 @@ const App = {
   current() { return this.songId ? Store.get(this.songId) : null; },
   applyTheme() { document.documentElement.dataset.theme = Store.data.settings.theme; const m = $('meta[name=theme-color]'); if (m) m.content = Store.data.settings.theme === 'light' ? '#f4f2ec' : '#121416'; },
   route() {
+    const pp = $('#chordPop'); if (pp) pp.remove();
+    if (location.hash === '#/akkorde') { Viewer.close(); Bass.stop(); Metro.stop(); Player.unload(); this.songId = null; this.stage = false; document.body.classList.remove('stage-on'); UI.lexicon(); window.scrollTo(0, 0); return; }
     const m = location.hash.match(/^#\/(song|stage)\/(.+)$/); const id = m ? decodeURIComponent(m[2]) : null;
     const wasStage = this.stage;
     Viewer.close(); Bass.stop(); Metro.stop();
@@ -2217,11 +2278,18 @@ const App = {
   },
 
   onClick(e) {
+    const tile = e.target.closest('.chordview .bar, .chordview .fc'), one = tile && tile.querySelectorAll('[data-ch]').length === 1 ? tile.querySelector('[data-ch]') : null;
+    const chd = e.target.closest('[data-ch]') || one, pop = $('#chordPop');   // ganze Kachel antippbar, wenn sie genau einen Akkord enthält
+    if (chd) { UI.chordPop(chd); return; }
+    if (pop && !e.target.closest('#chordPop')) pop.remove();
     const el = e.target.closest('[data-act]'); if (!el) return;
     const act = el.dataset.act, song = this.current();
     switch (act) {
       case 'open': location.hash = '#/song/' + encodeURIComponent(el.dataset.id); break;
-      case 'back': location.hash = '#/'; break;
+      case 'back': location.hash = this.lexFrom || '#/'; this.lexFrom = null; break;
+      case 'lexicon': this.lexFrom = location.hash && location.hash !== '#/akkorde' ? location.hash : '#/'; location.hash = '#/akkorde'; break;
+      case 'lexRoot': this.lexRoot = el.dataset.r; UI.lexicon(); break;
+      case 'lexRow': { const r = el.closest('tr'); r.classList.toggle('open'); break; }
       case 'filter': this.filter = el.dataset.f; this.reorder = false; UI.list(); break;
       case 'fav': { const x = Store.get(el.dataset.id) || song; if (!x) break; x.fav = !x.fav; Store.touch(x); if ($('#songList')) { UI.counts(); UI.listItems(); } else UI.header(); break; }
       case 'listNew': Dialogs.listName(null); break;
@@ -2480,6 +2548,7 @@ const UI = {
         <div class="grow"><h1>Band-Trainer</h1><div class="sub">Keyboard · Akkorde rechts, Bass links</div></div>
         <button class="primary addtop" data-act="add" aria-label="Neuen Song hinzufügen">+ Song</button>
         <button class="syncchip" id="syncState" data-act="sync" aria-label="Abgleich mit Google Drive"></button>
+        <button class="icon ghost lexbtn" data-act="lexicon" aria-label="Akkord-Lexikon" title="Akkord-Lexikon">♫</button>
         <button class="icon ghost" data-act="theme" aria-label="Hell/Dunkel umschalten" title="Hell/Dunkel">${ICON.theme}</button>
         <button class="icon ghost" data-act="menu" aria-label="Menü" title="Menü">${ICON.menu}</button>
       </header>
@@ -2565,6 +2634,7 @@ const UI = {
           </div>
           <div class="followinfo" id="followInfo" aria-live="off"></div><div class="chordview" id="chordOut"></div>
           <div class="small muted" id="chordMeta"></div>
+          <p class="small muted" style="margin:4px 0 0">Akkord antippen (oder mit der Maus darauf zeigen) = enthaltene Töne · <a href="#/akkorde" data-act="lexicon">Akkord-Lexikon</a></p>
           <details><summary>Akkorde bearbeiten</summary>
             <textarea id="chordsIn" class="mono" spellcheck="false" placeholder="[Intro]&#10;| A7 | D7 | A7 | A7 |&#10;[Strophe]&#10;| A7 | D7 |  (x4)">${esc(s.chords)}</textarea>
             <p class="small muted" style="margin-top:6px">Ein Takt pro Feld, getrennt mit <code>|</code>. Abschnitte in eckigen Klammern auf einer eigenen Zeile: <code>[Intro]</code>, <code>[Strophe]</code>, <code>[Refrain]</code> (Zeilen ohne <code>|</code> gelten ebenfalls als Abschnitt). Wiederholungen hinter der Zeile: <code>| Bm A | E |  (x4)</code>. Akkorde in der Originaltonart eintragen (Schreibweise C, F#, Bb, Am7, D/F#) – transponiert wird nur die Anzeige. Bitte nur Akkorde, keine Songtexte.</p>
@@ -2868,6 +2938,31 @@ const UI = {
   },
   time() { const sk = $('#seek'); if (!sk || Player.seeking) return; const t = Player.time(); sk.value = t; $('#tCur').textContent = fmt(t); },
   rate() { const r = $('#rate'); if (!r) return; r.value = Math.round(Player.rate * 100); const s = App.current(); $('#rateOut').textContent = Math.round(Player.rate * 100) + ' %' + (s && s.bpm ? ' · ' + Math.round(s.bpm * Player.rate) + ' BPM' : ''); },
+  lexicon() {
+    const roots = ['C','C#','Db','D','Eb','E','F','F#','Gb','G','Ab','A','Bb','B'], r = App.lexRoot || 'C', disp = x => x.replace('#', '♯').replace('b', '♭');
+    document.title = 'Akkord-Lexikon – Band-Trainer';
+    $('#app').innerHTML = `<header class="top"><button class="icon ghost" data-act="back" aria-label="Zurück">${ICON.back}</button>
+        <div class="grow"><h1>Akkord-Lexikon</h1><div class="sub">Welche Töne stecken in welchem Akkord?</div></div></header>
+      <div class="card"><h3>Grundton</h3><div class="lexroots">${roots.map(x => `<button class="${x === r ? 'on' : ''}" data-act="lexRoot" data-r="${x}">${disp(x)}</button>`).join('')}</div></div>
+      <div class="card"><table class="lex"><thead><tr><th>Akkord</th><th>Töne</th><th class="hidesm">Aufbau</th></tr></thead><tbody>
+      ${CHORD_TYPES.map(t => { const sym = r + t.q, notes = spellChord(r, t), base = 60 + noteIx(r) - (noteIx(r) > 7 ? 12 : 0);
+        return `<tr data-act="lexRow"><td><b class="chd" data-ch="${esc(sym)}">${esc(disp(r) + t.q)}</b><div class="small muted">${esc(t.name)}</div></td><td class="ln">${notes.join(' ')}</td><td class="hidesm small">${esc(t.f)}</td></tr>
+          <tr class="lexk"><td colspan="3">${kbdSvg(48, 84, t.iv.map(x => base + x[0]))}<div class="small muted">${esc(t.f)} · Alternativen: ${esc([t.q || 'Dur', ...(t.al || [])].map(a => disp(r) + (a === 'Dur' ? '' : a)).join(', '))}</div></td></tr>`; }).join('')}
+      </tbody></table>
+      <p class="small muted" style="margin-top:8px">Zeile antippen = Klaviatur. Schreibweise nach Stufen (z. B. C°7 enthält B𝄫 – klingt wie A). Bei 11- und 13-Akkorden lässt man meist einzelne Töne weg (in Klammern). Slash-Akkorde wie D/F♯: Akkord D, im Bass F♯.</p></div>`;
+  },
+  chordPop(el) {   // Töne eines angetippten Akkords mit Mini-Klaviatur
+    const old = $('#chordPop'); if (old) { const same = old.dataset.for === el.dataset.ch; old.remove(); if (same) return; }
+    const i = chordInfo(el.dataset.ch); if (!i) return;
+    const base = 60 + noteIx(i.root) - (noteIx(i.root) > 7 ? 12 : 0), keys = i.type.iv.map(x => base + x[0]);
+    const pop = document.createElement('div'); pop.id = 'chordPop'; pop.dataset.for = el.dataset.ch; pop.setAttribute('role', 'dialog');
+    pop.innerHTML = `<div class="row" style="justify-content:space-between"><b>${esc(i.sym.replace(/#/g, '♯').replace(/(?<=[A-G])b/g, '♭'))}</b><span class="small muted">${esc(i.type.name)}</span></div>
+      <div class="pn">${esc(i.notes.join(' – '))}${i.bass ? ` <span class="small muted">· Bass ${esc(i.bass)}</span>` : ''}</div>${kbdSvg(48, 84, keys)}<div class="small muted">${esc(i.type.f)}</div>`;
+    document.body.appendChild(pop);
+    const r = el.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+    pop.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px';
+    pop.style.top = (r.bottom + h + 12 < window.innerHeight ? r.bottom + 6 : Math.max(8, r.top - h - 6)) + 'px';
+  },
   sound() {
     const s = App.current(); if (!s) return; const sum = soundSummary(s);
     const el = $('#soundSum'); if (el) el.textContent = sum ? '· ' + sum : '';

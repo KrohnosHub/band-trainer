@@ -112,6 +112,11 @@ Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): e
 
 ## Änderungslog
 
+### v1.7.0 – Akkord-Lexikon, Töne direkt an den Akkorden
+- **Akkord-Lexikon** (Symbol ♫ in der Kopfzeile der Songliste, Link unter dem Akkordraster): alle gängigen Akkordtypen – Dur, Moll, Powerchord, vermindert, übermässig, sus2/sus4, 6, m6, 7, maj7, m7, m(maj7), halbvermindert (m7♭5), vermindert-sept (dim7), 7sus4, add9, 6/9, 9, m9, maj9, 7♭9, 7♯9, 11, m11, 13 – mit Tönen, Aufbau (1 ♭3 5 …), alternativen Schreibweisen und Klaviatur (Zeile antippen). Grundton frei wählbar (auch ♯/♭).
+- **Töne an den Akkord-Kacheln:** Mit der Maus auf einen Akkord zeigen = Tooltip mit den Tönen (z. B. «C: C E G»); antippen = kleines Fenster mit Tönen, Aufbau und Klaviatur (nochmals tippen oder daneben schliesst). Funktioniert auch transponiert und bei Folgen ohne Taktstriche.
+- Töne werden nach Stufen geschrieben (E♭-Moll = E♭ G♭ B♭, C°7 enthält B𝄫); dieselbe Akkordtabelle nutzen Voicing-Hilfe und Bassline-Vorschlag. «6/9» wird nicht mehr als Slash-Akkord missverstanden.
+
 ### v1.6.0 – Setlist teilen/PDF, Song aus Spotify-Link, Dateien aus Drive, Tonhöhe des Playbacks
 - **Teilen / PDF** (bei gewählter Liste): Setlist als Text teilen (Teilen-Menü des Handys bzw. Zwischenablage) oder als Druckansicht – im Druckdialog «Als PDF speichern». Wählbar: Tonart (wie angezeigt, inkl. Transponieren), BPM, Sound-Setup, Notizen, Akkordblätter anhängen (je Song eine Seite).
 - **Song aus Spotify-Link:** Im Song-Dialog Spotify-Link einfügen → «Übernehmen» füllt Titel und Interpret (braucht Spotify-Zugangsdaten); der Link wird als bestätigter Spotify-Titel gespeichert.
