@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-QSphmpbPcfR9bs7PGVy3JCboUzNeLo/gwd5InEMfjxA=' 'sha256-JRjc9LG6iGM86Na5XVOIdgcH8Iypvj3wUR3tAy/kISg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-QSphmpbPcfR9bs7PGVy3JCboUzNeLo/gwd5InEMfjxA=' 'sha256-uXgxGv0syCH7EFKUXS9aFJex/xJOHCY+nJqGU4sLLLs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -233,6 +233,17 @@ dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;fl
 .song.re button{flex:none}
 li.drag{opacity:.75;position:relative;z-index:3}
 li.drag .song{border-color:var(--accent);box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.marks{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-top:6px}
+.marks::-webkit-scrollbar{display:none}
+.marks .mk{display:inline-flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;flex:none}
+.marks .mk button{border:0;border-radius:0;min-height:32px;padding:0 9px;font-size:.82rem;background:var(--surface2)}
+.marks .mk button+button{border-left:1px solid var(--border);padding:0 7px}
+.marks .mk.on button{background:var(--accent);color:var(--accent-fg)}
+.marks .mkadd{min-height:32px;padding:0 10px;font-size:.82rem;flex:none}
+.gridrow{flex-wrap:wrap;gap:6px}
+.gridrow button{min-height:32px;padding:0 9px;font-size:.82rem}
+.chordview .bar.cur{background:var(--accent);color:var(--accent-fg);box-shadow:0 0 0 2px var(--accent)}
+.followinfo{font-size:.8rem;color:var(--muted);min-height:1.1em;margin-bottom:4px}
 .songrow{display:flex;align-items:stretch;gap:6px}
 .songrow .song{flex:1;min-width:0}
 .songrow .song .t,.songrow .song .a{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -338,7 +349,7 @@ for (const C of [Map, WeakMap]) {
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.4.0';
 const SCHEMA = 4;   // 4 (v1.3.0): eigene Listen (lists) + Favoriten (fav) statt fester Status Setlist/To Do
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
@@ -431,7 +442,7 @@ const ICON = {
 const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const byId = (p, q) => p.id < q.id ? -1 : p.id > q.id ? 1 : 0;
 const liveSheets = s => (s.sheets || []).filter(x => !x.deleted);
-const DEF_SETTINGS = { theme:'dark', chordSize:1, stageSize:1, countIn:false };
+const DEF_SETTINGS = { theme:'dark', chordSize:1, stageSize:1, countIn:false, follow:true };
 const defMix = () => ({ original:{on:true,vol:1}, bass:{on:false,vol:1}, nobass:{on:false,vol:1} });
 function newSong(p = {}) {
   return Object.assign({
@@ -454,6 +465,8 @@ function newSong(p = {}) {
     stageSheet:'',           // Auftrittsmodus: ID des Notenblatts, das statt des Akkordrasters gezeigt wird ('' = Akkordraster)
     mix:defMix(),
     loop:{ a:null, b:null },
+    grid:{ offset:null, beats:4 },   // Takt-Raster (v1.4.0): Zeitpunkt der ersten «1» im Audio (s) + Schläge pro Takt; Tempo = BPM
+    marks:[],                // Abschnitte im Audio (v1.4.0): [{id, name, t}] – Sprungmarken und Abschnitts-Loops
     isDemo:false, updatedAt: Date.now()
   }, p);
 }
@@ -506,6 +519,9 @@ function cleanSong(r) {
     links: (Array.isArray(r.links) ? r.links : []).filter(l => l && safeUrl(l.url)).slice(0, 100).map(l => ({ id:str(l.id, 40) || uid(), label:str(l.label, 300), url:safeUrl(l.url), kind:hasOwn(LINK_KINDS, l.kind) ? l.kind : 'other' })),
     suggest, stems, mix,
     loop: { a: r.loop && num(r.loop.a), b: r.loop && num(r.loop.b) },
+    grid: { offset: r.grid && typeof r.grid.offset === 'number' && isFinite(r.grid.offset) && r.grid.offset >= 0 ? r.grid.offset : null, beats: r.grid && [2,3,4,5,6,7,8,9,10,11,12].includes(r.grid.beats) ? r.grid.beats : 4 },
+    marks: (Array.isArray(r.marks) ? r.marks : []).filter(m => m && typeof m.t === 'number' && isFinite(m.t) && m.t >= 0).slice(0, 60)
+      .map(m => ({ id: typeof m.id === 'string' && /^[\w-]{1,40}$/.test(m.id) ? m.id : uid(), name: str(m.name, 40) || 'Abschnitt', t: m.t })).sort((a, b) => a.t - b.t),
     isDemo: !!r.isDemo, updatedAt: num(r.updatedAt) || 0
   });
 }
@@ -553,7 +569,7 @@ function cleanData(raw) {
     songs: (Array.isArray(raw.songs) ? raw.songs : []).filter(s => s && typeof s === 'object' && typeof s.id === 'string' && !UNSAFE_KEYS.has(s.id) && typeof s.title === 'string' && s.title.trim()).map(cleanSong),
     deleted,
     lists: Array.isArray(raw.lists) ? (() => { const seen = new Set(); return raw.lists.filter(l => l && typeof l === 'object').map(cleanList).filter(l => !seen.has(l.id) && seen.add(l.id)); })() : null,
-    settings: { theme: st.theme === 'light' ? 'light' : 'dark', chordSize:size(st.chordSize), stageSize:size(st.stageSize), countIn:!!st.countIn },
+    settings: { theme: st.theme === 'light' ? 'light' : 'dark', chordSize:size(st.chordSize), stageSize:size(st.stageSize), countIn:!!st.countIn, follow:st.follow !== false },
     settingsAt: typeof raw.settingsAt === 'number' && isFinite(raw.settingsAt) ? raw.settingsAt : 0
   };
 }
@@ -1091,7 +1107,23 @@ const Metro = {
       while (this.next < c.currentTime + 0.15) { this.click(this.next, this.beat % 4 === 0); this.next += 60 / this.bpm; this.beat++; }
     }, 40);
   },
-  stop() { clearInterval(this.timer); this.timer = null; this.on = false; },
+  stop() { clearInterval(this.timer); this.timer = null; this.on = false; this.synced = false; },
+  // Im Songtakt (v1.4.0): Klicks auf die Schläge des Takt-Rasters, umgerechnet von Audio-Zeit in AudioContext-Zeit (berücksichtigt Tempo %)
+  startSynced(song) {
+    this.stop(); const c = AC.get(); if (!c) return;
+    this.on = true; this.synced = true; let last = -1e9, lastT = -1;
+    this.timer = setInterval(() => {
+      if (!Player.playing) { last = -1e9; return; }
+      const t = Player.time(), r = Player.rate || 1, bd = Grid.beatDur(song), beats = song.grid.beats || 4;
+      if (t < lastT - 0.05) last = -1e9; lastT = t;                 // zurückgesprungen (Seek/Loop) → neu ansetzen
+      let i = Math.max(last + 1, Math.ceil((t - song.grid.offset) / bd - 1e-6));
+      for (;; i++) {
+        const bt = song.grid.offset + i * bd, dt = (bt - t) / r; if (dt > 0.15) break;
+        if (dt >= -0.01 && i >= 0) this.click(c.currentTime + Math.max(0, dt), ((i % beats) + beats) % beats === 0);
+        last = i;
+      }
+    }, 30);
+  },
   countIn(bpm, beats = 4) {
     const c = AC.get(); if (!c) return Promise.resolve();
     const t0 = c.currentTime + 0.1;
@@ -1200,9 +1232,56 @@ const Player = {
       if (tr === m || tr.el.ended) continue;
       if (Math.abs(tr.el.currentTime - t) > 0.08 && t < (tr.el.duration || Infinity)) { try { tr.el.currentTime = t; } catch {} }
     }
-    UI.time();
+    UI.time(); UI.follow();
   },
   onEnded() { const lp = this.song.loop; if (lp.a != null && lp.b == null) { this.seek(lp.a); for (const tr of Object.values(this.tracks)) tr.el.play().catch(() => {}); } else this.pause(); }
+};
+
+/* ---------- Takt-Raster, Abschnitte, mitlaufendes Akkordraster (v1.4.0) ----------
+   Tempo = BPM des Songs, Startpunkt = Zeit der ersten «1» (per «1 tippen» beim Abspielen gesetzt, fein justierbar).
+   Daraus: Takt/Schlag zur Audio-Position, Metronom im Songtakt, Hervorhebung des aktuellen Takts im Akkordraster. */
+const Grid = {
+  ok(s) { return !!(s && s.bpm && s.grid && s.grid.offset != null); },
+  beatDur(s) { return 60 / s.bpm; },
+  barDur(s) { return this.beatDur(s) * (s.grid.beats || 4); },
+  bar(s, t) { return Math.floor((t - s.grid.offset) / this.barDur(s) + 1e-6); },          // 0 = erster Takt ab der «1»
+  beat(s, t) { return Math.floor((t - s.grid.offset) / this.beatDur(s) + 1e-6); },
+  snap(s, t) { if (!this.ok(s)) return t; const b = this.barDur(s), n = Math.round((t - s.grid.offset) / b); return Math.max(0, s.grid.offset + n * b); }
+};
+const SECT_ALIAS = { strophe:'verse', vers:'verse', refrain:'chorus', chor:'chorus', prechorus:'prechorus', vorrefrain:'prechorus', bruecke:'bridge', bridge:'bridge', zwischenspiel:'interlude', vorspiel:'intro', einleitung:'intro', schluss:'outro', ende:'outro', solo:'solo', gitarrensolo:'solo' };
+const sectKey = n => { const k = String(n || '').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/[^a-z]/g, ''); return SECT_ALIAS[k] || k; };
+// Akkordblatt → Abschnitte mit (ausgeschriebenen) Takten; jeder Takt verweist auf seine Kachel (Zeile r, Spalte c)
+function chordTimeline(song) {
+  const rows = parseChords(song.chords), sects = []; let cur = { name:'', key:'', bars:[] };
+  rows.forEach((r, ri) => {
+    if (r.t === 'sect') { if (cur.bars.length || cur.name) sects.push(cur); cur = { name:r.text, key:sectKey(r.text), bars:[] }; return; }
+    if (r.t !== 'bars') return;
+    const rep = Math.max(1, Math.min(32, parseInt(r.rep, 10) || 1));
+    for (let k = 0; k < rep; k++) r.bars.forEach((_, ci) => cur.bars.push({ r:ri, c:ci }));
+  });
+  if (cur.bars.length || cur.name) sects.push(cur);
+  return { sects, all:sects.flatMap(x => x.bars) };
+}
+// Welche Kachel gehört zur Zeit t? Mit Abschnittsmarken: passender Abschnitt im Blatt (auch Strophe=Verse, Refrain=Chorus), sonst linear
+function followCell(song, t) {
+  if (!Grid.ok(song) || t < song.grid.offset - 0.02) return null;
+  const tl = chordTimeline(song); if (!tl.all.length) return null;
+  const marks = song.marks.filter(m => m.t <= t + 0.02), mk = marks[marks.length - 1];
+  if (mk) {
+    const key = sectKey(mk.name), cands = tl.sects.filter(x => x.key === key && x.bars.length);
+    if (cands.length) {
+      const nth = marks.filter(m => sectKey(m.name) === key).length - 1, sec = cands[Math.min(nth, cands.length - 1)];
+      const n = Math.floor((t - mk.t) / Grid.barDur(song) + 1e-6);
+      return { cell:sec.bars[((n % sec.bars.length) + sec.bars.length) % sec.bars.length], sect:mk.name, bar:Grid.bar(song, t) + 1 };
+    }
+  }
+  const n = Grid.bar(song, t); if (n < 0 || n >= tl.all.length) return { cell:null, sect:mk ? mk.name : '', bar:n + 1 };
+  return { cell:tl.all[n], sect:mk ? mk.name : '', bar:n + 1 };
+}
+const Marks = {
+  add(song, name, t) { const m = { id:uid(), name:String(name || 'Abschnitt').trim().slice(0, 40) || 'Abschnitt', t:Math.max(0, t) }; song.marks.push(m); song.marks.sort((a, b) => a.t - b.t); Store.touch(song); return m; },
+  end(song, m) { const i = song.marks.indexOf(m), nx = song.marks[i + 1]; return nx ? nx.t : (Player.duration() || null); },
+  loop(song, m) { song.loop = { a:m.t, b:this.end(song, m) }; Store.touch(song); }
 };
 
 /* ---------- Bassline: ABC-Rendering und Wiedergabe ---------- */
@@ -1757,12 +1836,12 @@ function parseChords(text) {
 function chordsHtml(s) {
   const st = s.transpose || 0, fl = st ? useFlats(s, st) : false;
   const tr = c => esc(st ? trBar(c, st, fl) : c);
-  return parseChords(s.chords).map(r => r.t === 'sect' ? '<div class="sect">' + esc(r.text) + '</div>'
+  return parseChords(s.chords).map((r, ri) => r.t === 'sect' ? '<div class="sect">' + esc(r.text) + '</div>'
     : r.t === 'note' ? '<div class="cnote">' + esc(r.text) + '</div>'
     : r.t === 'flow' ? '<div class="barrow"><div class="flow">' + r.parts.map(x => /^\s*[–—]\s*$/.test(x) ? '<span class="sep">–</span>' : /^\s+$/.test(x) ? ' ' : '<span class="fc">' + tr(x) + '</span>').join('')
         + (r.tail ? ' <span class="cnote">' + esc(r.tail) + '</span>' : '') + '</div>'
         + (r.rep ? '<div class="rep" title="' + esc(r.rep) + '-mal spielen">×' + esc(r.rep) + '</div>' : '') + '</div>'
-    : '<div class="barrow"><div class="bars">' + r.bars.map(c => '<div class="bar">' + esc(st ? trBar(c, st, fl) : c) + '</div>').join('') + '</div>'
+    : '<div class="barrow"><div class="bars">' + r.bars.map((c, ci) => '<div class="bar" data-r="' + ri + '" data-c="' + ci + '">' + esc(st ? trBar(c, st, fl) : c) + '</div>').join('') + '</div>'
       + (r.rep ? '<div class="rep" title="' + esc(r.rep) + '-mal spielen">×' + esc(r.rep) + '</div>' : '') + '</div>').join('');
 }
 function chordBadge(s) {   // Status der Akkorde als Badge (nur wenn Akkorde eingetragen sind; das Demo ist ein eigenes Beispiel)
@@ -1991,8 +2070,26 @@ const App = {
       case 'loopClr': song.loop = { a:null, b:null }; Store.touch(song); UI.loop(); break;
       case 'more': { const o = $('.transport').classList.toggle('open'); el.classList.toggle('on', o); el.setAttribute('aria-expanded', o); break; }
       case 'metro':
-        if (Metro.on) Metro.stop(); else if (song.bpm) Metro.start(song.bpm * Player.rate); else toast('Für das Metronom zuerst BPM beim Song eintragen.');
-        el.classList.toggle('on', Metro.on); break;
+        if (Metro.on) Metro.stop(); else if (!song.bpm) toast('Für das Metronom zuerst BPM beim Song eintragen.');
+        else if (Grid.ok(song) && Player.master()) Metro.startSynced(song); else Metro.start(song.bpm * Player.rate);
+        UI.grid(); break;
+      case 'gridTap': {   // auf eine «1» tippen → Startpunkt des Takt-Rasters
+        if (!song.bpm) { toast('Zuerst BPM beim Song eintragen (Bearbeiten → BPM oder Tap).'); break; }
+        if (!Player.master()) { toast('Zuerst eine Audiodatei laden (Tab «Audio»).'); break; }
+        // Erstes Tippen = Takt 1 (am besten auf die erste «1» des Songs). Weiteres Tippen auf irgendeine «1» korrigiert nur die Phase – die Taktzählung bleibt.
+        const t = Player.time(), go = song.grid.offset;
+        song.grid.offset = go == null ? t : Math.max(0, +(t - Math.round((t - go) / Grid.barDur(song)) * Grid.barDur(song)).toFixed(3));
+        Store.touch(song); UI.grid(); UI.follow(true); if (Metro.on) Metro.startSynced(song); toast('Takt-Raster gesetzt – mit ◀ ▶ fein justieren.'); break;
+      }
+      case 'gridNudge': if (song.grid.offset != null) { song.grid.offset = Math.max(0, +(song.grid.offset + Number(el.dataset.d)).toFixed(3)); Store.touch(song); UI.grid(); UI.follow(true); } break;
+      case 'gridBeats': song.grid.beats = song.grid.beats === 4 ? 3 : song.grid.beats === 3 ? 6 : 4; Store.touch(song); UI.grid(); UI.follow(true); break;
+      case 'gridClr': song.grid.offset = null; Store.touch(song); if (Metro.synced) Metro.stop(); UI.grid(); UI.follow(true); break;
+      case 'follow': Store.data.settings.follow = !Store.data.settings.follow; Store.saveSettings(); UI.grid(); UI.follow(true); break;
+      case 'markAdd': { if (!Player.master()) { toast('Zuerst eine Audiodatei laden (Tab «Audio»).'); break; } Dialogs.mark(song, null, Grid.snap(song, Player.time())); break; }
+      case 'markGo': { const m = song.marks.find(x => x.id === el.dataset.id); if (m) { Player.seek(m.t); UI.follow(true); } break; }
+      case 'markLoop': { const m = song.marks.find(x => x.id === el.dataset.id); if (!m) break; const on = song.loop.a === m.t && song.loop.b === Marks.end(song, m);
+        if (on) { song.loop = { a:null, b:null }; Store.touch(song); } else { Marks.loop(song, m); Player.seek(m.t); } UI.loop(); UI.marks(); break; }
+      case 'markEdit': { const m = song.marks.find(x => x.id === el.dataset.id); if (m) Dialogs.mark(song, m, m.t); break; }
       // Stems
       case 'pick': $('#file-' + el.dataset.slot).click(); break;
       case 'stemDel': {
@@ -2211,7 +2308,7 @@ const UI = {
             <button data-act="trFlats" id="bFlats" title="Schreibweise mit ♯ oder ♭" aria-label="Schreibweise Kreuz oder Be umschalten">♯/♭</button>
             <button data-act="trReset" id="bTrReset" class="ghost">Original</button>
           </div>
-          <div class="chordview" id="chordOut"></div>
+          <div class="followinfo" id="followInfo" aria-live="off"></div><div class="chordview" id="chordOut"></div>
           <div class="small muted" id="chordMeta"></div>
           <details><summary>Akkorde bearbeiten</summary>
             <textarea id="chordsIn" class="mono" spellcheck="false" placeholder="[Intro]&#10;| A7 | D7 | A7 | A7 |&#10;[Strophe]&#10;| A7 | D7 |  (x4)">${esc(s.chords)}</textarea>
@@ -2343,17 +2440,19 @@ const UI = {
               <button data-act="more" id="bMore" aria-label="Tempo und Metronom ein-/ausblenden" aria-expanded="false">Tempo</button>
             </div>
             <div class="loopinfo" id="loopInfo"></div>
+            <div class="marks" id="markBox" aria-label="Abschnitte"></div>
           </div>
           <div class="extra">
             <div class="temporow"><span class="lab">Tempo <b id="rateOut">100 %</b></span><input type="range" id="rate" min="50" max="100" step="5" value="100" aria-label="Tempo in Prozent"></div>
             <div class="temporow"><button data-act="metro" id="bMetro" class="grow">Metronom</button>
               <label class="chk"><input type="checkbox" id="countIn" ${st.countIn ? 'checked' : ''}> Einzähler</label></div>
+            <div class="temporow gridrow" id="gridBox"></div>
           </div>
         </div>
       </div>`;
     const hh = () => { const t = $('#app .top'); if (t) document.documentElement.style.setProperty('--hh', t.offsetHeight + 'px'); };
     hh(); requestAnimationFrame(hh);
-    this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.spotify(); this.suggest(); this.info(); this.transport(); this.sheets();
+    this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.spotify(); this.suggest(); this.info(); this.transport(); this.marks(); this.grid(); this.sheets();
     if (liveSheets(s).length) Sheets.scan(s);
     const bw = $('#bWake'); if (bw) bw.classList.toggle('on', !!App.wake);
     if (App.tab === 'videos') Suggest.run(s, false);
@@ -2370,6 +2469,7 @@ const UI = {
   chords() {
     const s = App.current(), el = $('#chordOut'); if (!s || !el) return;
     el.style.setProperty('--cs', Store.data.settings.chordSize);
+    this._fk = null; setTimeout(() => this.follow(true), 0);
     el.innerHTML = chordsHtml(s) || '<div class="muted small" style="font-family:system-ui,sans-serif">Noch keine Akkorde eingetragen. Geprüfte Akkorde unter «Akkorde bearbeiten» eintragen – Suchlinks und Video-Vorschläge findest du im Tab «Videos».</div>';
     const st = s.transpose || 0;
     $('#trOut').textContent = trLabel(st); $('#bTrReset').disabled = !st && s.flats == null;
@@ -2491,7 +2591,36 @@ const UI = {
   },
   time() { const sk = $('#seek'); if (!sk || Player.seeking) return; const t = Player.time(); sk.value = t; $('#tCur').textContent = fmt(t); },
   rate() { const r = $('#rate'); if (!r) return; r.value = Math.round(Player.rate * 100); const s = App.current(); $('#rateOut').textContent = Math.round(Player.rate * 100) + ' %' + (s && s.bpm ? ' · ' + Math.round(s.bpm * Player.rate) + ' BPM' : ''); },
+  // Abschnitte (Sprungmarken, Loop pro Abschnitt) und Takt-Raster
+  marks() {
+    const s = App.current(), box = $('#markBox'); if (!s || !box) return;
+    const lp = s.loop;
+    setHtml(box, s.marks.map(m => { const on = lp.a === m.t && lp.b === Marks.end(s, m);
+      return `<span class="mk ${on ? 'on' : ''}"><button data-act="markGo" data-id="${esc(m.id)}" title="Zu ${esc(m.name)} springen (${fmt(m.t)})">${esc(m.name)}</button><button data-act="markLoop" data-id="${esc(m.id)}" aria-pressed="${on}" aria-label="${esc(m.name)} in Schleife" title="Abschnitt in Schleife">⟲</button><button data-act="markEdit" data-id="${esc(m.id)}" aria-label="${esc(m.name)} bearbeiten" title="Bearbeiten">✎</button></span>`; }).join('')
+      + '<button class="mkadd" data-act="markAdd" title="Abschnitt an der aktuellen Stelle setzen">+ Abschnitt</button>');
+  },
+  grid() {
+    const s = App.current(), box = $('#gridBox'); if (!s || !box) return;
+    const ok = Grid.ok(s), mb = $('#bMetro');
+    if (mb) { mb.classList.toggle('on', Metro.on); mb.textContent = Metro.on ? (Metro.synced ? 'Metronom (im Songtakt)' : 'Metronom') : 'Metronom'; }
+    setHtml(box, `<span class="lab">Takt-Raster ${ok ? `<b>${s.grid.beats}/4 · 1 bei ${fmt(s.grid.offset)}.${String(Math.round((s.grid.offset % 1) * 100)).padStart(2, '0')}</b>` : '<span class="muted">nicht gesetzt</span>'}</span>
+      <button data-act="gridTap" title="Beim Abspielen auf eine «1» tippen">1 tippen</button>
+      ${ok ? `<button data-act="gridNudge" data-d="-0.02" aria-label="Raster 20 ms früher">◀</button><button data-act="gridNudge" data-d="0.02" aria-label="Raster 20 ms später">▶</button><button data-act="gridBeats" title="Taktart wechseln">${s.grid.beats}/4</button><button class="ghost" data-act="gridClr" aria-label="Takt-Raster entfernen">✕</button>` : ''}
+      <button data-act="follow" class="${Store.data.settings.follow ? 'on' : ''}" aria-pressed="${!!Store.data.settings.follow}" title="Aktuellen Takt im Akkordraster hervorheben">Mitlaufen</button>`);
+  },
+  follow(force) {
+    const s = App.current(), out = $('#chordOut'); if (!s || !out) return;
+    const f = Store.data.settings.follow && Player.master() ? followCell(s, Player.time()) : null, key = f && f.cell ? f.cell.r + ':' + f.cell.c : '';
+    const info = $('#followInfo'); if (info) info.textContent = f ? 'Takt ' + f.bar + (f.sect ? ' · ' + f.sect : '') : '';
+    if (!force && key === this._fk) return; this._fk = key;
+    out.querySelectorAll('.bar.cur').forEach(x => x.classList.remove('cur'));
+    if (!key) return;
+    const el = out.querySelector(`.bar[data-r="${f.cell.r}"][data-c="${f.cell.c}"]`); if (!el) return;
+    el.classList.add('cur');
+    if (Player.playing && App.tab === 'noten') { const r = el.getBoundingClientRect(), top = (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hh')) || 60) + 60, bot = window.innerHeight - 170; if (r.top < top || r.bottom > bot) window.scrollBy({ top:r.top - top - 20, behavior:'smooth' }); }
+  },
   loop() {
+    this.marks();
     const s = App.current(); if (!s || !$('#bA')) return; const { a, b } = s.loop;
     $('#bA').classList.toggle('on', a != null); $('#bB').classList.toggle('on', b != null);
     $('#loopInfo').textContent = a != null || b != null ? 'Loop: A ' + (a != null ? fmt(a) : '–') + '  →  B ' + (b != null ? fmt(b) : 'Ende') : '';
@@ -2538,6 +2667,25 @@ function statusBadge(s) {
 /* ---------- Dialoge ---------- */
 const Dialogs = {
   taps:[],
+  mark(song, m, t) {   // Abschnitt setzen/umbenennen/verschieben/löschen; Namensvorschläge aus dem Akkordblatt
+    const d = $('#dlg'), names = [...new Set([...parseChords(song.chords).filter(r => r.t === 'sect').map(r => r.text), 'Intro', 'Strophe', 'Refrain', 'Bridge', 'Solo', 'Outro'])].slice(0, 12);
+    d.innerHTML = `<form id="markForm" novalidate><h2>${m ? 'Abschnitt bearbeiten' : 'Abschnitt setzen'}</h2>
+      <p class="small muted">Position ${fmt(t)}${Grid.ok(song) ? ' (auf den Takt gerundet)' : ''}${m ? '' : ' – gilt bis zum nächsten Abschnitt.'}</p>
+      <label class="f"><span>Name</span><input type="text" name="name" maxlength="40" value="${esc(m ? m.name : '')}" autocomplete="off" required></label>
+      <div class="row" style="margin-bottom:10px">${names.map(n => `<button type="button" class="chip" data-act="markName" data-n="${esc(n)}">${esc(n)}</button>`).join('')}</div>
+      ${m ? `<div class="row" style="margin-bottom:10px"><button type="button" data-act="markHere">Auf aktuelle Position (${fmt(Player.time())}) setzen</button></div>` : ''}
+      <div class="actions">${m ? '<button type="button" class="danger ghost" data-act="markDel" style="margin-right:auto">Löschen</button>' : ''}
+        <button type="button" data-act="close">Abbrechen</button><button type="submit" class="primary">Speichern</button></div></form>`;
+    const f = $('#markForm'); let pos = t;
+    f.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.act === 'markName') { f.name.value = b.dataset.n; f.name.focus(); }
+      else if (b.dataset.act === 'markHere') { pos = Grid.snap(song, Player.time()); b.textContent = 'Neue Position: ' + fmt(pos); }
+      else if (b.dataset.act === 'markDel') { song.marks = song.marks.filter(x => x !== m); Store.touch(song); d.close(); UI.marks(); } });
+    f.addEventListener('submit', e => { e.preventDefault(); const n = f.name.value.trim(); if (!n) { toast('Bitte einen Namen eingeben.'); return; }
+      if (m) { m.name = n.slice(0, 40); m.t = pos; song.marks.sort((a, b) => a.t - b.t); Store.touch(song); } else Marks.add(song, n, pos);
+      d.close(); UI.marks(); UI.follow(true); });
+    if (!d.open) d.showModal(); if (!m) setTimeout(() => f.name.focus(), 30);
+  },
   listName(l) {   // neue Liste anlegen oder umbenennen
     const d = $('#dlg');
     d.innerHTML = `<form id="listForm" novalidate><h2>${l ? 'Liste umbenennen' : 'Neue Liste'}</h2>

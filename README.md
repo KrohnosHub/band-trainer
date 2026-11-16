@@ -112,6 +112,12 @@ Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): e
 
 ## Änderungslog
 
+### v1.4.0 – Takt-Raster, Abschnitts-Loops, Metronom im Songtakt, mitlaufendes Akkordraster
+- **Takt-Raster** (Player → «Tempo»): Beim Abspielen auf eine «1» tippen («1 tippen»). Das erste Tippen legt Takt 1 fest (am besten die erste «1» des Songs); weiteres Tippen auf irgendeine «1» korrigiert nur die Phase. Feinjustierung ◀ ▶ (20 ms), Taktart 4/4 · 3/4 · 6/4. Grundlage ist die BPM-Angabe des Songs.
+- **Abschnitte:** «+ Abschnitt» setzt an der aktuellen Stelle eine Marke (mit Raster auf den Takt gerundet; Namen aus dem Akkordblatt oder Intro/Strophe/Refrain/…). Antippen springt hin, ⟲ spielt den Abschnitt in Schleife (bis zum nächsten Abschnitt bzw. Songende), ✎ zum Umbenennen, Verschieben, Löschen.
+- **Metronom im Songtakt:** Mit Raster und geladenem Audio klickt das Metronom genau auf den Schlägen des Songs (auch bei reduziertem Tempo), Betonung auf der 1. Ohne Raster wie bisher frei nach BPM.
+- **Mitlaufendes Akkordraster:** Der aktuelle Takt wird im Akkordraster hervorgehoben und bei Bedarf ins Bild gescrollt; Anzeige «Takt n · Abschnitt». Mit Abschnittsmarken wird der passende Abschnitt im Akkordblatt gesucht (auch Strophe = Verse, Refrain = Chorus) – so stimmt es auch, wenn das Blatt jeden Abschnitt nur einmal aufführt. Ohne Marken läuft es linear über die ausgeschriebenen Takte (Wiederholungen mitgezählt). Funktioniert für Akkordzeilen mit Taktstrichen «|»; «Mitlaufen» lässt sich ausschalten.
+
 ### v1.3.1 – Favoriten-Stern korrigiert
 - Ein Favorit zeigte einen farbigen Kasten statt des Sterns (allgemeiner «aktiv»-Knopfstil griff). Jetzt nur noch ein gelber, ausgefüllter Stern ★ – in der Übersicht und in der Song-Ansicht, hell und dunkel.
 
