@@ -141,5 +141,14 @@ module.exports = async () => {
       ok(drive.json('library.json').songs.some(s => s.id === 'seed-11'), 'wiederhergestellter Song wieder in Drive');
       eq(pg.errs, []); await pg.context().close();
     });
+    await test('Automatisch verbunden über die Anmeldung der Gesangs-App (gleicher Ursprung): still, mit Konto-Hinweis, Ordner angelegt; nach Abmelden nicht mehr', async () => {
+      const drive = new FakeDrive();
+      const pg = await open(b, D, { drive, init: () => { localStorage.setItem('gapp_hadlogin', '1'); localStorage.setItem('gapp_hint', 'gesang@example.com'); } });
+      await pg.waitForFunction(() => Cloud.tokenValid() && Cloud.folderId, null, { timeout: 8000 }); await pg.settle();
+      eq(await pg.evaluate(() => [window.__auth.calls[0].prompt, window.__auth.calls[0].hint, /04_Band/.test(document.querySelector('#dlg').innerText)]), ['none', 'gesang@example.com', true], 'nur der einmalige Ordner-Hinweis erscheint');
+      ok(drive.byName('Band-Trainer').length === 1, 'Ordner angelegt');
+      await pg.evaluate(() => Cloud.signOut()); eq(await pg.evaluate(() => Cloud.hadLogin()), false, 'nach Abmelden keine Auto-Verbindung mehr');
+      await pg.context().close();
+    });
   } finally { await b.close(); }
 };

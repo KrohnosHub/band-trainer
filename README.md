@@ -112,6 +112,13 @@ Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): e
 
 ## Änderungslog
 
+### v1.2.1 – Automatisch mit Drive verbunden, Suchfeld ohne Autofill, kompakter am Handy
+- **Drive:** Ist auf demselben Gerät/Browser die Gesangs-App angemeldet, verbindet sich der Band-Trainer jetzt still und automatisch mit demselben Konto (gleicher Ursprung, gleicher OAuth-Client) – ohne Tippen. Das Google-Skript wird immer schon beim Start geladen, damit «Mit Google Drive verbinden» das Fenster direkt im ersten Tipp öffnet (vorher teils vom Popup-Blocker geschluckt → mehrfaches Tippen nötig). Konto-Hinweis aus der Gesangs-App wird mitbenutzt. Nach «Abmelden» im Band-Trainer wird nicht mehr automatisch verbunden.
+- **Suchfeld:** Der Browser hat dort gespeicherte Zugangsdaten (Spotify-Client-ID) eingefüllt, auch nach dem Löschen wieder. Das Suchfeld ist jetzt für Autofill gesperrt (erst beim Antippen beschreibbar, Eingaben ohne Fokus werden ignoriert); das Spotify-Secret-Feld ist kein Passwortfeld mehr, damit der Browser es nicht als Login speichert.
+- **Song-Ansicht:** Die Reiter (Noten, Blätter, Audio, Videos, Info) bleiben beim Scrollen oben sichtbar.
+- **Handy:** Schrift, Knöpfe, Karten und Listeneinträge kompakter (unter 600 px Breite).
+- **Guide-Videos:** Vorschläge getrennt in «Piano / Keyboard» und «Bass», kleinere Vorschaubilder, Titel max. zwei Zeilen, kompakte Knöpfe (Verwerfen als ✕); Spotify-Player in kompakter Höhe.
+
 ### v1.2.0 – Spotify pro Song, Akkorde vorbelegt, «+ Song» gut sichtbar
 - **Spotify:** Jeder Song (auch neu angelegte oder umbenannte) wird automatisch mit dem passenden Spotify-Titel verknüpft – nur wenn Interpret und Titel passen (Abkürzungen wie «CCR», Zusätze wie «Remaster» werden erkannt), sonst bleibt der Song ohne Link. Automatische Treffer sind «Vorschlag» und lassen sich übernehmen, neu suchen oder entfernen. Spotify-Player im Tab «Videos», Badge «Spotify» in der Liste, Link auch von Hand einfügbar.
 - **Zugangsdaten:** Client-Credentials wie in der Gesangs-App. Auf demselben Gerät/Browser werden die dort gespeicherten Spotify-Zugangsdaten mitbenutzt (gleicher Ursprung `krohnoshub.github.io`); sonst unter «Daten & Einstellungen → Spotify» eintragen (nur lokal gespeichert, nie im Code oder in Drive).

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-QSphmpbPcfR9bs7PGVy3JCboUzNeLo/gwd5InEMfjxA=' 'sha256-hZvzXyp4Wj32+zE5VnBuorObvwV4ecAKl3uFqxibar0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-QSphmpbPcfR9bs7PGVy3JCboUzNeLo/gwd5InEMfjxA=' 'sha256-+qDmPMvXt9QlLTngfLfNkxWbzdHH6QwEWGH0AZ8sbHY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -128,7 +128,7 @@ label.chk{display:inline-flex;align-items:center;gap:8px;min-height:var(--tap);c
 .empty{text-align:center;color:var(--muted);padding:36px 10px}
 
 .tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-  padding:4px;margin-bottom:12px}
+  padding:4px;margin-bottom:12px;position:sticky;top:var(--hh,64px);z-index:4;box-shadow:0 6px 10px -8px rgba(0,0,0,.5)}
 .tabs button{flex:1;border:0;background:transparent;border-radius:10px;padding:0 6px;min-width:0}
 .tabs button.on{background:var(--accent);color:var(--accent-fg);font-weight:650}
 
@@ -197,6 +197,23 @@ dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;fl
   .transport .extra{display:block}
   #bMore{display:none}
 }
+/* Handy: kompakter (v1.2.1) */
+@media (max-width:600px){
+  :root{--tap:40px;--radius:12px}
+  body{font-size:14.5px}
+  #app{padding:0 10px calc(20px + env(safe-area-inset-bottom))}
+  h1{font-size:1.12rem} .top{padding:calc(6px + env(safe-area-inset-top)) 0 6px;gap:6px} .top .sub{font-size:.8rem}
+  button,.btn{padding:0 11px;border-radius:10px} button.icon{width:var(--tap)} svg.i{width:19px;height:19px}
+  .addtop{min-height:32px;padding:0 10px}
+  .chips{gap:6px;padding:6px 0} .chip{min-height:32px;padding:0 11px;font-size:.84rem}
+  .card{padding:10px;margin-bottom:9px}
+  .song{padding:8px 11px;min-height:52px;margin-bottom:6px} .song .t{font-size:.95rem} .song .a{font-size:.84rem} .song .m{margin-top:4px;gap:4px}
+  .badge{font-size:.68rem;padding:1px 6px}
+  .tabs{padding:3px;margin-bottom:9px} .tabs button{font-size:.84rem;min-height:34px;padding:0 4px}
+  input[type=text],input[type=search],input[type=url],input[type=number],select,textarea{padding:7px 10px}
+  label.f{margin-bottom:9px}
+  .fab{min-height:44px;padding:0 16px;font-size:.92rem}
+}
 @media (max-width:380px){ .grid2{grid-template-columns:1fr} button{padding:0 12px} }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 /* ----- v1.0.0: Sync-Anzeige, Setlist-Reihenfolge, Transponieren, Vorschläge, Auftrittsmodus ----- */
@@ -216,12 +233,18 @@ li.drag .song{border-color:var(--accent);box-shadow:0 6px 20px rgba(0,0,0,.35)}
 .trrow{margin:0 0 10px;gap:6px}
 .trrow b{min-width:5.2em;text-align:center;font-variant-numeric:tabular-nums}
 .trrow button{min-width:var(--tap);padding:0 12px}
-.sugg{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--border)}
-.sugg:first-child{border-top:0}
-.sugg img{width:96px;aspect-ratio:4/3;object-fit:cover;border-radius:8px;flex:none;background:#000}
-.sugg .ti{font-weight:600;overflow-wrap:anywhere}
-.sugg .row{margin-top:6px}
-.sugg .row button{min-height:40px;padding:0 12px;font-size:.9rem}
+.sugsec{margin-top:10px}
+.sugsec:first-child{margin-top:0}
+.sugsec h4{margin:0 0 2px;font-size:.86rem;display:flex;align-items:center;gap:6px}
+.sugg{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--border)}
+.sugsec h4+.sugg{border-top:0}
+.sugg img{width:72px;aspect-ratio:16/9;object-fit:cover;border-radius:6px;flex:none;background:#000}
+.sugg .ti{font-weight:600;font-size:.86rem;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.sugg .ch{font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sugg .row{margin-top:4px;gap:6px}
+.sugg .row button{min-height:30px;padding:0 9px;font-size:.78rem;border-radius:8px}
+.sugg .badge{font-size:.66rem;padding:1px 6px}
+.yt{max-width:520px}
 .badge.sug{color:var(--accent);border-color:var(--accent)}
 .drv{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.86rem;color:var(--muted)}
 .drv button{min-height:40px;padding:0 12px;font-size:.9rem}
@@ -247,7 +270,8 @@ body.stage-on #app{max-width:none;padding:0}
 .chordview .barrow .bars{flex:1;min-width:0;margin-bottom:0}
 .chordview .rep{flex:none;font-size:.72em;font-weight:700;color:var(--accent);min-width:2.2em;text-align:center;white-space:nowrap}
 .stage .chordview .sect{font-size:.74em;margin-top:.9em}
-.spf iframe{width:100%;height:152px;border:0;border-radius:12px;display:block}
+.spf iframe{width:100%;height:80px;border:0;border-radius:12px;display:block}
+.masked{-webkit-text-security:disc}
 .addtop{min-height:36px;padding:0 12px;font-weight:700}
 .badge.sp{color:#1db954;border-color:#1db954}
 .badge.cs-ok{color:var(--ok);border-color:var(--ok)}
@@ -299,7 +323,7 @@ for (const C of [Map, WeakMap]) {
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 const SCHEMA = 3;
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
@@ -662,7 +686,11 @@ const Cloud = {
 
   /* --- Anmeldung --- */
   tokenValid() { return !!(this.token && Date.now() < this.exp); },
-  hadLogin() { return !!LS.get('hadlogin'); },
+  // Ab v1.2.1: Auf demselben Gerät/Browser zählt auch eine Anmeldung in der Gesangs-App (gleicher Ursprung, gleicher OAuth-Client,
+  // gleicher Scope) – dann verbindet sich der Band-Trainer still und automatisch, ohne Tippen. Nach «Abmelden» hier nicht mehr.
+  gapp(k) { try { return localStorage.getItem('gapp_' + k); } catch (e) { return null; } },
+  hadLogin() { return !!LS.get('hadlogin') || (!LS.get('signedOut') && !!(this.gapp('hadlogin') || this.gapp('folderId'))); },
+  hint() { return LS.get('hint') || (LS.get('signedOut') ? '' : this.gapp('hint')) || ''; },
   canSync() { return isOnline() && this.tokenValid() && this.hadLogin(); },
   isDirty() { return LS.get('dirty') === '1'; },
   loadStoredToken() {
@@ -677,7 +705,7 @@ const Cloud = {
         const w = this.waiters; this.waiters = [];
         if (resp.error || !resp.access_token) { w.forEach(x => x.reject(new Error(resp.error || 'no_token'))); return; }
         this.token = resp.access_token; this.exp = Date.now() + ((Number(resp.expires_in) || 3600) - 60) * 1000;
-        LS.set('token', JSON.stringify({ t:this.token, exp:this.exp })); LS.set('hadlogin', '1'); UI.sync();
+        LS.set('token', JSON.stringify({ t:this.token, exp:this.exp })); LS.set('hadlogin', '1'); LS.del('signedOut'); UI.sync();
         w.forEach(x => x.resolve(this.token));
         this.rememberHint();
       },
@@ -719,14 +747,15 @@ const Cloud = {
   },
   async signIn() {
     if (!isOnline()) { toast('Offline – Anmelden geht erst mit Internet. Die App läuft lokal weiter.'); return false; }
-    await this.loadGsi();
+    if (!this.tokenClient) await this.loadGsi();   // normalerweise schon beim Start geladen → Fenster öffnet direkt im Tipp (kein Popup-Blocker)
     if (!this.tokenClient) { toast('Google-Anmeldung nicht erreichbar. Die App läuft lokal weiter.'); return false; }
-    try { await this.requestToken(); await this.afterSignIn(); return true; }
+    const hint = this.hint();
+    try { await this.requestToken(hint ? { hint } : undefined); await this.afterSignIn(); return true; }
     catch (e) { console.error(e); this.lastError = explainError(e); toast('Anmeldung fehlgeschlagen: ' + this.lastError); UI.sync(); return false; }
   },
   async afterSignIn() { this.lastError = ''; await this.ensureFolder(true); await this.childFolder('Stems', 'stemsFolder', true); UI.sync(); await this.syncAll(true); this.folderHint(); },
   signOut() {
-    const t = this.token; this.dropToken(); LS.del('hadlogin'); LS.del('hint');
+    const t = this.token; this.dropToken(); LS.del('hadlogin'); LS.del('hint'); LS.set('signedOut', '1');
     try { if (t && window.google) google.accounts.oauth2.revoke(t, () => {}); } catch (e) {}
     UI.sync(); toast('Abgemeldet. Deine Daten bleiben auf diesem Gerät und in Drive.');
   },
@@ -737,10 +766,10 @@ const Cloud = {
     if (Date.now() < this.silentFail) return false;
     this.busy = true;
     try {
-      const hint = LS.get('hint');
+      const hint = this.hint();
       await this.requestToken(hint ? { prompt:'none', hint } : { prompt:'none' });
       this.silentFail = 0;
-      try { await this.syncAll(true); } catch (e) {}
+      try { await (this.folderId ? this.syncAll(true) : this.afterSignIn()); } catch (e) {}
       return true;
     } catch (e) { this.silentFail = Date.now() + 120000; return false; }
     finally { this.busy = false; UI.sync(); }
@@ -752,7 +781,8 @@ const Cloud = {
     if (this.tokenValid() && Date.now() < this.exp - 5 * 60000) return;
     if (e.target && e.target.closest && e.target.closest('[data-act="signIn"],[data-act="signOut"],[data-act="sync"]')) return;
     this.busy = true;
-    this.requestToken().then(() => this.syncAll(true))
+    const hint = this.hint();
+    this.requestToken(hint ? { hint } : undefined).then(() => (this.folderId ? this.syncAll(true) : this.afterSignIn()))
       .catch((err) => { this.cooldown = Date.now() + (/popup_closed|access_denied/.test(String(err && err.message)) ? 180000 : 45000); })
       .finally(() => { this.busy = false; UI.sync(); });
   },
@@ -989,7 +1019,7 @@ const Cloud = {
     window.addEventListener('online', () => { UI.sync(); this.loadGsi().then(() => setTimeout(() => { if (this.canSync()) this.syncAll(true); else this.trySilentToken(); }, 800)); });
     window.addEventListener('offline', () => UI.sync());
     setInterval(() => this.trySilentToken(), 60000);
-    if (this.hadLogin()) this.loadGsi().then(() => { if (this.canSync()) this.syncAll(true); else this.trySilentToken(); });
+    this.loadGsi().then(() => { if (!this.hadLogin()) return; if (this.canSync()) (this.folderId ? this.syncAll(true) : this.afterSignIn()).catch(() => {}); else this.trySilentToken(); });   // immer vorladen: «Verbinden» öffnet dann sofort
   }
 };
 
@@ -1708,10 +1738,14 @@ const App = {
     document.addEventListener('change', e => this.onChange(e));
     document.addEventListener('keydown', e => this.onKey(e));
     document.addEventListener('pointerdown', e => this.onDragStart(e));
+    // Suchfeld erst beim Antippen beschreibbar machen – so füllt der Browser dort keine gespeicherten Zugangsdaten ein
+    const unlockQ = e => { const t = e.target; if (t && t.id === 'q' && t.readOnly) t.readOnly = false; };
+    document.addEventListener('pointerdown', unlockQ, true); document.addEventListener('focusin', unlockQ, true);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && this.wakeWanted) this.setWake(true); });
     let lastW = window.innerWidth;
     window.addEventListener('resize', debounce(() => { if (window.innerWidth === lastW) return; lastW = window.innerWidth; const s = this.current(); if (s && !this.stage && !Bass.playing) Bass.render(s); }, 300));
-    window.addEventListener('resize', debounce(() => Viewer.render(), 200));   // Notenblatt an neue Fenstergrösse/Drehung anpassen
+    window.addEventListener('resize', debounce(() => Viewer.render(), 200));
+    window.addEventListener('resize', debounce(() => { const t = $('#app .top'); if (t) document.documentElement.style.setProperty('--hh', t.offsetHeight + 'px'); }, 150));   // Notenblatt an neue Fenstergrösse/Drehung anpassen
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Viewer.flush(); });
     window.addEventListener('pagehide', () => Viewer.flush());
     this.route();
@@ -1948,7 +1982,10 @@ const App = {
   },
   onInput(e) {
     const t = e.target, song = this.current();
-    if (t.id === 'q') { this.query = t.value; UI.listItems(); return; }
+    if (t.id === 'q') {   // Browser-Autofill (z. B. gespeicherte Zugangsdaten) ignorieren: nur Eingaben im fokussierten Feld zählen
+      if (document.activeElement !== t) { t.value = this.query; return; }
+      this.query = t.value; UI.listItems(); return;
+    }
     if (!song || this.stage) return;
     const edit = () => { song.updatedAt = Date.now(); saveSoon(song); };
     if (t.id === 'seek') { Player.seeking = true; $('#tCur').textContent = fmt(Number(t.value)); }
@@ -2024,7 +2061,7 @@ const UI = {
         <button class="icon ghost" data-act="theme" aria-label="Hell/Dunkel umschalten" title="Hell/Dunkel">${ICON.theme}</button>
         <button class="icon ghost" data-act="menu" aria-label="Menü" title="Menü">${ICON.menu}</button>
       </header>
-      <input type="search" id="q" placeholder="Song oder Interpret suchen" value="${esc(App.query)}" aria-label="Suche" autocomplete="off">
+      <input type="search" id="q" name="bt-songsuche" placeholder="Song oder Interpret suchen" value="${esc(App.query)}" aria-label="Suche" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore readonly>
       <div class="chips" role="group" aria-label="Filter" id="chipBox"></div>
       <ul class="songs" id="songList"></ul>
       <button class="fab primary" data-act="add" aria-label="Neuen Song hinzufügen">+ Neuer Song</button>
@@ -2237,6 +2274,8 @@ const UI = {
           </div>
         </div>
       </div>`;
+    const hh = () => { const t = $('#app .top'); if (t) document.documentElement.style.setProperty('--hh', t.offsetHeight + 'px'); };
+    hh(); requestAnimationFrame(hh);
     this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.spotify(); this.suggest(); this.info(); this.transport(); this.sheets();
     if (liveSheets(s).length) Sheets.scan(s);
     const bw = $('#bWake'); if (bw) bw.classList.toggle('on', !!App.wake);
@@ -2342,13 +2381,14 @@ const UI = {
     else if (!Suggest.available()) h = '<p class="small muted">Automatische Vorschläge sind nicht eingerichtet (kein YouTube-API-Schlüssel). Nutze die Suchlinks unten.</p>';
     else {
       const sg = s.suggest, items = sg ? sg.items : [], busy = Suggest.busy.has(s.id), err = Suggest.err[s.id];
-      h = items.map(it => `<div class="sugg">
+      const card = it => `<div class="sugg">
           ${it.thumb ? `<img src="${esc(it.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}
           <div class="grow"><div class="ti">${esc(it.title)}</div>
-            <div class="small muted">${esc(it.channel)}</div>
-            <div><span class="badge sug">Vorschlag</span> <span class="badge">${esc(LINK_KINDS[it.kind])}</span></div>
-            <div class="row"><button data-act="embed" data-url="https://www.youtube.com/watch?v=${esc(it.vid)}">Ansehen</button><button class="primary" data-act="sugAccept" data-vid="${esc(it.vid)}">Übernehmen</button><button class="ghost" data-act="sugDismiss" data-vid="${esc(it.vid)}">Verwerfen</button></div>
-          </div></div>`).join('');
+            <div class="ch">${esc(it.channel)} <span class="badge sug">Vorschlag</span></div>
+            <div class="row"><button data-act="embed" data-url="https://www.youtube.com/watch?v=${esc(it.vid)}">Ansehen</button><button class="primary" data-act="sugAccept" data-vid="${esc(it.vid)}">Übernehmen</button><button class="ghost" data-act="sugDismiss" data-vid="${esc(it.vid)}" aria-label="Verwerfen">✕</button></div>
+          </div></div>`;
+      h = [['keys', 'Piano / Keyboard'], ['bass', 'Bass']].map(([k, l]) => { const its = items.filter(it => it.kind === k);
+        return its.length ? `<div class="sugsec"><h4>${l}</h4>${its.map(card).join('')}</div>` : ''; }).join('');
       if (busy) h += '<p class="small muted">Suche auf YouTube …</p>';
       else if (err) h += `<p class="small" style="color:var(--warn)">Vorschläge nicht verfügbar: ${esc(err)} Die Suchlinks unten funktionieren weiterhin.</p>`;
       else if (!sg || !sg.at) h += `<p class="small muted">${isOnline() ? 'Noch keine Vorschläge geladen.' : 'Offline – Vorschläge gibt es erst mit Internet.'}</p>`;
@@ -2519,7 +2559,7 @@ const Dialogs = {
       <h3 style="margin-top:14px">Spotify</h3>
       <p class="small muted">Für die automatische Spotify-Verknüpfung. ${Spotify.available() ? 'Zugangsdaten vorhanden' + (LS.get('sp_secret') ? ' (hier gespeichert).' : ' (aus der Gesangs-App übernommen).') : 'Keine Zugangsdaten auf diesem Gerät.'} Werden nur lokal in diesem Browser gespeichert – nicht im Code, nicht in Drive. Anlegen unter developer.spotify.com → Dashboard → App.</p>
       <div class="grid2"><label class="f"><span>Client-ID</span><input type="text" id="spIdIn" autocomplete="off" value="${esc(LS.get('sp_id') || '')}" placeholder="leer = Standard"></label>
-        <label class="f"><span>Client-Secret</span><input type="password" id="spSecIn" autocomplete="off" value="${esc(LS.get('sp_secret') || '')}" placeholder="${Spotify.available() && !LS.get('sp_secret') ? 'aus Gesangs-App' : ''}"></label></div>
+        <label class="f"><span>Client-Secret</span><input type="text" id="spSecIn" class="masked" name="bt-sp-secret" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore" value="${esc(LS.get('sp_secret') || '')}" placeholder="${Spotify.available() && !LS.get('sp_secret') ? 'aus Gesangs-App' : ''}"></label></div>
       <div class="row" style="margin-bottom:8px"><button data-act="spSave">Spotify-Zugangsdaten speichern</button></div>
       <h3 style="margin-top:14px">Hinweise</h3>
       <p class="small muted">Keine Songtexte oder vollständigen Transkriptionen Dritter veröffentlichen. Eigene Notizen für den Proberaum sind in Ordnung; Audiodateien bleiben auf dem Gerät bzw. in deinem privaten Drive.</p>
