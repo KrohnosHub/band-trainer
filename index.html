@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com https://apis.google.com 'sha256-ysbSSgPNLHl7WTosSm8j7CcJIEMPX5fgTlZZv7pHwLg=' 'sha256-HLDp8i2pU4nKbJlG2HSTWlv1P9PiRlC8IjGJ4DahjnM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta name="theme-color" content="#121416">
+<meta name="color-scheme" content="dark light">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Band-Trainer</title>
+
+<!-- ============================================================
+     KONFIGURATION
+     ============================================================ -->
+<script>
+  try { const d = JSON.parse(localStorage.getItem('bandtrainer.data.v1') || 'null'); if (d && d.settings && d.settings.theme === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) {}
+  const CONFIG = {
+    // Google Cloud Console → APIs & Dienste → Anmeldedaten → OAuth-Client-ID (Typ «Webanwendung»).
+    // Gleicher Client wie die Gesangs-App; JavaScript-Ursprung https://krohnoshub.github.io ist dort autorisiert.
+    CLIENT_ID: '159994249880-flb4nhh2aq51tspov0d7nv787hir84e5.apps.googleusercontent.com',
+    // Name des Drive-Ordners (wird beim ersten Anmelden gesucht bzw. angelegt; darf danach in Drive verschoben werden)
+    FOLDER_NAME: 'Band-Trainer',
+    // Minimaler Scope: die App sieht und verwaltet nur Dateien, die sie selbst angelegt hat
+    SCOPE: 'https://www.googleapis.com/auth/drive.file',
+    // YouTube Data API v3 (gleiches Cloud-Projekt wie CLIENT_ID) – für die automatischen Guide-Video-Vorschläge.
+    // Leer lassen = nur Suchlinks.
+    YOUTUBE_API_KEY: 'AIzaSyDVKIU06mW-j999tc-94y18TXSlvlgQ4No'
+  };
+  // Für automatisierte Tests: einzelne Werte ohne Codeänderung überschreiben.
+  if (window.__TEST_CFG) Object.assign(CONFIG, window.__TEST_CFG);
+</script>
+<style>
+:root{
+  --bg:#121416; --surface:#1b1e22; --surface2:#262a30; --border:#343a41;
+  --fg:#ebe8e2; --muted:#9aa1a8; --accent:#e3a63c; --accent-fg:#1b1403;
+  --danger:#e57563; --ok:#74c08f; --warn:#e3a63c;
+  --radius:14px; --tap:48px;
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --bg:#f4f2ec; --surface:#ffffff; --surface2:#ebe8e0; --border:#d6d2c8;
+  --fg:#1c1e21; --muted:#5f656c; --accent:#9a5f00; --accent-fg:#ffffff;
+  --danger:#b3402f; --ok:#2f7d4c; --warn:#9a5f00;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-tap-highlight-color:transparent}
+#app{max-width:980px;margin:0 auto;padding:0 14px calc(24px + env(safe-area-inset-bottom))}
+h1{font-size:1.35rem;margin:0;letter-spacing:.01em}
+h2{font-size:1.05rem;margin:0 0 10px}
+h3{font-size:.8rem;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+p{margin:0 0 10px}
+a{color:var(--accent)}
+.muted{color:var(--muted)} .small{font-size:.86rem}
+.hidden{display:none!important}
+
+button,.btn{font:inherit;color:var(--fg);background:var(--surface2);border:1px solid var(--border);
+  border-radius:12px;min-height:var(--tap);padding:0 16px;cursor:pointer;display:inline-flex;
+  align-items:center;justify-content:center;gap:8px;text-decoration:none;white-space:nowrap;
+  touch-action:manipulation;user-select:none}
+button:active,.btn:active{transform:translateY(1px)}
+button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{
+  outline:2px solid var(--accent);outline-offset:2px}
+button.primary,.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent;font-weight:650}
+button.ghost{background:transparent}
+button.danger{color:var(--danger)}
+button.on{background:var(--accent);color:var(--accent-fg);border-color:transparent}
+button.icon{padding:0;width:var(--tap)}
+button:disabled{opacity:.45;cursor:not-allowed}
+svg.i{width:22px;height:22px;fill:currentColor;flex:none}
+
+input[type=text],input[type=search],input[type=url],input[type=number],select,textarea{
+  font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--border);border-radius:12px;
+  min-height:var(--tap);padding:10px 12px;width:100%}
+textarea{min-height:120px;resize:vertical;line-height:1.4}
+textarea.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.95rem}
+input[type=range]{width:100%;accent-color:var(--accent);height:32px;margin:0}
+input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent)}
+label.f{display:block;margin-bottom:12px}
+label.f>span{display:block;font-size:.84rem;color:var(--muted);margin-bottom:4px}
+label.chk{display:inline-flex;align-items:center;gap:8px;min-height:var(--tap);cursor:pointer}
+
+.top{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top)) 0 10px;
+  display:flex;align-items:center;gap:10px}
+.top .grow{flex:1;min-width:0}
+.top .sub{color:var(--muted);font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row.nowrap{flex-wrap:nowrap}
+.grow{flex:1;min-width:0}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{border-radius:999px;min-height:40px;padding:0 14px;font-size:.92rem}
+.badge{display:inline-block;font-size:.74rem;padding:2px 8px;border-radius:999px;border:1px solid var(--border);
+  color:var(--muted);white-space:nowrap;vertical-align:middle}
+.badge.setlist{color:var(--ok);border-color:var(--ok)}
+.badge.todo{color:var(--muted)}
+.badge.warn{color:var(--warn);border-color:var(--warn)}
+.badge.demo{color:var(--accent);border-color:var(--accent)}
+
+.songs{list-style:none;margin:0;padding:0}
+.song{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;min-height:64px;height:auto;white-space:normal}
+.song .t{font-weight:650;font-size:1.03rem}
+.song .a{color:var(--muted);font-size:.92rem}
+.song .m{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.song .l{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;width:100%}
+.song>div{width:100%}
+.empty{text-align:center;color:var(--muted);padding:36px 10px}
+
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:4px;margin-bottom:12px}
+.tabs button{flex:1;border:0;background:transparent;border-radius:10px;padding:0 6px;min-width:0}
+.tabs button.on{background:var(--accent);color:var(--accent-fg);font-weight:650}
+
+.chordview{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:calc(1.15rem * var(--cs,1));line-height:1.25}
+.chordview .sect{font-family:system-ui,sans-serif;font-size:.6em;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:14px 0 6px}
+.chordview .sect:first-child{margin-top:0}
+.chordview .bars{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px}
+.chordview .bar{background:var(--surface2);border-radius:10px;padding:.55em .3em;text-align:center;font-weight:650;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#abcOut{background:#fff;color:#111;border-radius:10px;padding:6px;min-height:60px;overflow:hidden}
+:root:not([data-theme="light"]) #abcOut{background:#e9e6df}
+#abcWarn{color:var(--warn);font-size:.86rem;margin-top:6px;white-space:pre-wrap}
+details.help{margin-top:10px}
+details>summary{cursor:pointer;min-height:var(--tap);display:flex;align-items:center;color:var(--accent);font-weight:600}
+pre{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;overflow:auto;font-size:.86rem;margin:6px 0 10px}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+table.kv{border-collapse:collapse;width:100%;font-size:.9rem}
+table.kv td{padding:4px 8px 4px 0;vertical-align:top;border-bottom:1px solid var(--border)}
+table.kv td:first-child{white-space:nowrap;font-family:ui-monospace,Menlo,Consolas,monospace}
+
+.stem{display:grid;grid-template-columns:1fr auto;gap:8px 10px;align-items:center;padding:12px 0;border-top:1px solid var(--border)}
+.stem:first-of-type{border-top:0;padding-top:0}
+.stem .fn{font-size:.88rem;color:var(--muted);overflow-wrap:anywhere}
+.stem .ctl{grid-column:1/-1;display:flex;gap:8px;align-items:center}
+.stem input[type=file]{display:none}
+
+.yt{position:relative;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;margin:10px 0}
+.yt iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.link{display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--border)}
+.link:first-child{border-top:0}
+.link .grow div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.searchgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.searchgrid .btn{justify-content:flex-start;white-space:normal;text-align:left;padding:8px 14px}
+
+.transport{position:sticky;bottom:0;z-index:6;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius) var(--radius) 0 0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+  margin:16px -6px 0;box-shadow:0 -8px 24px rgba(0,0,0,.25)}
+.transport .seekrow{display:flex;align-items:center;gap:10px;font-variant-numeric:tabular-nums;font-size:.9rem}
+.transport .seekrow span{min-width:38px;text-align:center}
+.transport .btnrow{display:flex;gap:6px;align-items:center;margin-top:6px}
+.transport .btnrow button{flex:1;padding:0 4px;min-width:0;font-size:.9rem}
+.transport .btnrow #bMore{flex:1.5}
+.transport .btnrow .play{flex:1.4;min-height:56px}
+.transport .temporow{display:flex;gap:10px;align-items:center;margin-top:6px;font-size:.9rem}
+.transport .temporow .lab{white-space:nowrap;flex:none;min-width:150px;font-variant-numeric:tabular-nums}
+.transport .extra{display:none}
+.transport.open .extra{display:block}
+.loopinfo{font-size:.8rem;color:var(--muted);text-align:center;margin-top:4px;min-height:1.1em}
+
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));
+  border-radius:999px;min-height:56px;padding:0 22px;box-shadow:0 6px 20px rgba(0,0,0,.35);z-index:7}
+dialog{background:var(--surface);color:var(--fg);border:1px solid var(--border);border-radius:18px;
+  padding:18px;width:min(560px,calc(100vw - 24px));max-height:calc(100dvh - 24px)}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+#toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%);
+  background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.92rem;z-index:20;
+  max-width:calc(100vw - 32px);opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+.notice{border-left:3px solid var(--warn);padding:8px 12px;background:var(--surface2);border-radius:0 10px 10px 0;margin-bottom:12px;font-size:.92rem}
+
+@media (min-width:760px){
+  .chordview{font-size:calc(1.4rem * var(--cs,1))}
+  .transport .rows{display:grid;grid-template-columns:1.2fr 1fr;gap:0 18px;align-items:center}
+  .transport .extra{display:block}
+  #bMore{display:none}
+}
+@media (max-width:380px){ .grid2{grid-template-columns:1fr} button{padding:0 12px} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* ----- v1.0.0: Sync-Anzeige, Setlist-Reihenfolge, Transponieren, Vorschläge, Auftrittsmodus ----- */
+.syncchip{min-height:36px;padding:0 10px;font-size:.8rem;border-radius:999px;color:var(--muted);flex:none}
+.syncchip.ok{color:var(--ok);border-color:var(--ok)}
+.syncchip.warn{color:var(--warn);border-color:var(--warn)}
+.syncchip.err{color:var(--danger);border-color:var(--danger)}
+.chips{flex-wrap:wrap;overflow:visible}
+.chips .sep{flex:1;min-width:0}
+.song.re{display:flex;align-items:center;gap:8px;padding:6px 8px;min-height:60px;cursor:default}
+.song.re .pos{min-width:1.8em;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.song.re .handle{touch-action:none;cursor:grab;font-size:1.3rem;flex:none}
+.song.re button{flex:none}
+li.drag{opacity:.75;position:relative;z-index:3}
+li.drag .song{border-color:var(--accent);box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.song .n{color:var(--muted);font-variant-numeric:tabular-nums;margin-right:6px}
+.trrow{margin:0 0 10px;gap:6px}
+.trrow b{min-width:5.2em;text-align:center;font-variant-numeric:tabular-nums}
+.trrow button{min-width:var(--tap);padding:0 12px}
+.sugg{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--border)}
+.sugg:first-child{border-top:0}
+.sugg img{width:96px;aspect-ratio:4/3;object-fit:cover;border-radius:8px;flex:none;background:#000}
+.sugg .ti{font-weight:600;overflow-wrap:anywhere}
+.sugg .row{margin-top:6px}
+.sugg .row button{min-height:40px;padding:0 12px;font-size:.9rem}
+.badge.sug{color:var(--accent);border-color:var(--accent)}
+.drv{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.86rem;color:var(--muted)}
+.drv button{min-height:40px;padding:0 12px;font-size:.9rem}
+.drv .okc{color:var(--ok)}
+dialog .scroll{max-height:40vh;overflow:auto}
+body.stage-on #app{max-width:none;padding:0}
+.stage{min-height:100dvh;display:flex;flex-direction:column;padding:calc(8px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));touch-action:pan-y}
+.stage .shead{display:flex;align-items:center;gap:8px}
+.stage .shead h1{font-size:1.5rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stage .shead button{min-width:var(--tap);padding:0 10px;flex:none}
+.stage .ssub{color:var(--muted);font-size:.95rem;margin-top:4px}
+.stage .spos{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.stage .sbody{flex:1;padding:12px 0;overflow:auto}
+.stage .chordview{font-size:calc(1.9rem * var(--cs,1))}
+.stage .snotes{white-space:pre-wrap;color:var(--muted);margin-top:14px;font-size:1rem}
+.stage .snav{display:flex;gap:8px}
+.stage .snav button{flex:1;min-height:60px;white-space:normal;line-height:1.2;overflow:hidden}
+.stage .snav .nx{flex:2}
+@media (min-width:760px){ .stage .chordview{font-size:calc(2.6rem * var(--cs,1))} .stage .shead h1{font-size:1.9rem} }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<dialog id="dlg"></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- abcjs (Notensatz + Synth) liegt lokal im Repo: Voraussetzung für den Offline-Start. -->
+<script src="vendor/abcjs-basic-min.js"></script>
+<script>
+'use strict';
+/* =====================================================================
+   Band-Trainer – Übungs-PWA für Keyboard (Akkorde rechts, Bass links)
+   Aufbau analog zur Gesangs-App: eine Datei, GitHub Pages, offline-first
+   (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
+   Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
+   ===================================================================== */
+const APP_VERSION = '1.0.0';
+const SCHEMA = 2;
+const LS_KEY = 'bandtrainer.data.v1';
+const ABCJS_VERSION = '6.7.2';
+const TOMB_TTL = 180 * 864e5;           // Löschmarken (Tombstones) bleiben 180 Tage
+const BK_KEEP = 14;                     // so viele Tages-Sicherungen bleiben in Drive
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+const SLOTS = [
+  { id:'original', label:'Original', hint:'Ganzer Song, z.B. deine gekaufte MP3' },
+  { id:'bass',     label:'Bass-Stem', hint:'Nur der Bass – zum Raushören der Bassline' },
+  { id:'nobass',   label:'Ohne Bass', hint:'Playback ohne Bass – du spielst ihn mit links' }
+];
+const LINK_KINDS = { keys:'Keyboard-Guide', bass:'Bass-Guide', tabs:'Tabs / Noten', other:'Sonstiges' };
+
+/* Vorbefüllte Songliste (Titel und Interpreten von dir bestätigt). Bewusst OHNE Tonarten, Akkorde, Basslines oder Video-IDs –
+   diese Angaben werden nicht aus dem Gedächtnis eingetragen, sondern vom Nutzer geprüft ergänzt. */
+const SEED = [
+  ['Blackwater Swagger','Blackwater Conspiracy',85,'setlist'],
+  ['Free Fallin','Tom Petty',84,'setlist'],
+  ['Hard to Handle','Black Crowes',104,'setlist'],
+  ['Highway To Hell','AC/DC',null,'setlist'],
+  ['Hotel California','Eagles',null,'setlist'],
+  ['Light that Torch','Beverly Jo Scott',89,'setlist'],
+  ['Mountain Mama','Gotthard',119,'setlist'],
+  ['Three Chords','Goodbye June',132,'setlist'],
+  ['Waiting for the Thunder','Blackberry Smoke',144,'setlist'],
+  ['What You Give','Tesla',74,'setlist'],
+  ['What\'s Up','4 Non Blondes',66,'setlist'],
+  ['Wicked Game','Chris Isaak',117,'setlist'],
+  ['Have You Ever Seen the Rain','CCR',null,'todo'],
+  ['Heroes','David Bowie',null,'todo'],
+  ['Imagine','John Lennon',null,'todo'],
+  ['I\'m a Believer','The Monkees',null,'todo'],
+  ['Old Time Rock N Roll','Bob Seger',null,'todo'],
+  ['Purple Rain','Prince',null,'todo'],
+  ['Sweet Child o\' Mine','Guns N\' Roses',null,'todo'],
+  ['Times Like These','Foo Fighters',null,'todo'],
+  ['Tuesday\'s Gone','Lynyrd Skynyrd',null,'todo'],
+  ['Valerie','The Zutons',null,'todo'],
+  ['Wanted Dead or Alive','Bon Jovi',null,'todo']
+];
+
+/* Eigenes, generisches Demo-Beispiel (kein echter Song): Standard-Blues-Schema, Bass Grundton–Quinte. */
+const DEMO_CHORDS = 'Demo – 12-Takt-Blues\n| A7 | A7 | A7 | A7 |\n| D7 | D7 | A7 | A7 |\n| E7 | D7 | A7 | E7 |';
+const DEMO_ABC = [
+  'X:1',
+  'T:Demo: Blues in A',
+  'M:4/4',
+  'L:1/4',
+  'Q:1/4=100',
+  'K:A clef=bass',
+  '"A7" A,,2 E,2 | A,,2 E,2 | A,,2 E,2 | A,,2 E,2 |',
+  '"D7" D,2 A,,2 | D,2 A,,2 | "A7" A,,2 E,2 | A,,2 E,2 |',
+  '"E7" E,,2 B,,2 | "D7" D,2 A,,2 | "A7" A,,2 E,2 | "E7" E,,2 B,,2 |]'
+].join('\n');
+
+/* ---------- Helfer ---------- */
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const fmt = t => { if (!isFinite(t)) return '–:––'; t = Math.max(0, t); return Math.floor(t/60) + ':' + String(Math.floor(t%60)).padStart(2,'0'); };
+const safeUrl = u => { try { const x = new URL(String(u).trim()); return (x.protocol === 'https:' || x.protocol === 'http:') ? x.href : null; } catch { return null; } };
+const debounce = (fn, ms=400) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+let toastTimer;
+function toast(msg) { const el = $('#toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2800); }
+
+const ICON = {
+  play:'<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>',
+  pause:'<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="4" width="4.5" height="16" rx="1"/><rect x="14" y="4" width="4.5" height="16" rx="1"/></svg>',
+  back:'<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 4.5 8 12l7.5 7.5-1.6 1.6L4.8 12l9.1-9.1z"/></svg>',
+  menu:'<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
+  theme:'<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18V3z"/><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>'
+};
+
+/* ---------- Datenmodell & lokale Speicherung ---------- */
+const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+const DEF_SETTINGS = { theme:'dark', chordSize:1, stageSize:1, countIn:false };
+const defMix = () => ({ original:{on:true,vol:1}, bass:{on:false,vol:1}, nobass:{on:false,vol:1} });
+function newSong(p = {}) {
+  return Object.assign({
+    id: uid(), title:'', artist:'', bpm:null, key:'', status:'todo', notes:'',
+    uncertain:'',            // Hinweistext, wenn Angaben unsicher sind
+    chords:'',               // Akkordzeilen rechte Hand, Textformat "| A7 | D7 |"
+    bassAbc:'',              // Bassline linke Hand, ABC-Notation
+    transpose:0, flats:null, // Anzeige transponieren (Halbtöne); Schreibweise ♯/♭ (null = automatisch)
+    order:null,              // Position in der Setlist
+    youtubeUrl:'',           // Referenzvideo (von dir eingefügt)
+    links:[],                // [{id,label,url,kind}]
+    suggest:null,            // YouTube-Vorschläge {at, items:[{vid,title,channel,thumb,kind}], dismissed:[vid]}
+    stems:{},                // Metadaten {slot:{name,size,type,u,driveId?}|{deleted,u}}; Audiodaten liegen in IndexedDB
+    mix:defMix(),
+    loop:{ a:null, b:null },
+    isDemo:false, updatedAt: Date.now()
+  }, p);
+}
+/* Daten aus Import/Drive nie ungeprüft übernehmen: Typen und Längen begrenzen, nur http(s)-Links. */
+function cleanSong(r) {
+  const str = (v, max = 20000) => typeof v === 'string' ? v.slice(0, max) : '';
+  const num = v => typeof v === 'number' && isFinite(v) ? v : null;
+  const vidOk = v => typeof v === 'string' && /^[\w-]{11}$/.test(v);
+  const stems = {};
+  if (r.stems && typeof r.stems === 'object') for (const sl of SLOTS) {
+    const m = r.stems[sl.id]; if (!m || typeof m !== 'object') continue;
+    if (m.deleted) { stems[sl.id] = { deleted:true, u:num(m.u) || 0 }; continue; }
+    if (typeof m.name !== 'string') continue;
+    stems[sl.id] = { name:str(m.name, 300), size:num(m.size) || 0, type:str(m.type, 100), u:num(m.u) || 0 };
+    if (typeof m.driveId === 'string' && /^[\w-]{5,200}$/.test(m.driveId)) stems[sl.id].driveId = m.driveId;
+  }
+  const mix = defMix();
+  if (r.mix && typeof r.mix === 'object') for (const sl of SLOTS) { const m = r.mix[sl.id]; if (m && typeof m === 'object') mix[sl.id] = { on:!!m.on, vol:Math.min(1, Math.max(0, num(m.vol) == null ? 1 : m.vol)) }; }
+  let suggest = null;
+  if (r.suggest && typeof r.suggest === 'object') suggest = {
+    at: num(r.suggest.at) || 0,
+    items: (Array.isArray(r.suggest.items) ? r.suggest.items : []).filter(x => x && vidOk(x.vid)).slice(0, 12).map(x => ({ vid:x.vid, title:str(x.title, 300), channel:str(x.channel, 200), thumb:/^https:\/\/i\.ytimg\.com\//.test(x.thumb) ? str(x.thumb, 300) : '', kind:x.kind === 'bass' ? 'bass' : 'keys' })),
+    dismissed: (Array.isArray(r.suggest.dismissed) ? r.suggest.dismissed : []).filter(vidOk).slice(-200)
+  };
+  const bpm = num(r.bpm), tr = num(r.transpose);
+  return newSong({
+    id: str(r.id, 80) || uid(), title:str(r.title, 300), artist:str(r.artist, 300),
+    bpm: bpm != null && bpm >= 30 && bpm <= 260 ? Math.round(bpm) : null, key:str(r.key, 20),
+    status: ['setlist', 'todo', 'demo'].includes(r.status) ? r.status : 'todo',
+    notes:str(r.notes), uncertain:str(r.uncertain, 500), chords:str(r.chords), bassAbc:str(r.bassAbc, 60000),
+    transpose: tr != null ? Math.max(-11, Math.min(11, Math.round(tr))) : 0, flats: r.flats === true || r.flats === false ? r.flats : null,
+    order: num(r.order), youtubeUrl:str(r.youtubeUrl, 500),
+    links: (Array.isArray(r.links) ? r.links : []).filter(l => l && safeUrl(l.url)).slice(0, 100).map(l => ({ id:str(l.id, 40) || uid(), label:str(l.label, 300), url:safeUrl(l.url), kind:hasOwn(LINK_KINDS, l.kind) ? l.kind : 'other' })),
+    suggest, stems, mix,
+    loop: { a: r.loop && num(r.loop.a), b: r.loop && num(r.loop.b) },
+    isDemo: !!r.isDemo, updatedAt: num(r.updatedAt) || 0
+  });
+}
+function cleanData(raw) {
+  raw = raw && typeof raw === 'object' ? raw : {};
+  const deleted = {};
+  if (raw.deleted && typeof raw.deleted === 'object') for (const [id, t] of Object.entries(raw.deleted)) if (typeof t === 'number' && isFinite(t) && !UNSAFE_KEYS.has(id)) deleted[id] = t;
+  const st = raw.settings && typeof raw.settings === 'object' ? raw.settings : {};
+  const size = v => typeof v === 'number' && isFinite(v) ? Math.min(2.4, Math.max(0.6, v)) : 1;
+  return {
+    songs: (Array.isArray(raw.songs) ? raw.songs : []).filter(s => s && typeof s === 'object' && typeof s.id === 'string' && !UNSAFE_KEYS.has(s.id) && typeof s.title === 'string' && s.title.trim()).map(cleanSong),
+    deleted,
+    settings: { theme: st.theme === 'light' ? 'light' : 'dark', chordSize:size(st.chordSize), stageSize:size(st.stageSize), countIn:!!st.countIn },
+    settingsAt: typeof raw.settingsAt === 'number' && isFinite(raw.settingsAt) ? raw.settingsAt : 0
+  };
+}
+function seedData() {
+  // updatedAt 0: vorbefüllte Einträge sind auf jedem Gerät gleich alt – jede echte Änderung gewinnt beim Abgleich.
+  let n = 0;
+  const songs = SEED.map((s, i) => newSong({ id:'seed-' + String(i+1).padStart(2,'0'), title:s[0], artist:s[1], bpm:s[2], status:s[3], order:s[3] === 'setlist' ? n++ : null, updatedAt:0 }));
+  songs.push(newSong({ id:'demo-blues', title:'Demo: 12-Takt-Blues in A', artist:'Eigenes Übungsbeispiel (kein echter Song)', bpm:100, key:'A', status:'demo', isDemo:true, updatedAt:0,
+    notes:'Generisches Beispiel, um Akkord- und Bassanzeige zu zeigen. Links: Grundton–Quinte in Halben. Rechts: Dominantseptakkorde.',
+    chords:DEMO_CHORDS, bassAbc:DEMO_ABC }));
+  return { schema:SCHEMA, songs, deleted:{}, settings:Object.assign({}, DEF_SETTINGS), settingsAt:0 };
+}
+
+/* Zusammenführen zweier Stände (lokal/Drive/Import): pro Song gewinnt das neuere updatedAt,
+   Löschungen sind Löschmarken {id: Zeit} und gewinnen gegen ältere Song-Stände. */
+function mergeStems(x, y) {
+  const out = {};
+  for (const sl of SLOTS) {
+    const a = x && x[sl.id], b = y && y[sl.id]; if (!a && !b) continue;
+    let w = !b ? a : !a ? b : (b.u || 0) > (a.u || 0) ? b : (a.u || 0) > (b.u || 0) ? a : (b.driveId && !a.driveId ? b : a);
+    out[sl.id] = Object.assign({}, w);
+  }
+  return out;
+}
+function mergeData(a, b) {
+  const cutoff = Date.now() - TOMB_TTL, deleted = {};
+  for (const src of [a.deleted, b.deleted]) for (const [id, t] of Object.entries(src || {})) if (t > cutoff && !UNSAFE_KEYS.has(id)) deleted[id] = Math.max(deleted[id] || 0, t);
+  const map = new Map();
+  for (const s of [...(a.songs || []), ...(b.songs || [])]) {
+    const cur = map.get(s.id);
+    if (!cur) { map.set(s.id, s); continue; }
+    const win = (s.updatedAt || 0) > (cur.updatedAt || 0) ? s : cur, other = win === s ? cur : s;
+    const m = JSON.parse(JSON.stringify(win)); m.stems = mergeStems(win.stems, other.stems); map.set(s.id, m);
+  }
+  const songs = [];
+  for (const s of map.values()) {
+    if (deleted[s.id] != null) { if (deleted[s.id] >= (s.updatedAt || 0)) continue; delete deleted[s.id]; }   // nach dem Löschen neu bearbeitet → Song lebt
+    songs.push(s);
+  }
+  songs.sort((p, q) => p.id < q.id ? -1 : p.id > q.id ? 1 : 0);
+  const bNewer = (b.settingsAt || 0) > (a.settingsAt || 0);
+  return { songs, deleted, settings:Object.assign({}, DEF_SETTINGS, bNewer ? b.settings : a.settings), settingsAt:Math.max(a.settingsAt || 0, b.settingsAt || 0) };
+}
+/* Vergleichbare Textform (Schlüssel sortiert) – um zu erkennen, ob sich durch das Zusammenführen etwas geändert hat. */
+const canon = v => JSON.stringify(v, (k, x) => x && typeof x === 'object' && !Array.isArray(x) ? Object.keys(x).sort().reduce((o, kk) => (o[kk] = x[kk], o), {}) : x);
+const canonData = d => canon({ songs:[...d.songs].sort((p, q) => p.id < q.id ? -1 : p.id > q.id ? 1 : 0), deleted:d.deleted || {}, settings:d.settings, settingsAt:d.settingsAt || 0 });
+
+const Store = {
+  data:null,
+  load() {
+    let raw = null;
+    try { const t = localStorage.getItem(LS_KEY); if (t) raw = JSON.parse(t); } catch (e) { console.warn('Lokale Daten nicht lesbar', e); }
+    if (!raw || !Array.isArray(raw.songs)) { this.data = seedData(); this.persist(); return; }
+    const d = cleanData(raw);
+    // Aus dem Prototyp übernommene Daten: bestätigte Titel ohne Prüfhinweis; Setlist-Reihenfolge ergänzen
+    for (const s of d.songs) if ((s.id === 'seed-09' || s.id === 'seed-13') && /in der PDF-Liste abgeschnitten/.test(s.uncertain)) s.uncertain = '';
+    this.data = { schema:SCHEMA, songs:d.songs, deleted:d.deleted, settings:d.settings, settingsAt:d.settingsAt };
+    this.fixOrder(false);
+    if ((raw.schema || 1) < SCHEMA) this.persist();
+  },
+  persist() { try { localStorage.setItem(LS_KEY, JSON.stringify(this.data)); } catch (e) { toast('Speichern fehlgeschlagen (Speicher voll?)'); } },
+  save() { this.persist(); Cloud.markDirty(); },
+  saveSettings() { this.data.settingsAt = Date.now(); this.save(); },
+  get(id) { return this.data.songs.find(s => s.id === id); },
+  touch(song) { song.updatedAt = Date.now(); this.save(); },
+  remove(id) { this.data.songs = this.data.songs.filter(s => s.id !== id); this.data.deleted[id] = Date.now(); this.save(); },
+  setlist() { return this.data.songs.filter(s => s.status === 'setlist').sort((a, b) => ((a.order == null ? 1e9 : a.order) - (b.order == null ? 1e9 : b.order)) || a.title.localeCompare(b.title, 'de')); },
+  fixOrder(touch) {   // Setlist-Songs ohne Position hinten anhängen
+    let max = -1; for (const s of this.data.songs) if (s.status === 'setlist' && s.order != null) max = Math.max(max, s.order);
+    for (const s of this.setlist()) if (s.order == null) { s.order = ++max; if (touch) s.updatedAt = Date.now(); }
+  },
+  reorder(ids) {      // neue Setlist-Reihenfolge; nur verschobene Songs gelten als geändert
+    const now = Date.now(); let changed = false;
+    ids.map(id => this.get(id)).filter(Boolean).forEach((s, i) => { if (s.order !== i) { s.order = i; s.updatedAt = now; changed = true; } });
+    if (changed) this.save();
+  },
+  snapshot() { return { songs:this.data.songs, deleted:this.data.deleted, settings:this.data.settings, settingsAt:this.data.settingsAt }; },
+  apply(m) {          // zusammengeführten Stand übernehmen; bestehende Song-Objekte bleiben dieselben (Player/Editor halten Referenzen)
+    const byId = new Map(this.data.songs.map(s => [s.id, s]));
+    this.data.songs = m.songs.map(n => { const cur = byId.get(n.id); if (!cur) return cleanSong(n); if (canon(cur) !== canon(n)) { for (const k of Object.keys(cur)) delete cur[k]; Object.assign(cur, cleanSong(n)); } return cur; });
+    this.data.deleted = m.deleted; this.data.settings = Object.assign({}, DEF_SETTINGS, m.settings); this.data.settingsAt = m.settingsAt || 0;
+    this.persist();
+  },
+  payload() { return { app:'band-trainer', schema:SCHEMA, v:APP_VERSION, savedAt:new Date().toISOString(), songs:this.data.songs, deleted:this.data.deleted, settings:this.data.settings, settingsAt:this.data.settingsAt }; }
+};
+
+/* Audiodateien (Stems) in IndexedDB – bleiben nur auf diesem Gerät. */
+const IDB = {
+  _db:null,
+  open() {
+    if (this._db) return Promise.resolve(this._db);
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('bandtrainer', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('stems');
+      r.onsuccess = () => { this._db = r.result; res(this._db); };
+      r.onerror = () => rej(r.error);
+    });
+  },
+  async _req(mode, fn) {
+    const db = await this.open();
+    return new Promise((res, rej) => {
+      const tx = db.transaction('stems', mode); const rq = fn(tx.objectStore('stems'));
+      tx.oncomplete = () => res(rq && rq.result); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+    });
+  },
+  get(key) { return this._req('readonly', s => s.get(key)); },
+  put(key, val) { return this._req('readwrite', s => s.put(val, key)); },
+  del(key) { return this._req('readwrite', s => s.delete(key)); }
+};
+const stemKey = (songId, slot) => songId + ':' + slot;
+
+/* ---------- Google Drive: Anmeldung, Ordner, Abgleich, Stems, Sicherungen ----------
+   Muster aus der Gesangs-App: Google Identity Services (Token-Client, rein clientseitig), Scope drive.file.
+   Das Token gilt ca. 1 Stunde; erneuert wird still im Hintergrund bzw. beim nächsten Tipp.
+   Ohne Anmeldung/Netz bleibt die App voll nutzbar; Änderungen werden gemerkt und später abgeglichen. */
+const LS = {
+  get(k) { try { return localStorage.getItem('bt_' + k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem('bt_' + k, String(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem('bt_' + k); } catch (e) {} }
+};
+const DRIVE_FILES = 'https://www.googleapis.com/drive/v3/files';
+const DRIVE_UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
+const FOLDER_MIME = 'application/vnd.google-apps.folder';
+const isOnline = () => navigator.onLine !== false;
+const escQ = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+function explainError(e) {
+  const m = String((e && e.message) || e);
+  if (/accessNotConfigured|SERVICE_DISABLED|has not been used|is disabled/i.test(m)) return 'Die benötigte Google-API ist im Cloud-Projekt nicht aktiviert (Cloud Console → APIs & Dienste → Bibliothek).';
+  if (/access_denied/.test(m)) return 'Zugriff verweigert: Im Google-Fenster abgebrochen, Drive-Zugriff nicht erlaubt oder dein Konto ist für diese App nicht als Testnutzer freigeschaltet.';
+  if (/popup_closed|popup_failed/.test(m)) return 'Das Anmelde-Fenster wurde geschlossen oder vom Browser blockiert.';
+  if (/unauthorized/.test(m)) return 'Sitzung abgelaufen – bitte anmelden.';
+  if (/^offline$/.test(m)) return 'Keine Internetverbindung.';
+  if (/insufficientPermissions|insufficient/i.test(m)) return 'Fehlende Berechtigung – bitte neu anmelden und den Zugriff auf Drive erlauben.';
+  return m;
+}
+const Cloud = {
+  tokenClient:null, token:null, exp:0, waiters:[], busy:false, cooldown:0, silentFail:0,
+  folderId:LS.get('folderId'), syncing:0, dirtySeq:0, lastRun:0, lastError:'', chain:Promise.resolve(), timer:null, gsiLoading:null,
+
+  /* --- Anmeldung --- */
+  tokenValid() { return !!(this.token && Date.now() < this.exp); },
+  hadLogin() { return !!LS.get('hadlogin'); },
+  canSync() { return isOnline() && this.tokenValid() && this.hadLogin(); },
+  isDirty() { return LS.get('dirty') === '1'; },
+  loadStoredToken() {
+    try { const o = JSON.parse(LS.get('token') || 'null'); if (o && o.t && o.exp > Date.now() + 60000) { this.token = o.t; this.exp = o.exp; return true; } } catch (e) {}
+    LS.del('token'); return false;
+  },
+  dropToken() { this.token = null; this.exp = 0; LS.del('token'); UI.sync(); },
+  initAuth() {
+    this.tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CONFIG.CLIENT_ID, scope: CONFIG.SCOPE,
+      callback: (resp) => {
+        const w = this.waiters; this.waiters = [];
+        if (resp.error || !resp.access_token) { w.forEach(x => x.reject(new Error(resp.error || 'no_token'))); return; }
+        this.token = resp.access_token; this.exp = Date.now() + ((Number(resp.expires_in) || 3600) - 60) * 1000;
+        LS.set('token', JSON.stringify({ t:this.token, exp:this.exp })); LS.set('hadlogin', '1'); UI.sync();
+        w.forEach(x => x.resolve(this.token));
+        this.rememberHint();
+      },
+      error_callback: (err) => { const w = this.waiters; this.waiters = []; w.forEach(x => x.reject(new Error((err && err.type) || 'auth_error'))); }
+    });
+  },
+  loadGsi() {
+    if (this.tokenClient) return Promise.resolve();
+    const ready = () => window.google && window.google.accounts && window.google.accounts.oauth2;
+    if (ready()) { this.initAuth(); return Promise.resolve(); }
+    if (!isOnline()) return Promise.resolve();
+    if (!this.gsiLoading) this.gsiLoading = new Promise((res) => {
+      const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+      s.onload = () => { let n = 0; const wait = () => { if (ready()) { this.initAuth(); res(); } else if (++n < 60) setTimeout(wait, 100); else { this.gsiLoading = null; res(); } }; wait(); };
+      s.onerror = () => { this.gsiLoading = null; s.remove(); res(); };
+      document.head.append(s);
+    });
+    return this.gsiLoading;
+  },
+  requestToken(cfg) {
+    return new Promise((resolve, reject) => {
+      this.waiters.push({ resolve, reject });
+      if (this.waiters.length > 1) return;
+      try { this.tokenClient.requestAccessToken(Object.assign({ prompt:'' }, cfg || {})); }
+      catch (e) { const w = this.waiters; this.waiters = []; w.forEach(x => x.reject(e)); }
+    });
+  },
+  async ensureToken() {
+    if (this.tokenValid()) return this.token;
+    if (!this.tokenClient) throw new Error('unauthorized');
+    try { return await this.requestToken(); } catch (e) { this.dropToken(); throw new Error('unauthorized'); }
+  },
+  async rememberHint() {   // Konto-Hinweis für die stille Anmeldung
+    try {
+      if (LS.get('hint')) return;
+      const r = await fetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)', { headers:{ Authorization:'Bearer ' + this.token } });
+      if (r.ok) { const j = await r.json(); if (j && j.user && j.user.emailAddress) LS.set('hint', j.user.emailAddress); }
+    } catch (e) {}
+  },
+  async signIn() {
+    if (!isOnline()) { toast('Offline – Anmelden geht erst mit Internet. Die App läuft lokal weiter.'); return false; }
+    await this.loadGsi();
+    if (!this.tokenClient) { toast('Google-Anmeldung nicht erreichbar. Die App läuft lokal weiter.'); return false; }
+    try { await this.requestToken(); await this.afterSignIn(); return true; }
+    catch (e) { console.error(e); this.lastError = explainError(e); toast('Anmeldung fehlgeschlagen: ' + this.lastError); UI.sync(); return false; }
+  },
+  async afterSignIn() { this.lastError = ''; await this.ensureFolder(true); await this.childFolder('Stems', 'stemsFolder', true); UI.sync(); await this.syncAll(true); this.folderHint(); },
+  signOut() {
+    const t = this.token; this.dropToken(); LS.del('hadlogin'); LS.del('hint');
+    try { if (t && window.google) google.accounts.oauth2.revoke(t, () => {}); } catch (e) {}
+    UI.sync(); toast('Abgemeldet. Deine Daten bleiben auf diesem Gerät und in Drive.');
+  },
+  // Stille Anmeldung (prompt none + Konto-Hinweis): beim Start, beim Zurückkehren, nach Wiederverbindung, kurz vor Ablauf.
+  async trySilentToken() {
+    if (!this.tokenClient || this.busy || !isOnline() || !this.hadLogin() || App.stage) return false;
+    if (this.tokenValid() && Date.now() < this.exp - 5 * 60000) return false;
+    if (Date.now() < this.silentFail) return false;
+    this.busy = true;
+    try {
+      const hint = LS.get('hint');
+      await this.requestToken(hint ? { prompt:'none', hint } : { prompt:'none' });
+      this.silentFail = 0;
+      try { await this.syncAll(true); } catch (e) {}
+      return true;
+    } catch (e) { this.silentFail = Date.now() + 120000; return false; }
+    finally { this.busy = false; UI.sync(); }
+  },
+  // Jede Bedienung erneuert eine abgelaufene Anmeldung (das Google-Fenster darf nur nach einer Nutzeraktion aufgehen).
+  onPointerUp(e) {
+    if (!e.isTrusted || this.busy || App.stage || !this.tokenClient || !isOnline() || !this.hadLogin()) return;
+    if (Date.now() < this.cooldown) return;
+    if (this.tokenValid() && Date.now() < this.exp - 5 * 60000) return;
+    if (e.target && e.target.closest && e.target.closest('[data-act="signIn"],[data-act="signOut"],[data-act="sync"]')) return;
+    this.busy = true;
+    this.requestToken().then(() => this.syncAll(true))
+      .catch((err) => { this.cooldown = Date.now() + (/popup_closed|access_denied/.test(String(err && err.message)) ? 180000 : 45000); })
+      .finally(() => { this.busy = false; UI.sync(); });
+  },
+
+  /* --- Drive-Zugriff --- */
+  // interactive=false: nie ein Anmelde-Fenster öffnen (Hintergrund-Abgleich)
+  async fetch(url, opts = {}, interactive = false, retry = true) {
+    if (!isOnline()) throw new Error('offline');
+    if (interactive) await this.ensureToken(); else if (!this.tokenValid()) throw new Error('unauthorized');
+    const headers = Object.assign({ Authorization:'Bearer ' + this.token }, opts.headers || {});
+    const ctrl = new AbortController(), tm = setTimeout(() => ctrl.abort(), opts.timeout || 45000);
+    let res;
+    try { res = await fetch(url, Object.assign({}, opts, { headers, signal:ctrl.signal })); }
+    catch (e) { throw new Error('offline'); }
+    finally { clearTimeout(tm); }
+    if (res.status === 401) { this.dropToken(); if (retry && interactive) return this.fetch(url, opts, true, false); throw new Error('unauthorized'); }
+    if (!res.ok) { const t = await res.text().catch(() => ''); const er = new Error('Drive-Fehler ' + res.status + ' ' + t.slice(0, 300)); er.status = res.status; throw er; }
+    return res;
+  },
+  // Ordner «Band-Trainer»: gemerkte ID prüfen (gilt auch nach dem Verschieben in Drive), sonst per Name suchen, sonst anlegen.
+  async ensureFolder(interactive = false) {
+    if (this.folderId) {
+      try {
+        const info = await (await this.fetch(`${DRIVE_FILES}/${this.folderId}?fields=id,trashed`, {}, interactive)).json();
+        if (info && !info.trashed) return this.folderId;
+      } catch (e) { if (e.message === 'unauthorized' || e.message === 'offline') throw e; }
+      this.folderId = null; ['folderId', 'libId', 'stemsFolder', 'backupFolder'].forEach(k => LS.del(k));
+    }
+    const q = encodeURIComponent(`name='${escQ(CONFIG.FOLDER_NAME)}' and mimeType='${FOLDER_MIME}' and trashed=false`);
+    const data = await (await this.fetch(`${DRIVE_FILES}?q=${q}&fields=files(id,name)`, {}, interactive)).json();
+    if (data.files && data.files.length) this.folderId = data.files[0].id;
+    else this.folderId = (await (await this.fetch(`${DRIVE_FILES}?fields=id`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ name:CONFIG.FOLDER_NAME, mimeType:FOLDER_MIME }) }, interactive)).json()).id;
+    LS.set('folderId', this.folderId);
+    return this.folderId;
+  },
+  async childFolder(name, key, interactive = false) {
+    const cached = LS.get(key);
+    if (cached) {
+      try { const m = await (await this.fetch(`${DRIVE_FILES}/${cached}?fields=id,trashed`, {}, interactive)).json(); if (m && !m.trashed) return cached; }
+      catch (e) { if (e.message === 'unauthorized' || e.message === 'offline') throw e; }
+      LS.del(key);
+    }
+    const q = encodeURIComponent(`'${this.folderId}' in parents and trashed=false and name='${escQ(name)}' and mimeType='${FOLDER_MIME}'`);
+    const found = (await (await this.fetch(`${DRIVE_FILES}?q=${q}&fields=files(id)`, {}, interactive)).json()).files || [];
+    let id = found.length ? found[0].id : null;
+    if (!id) id = (await (await this.fetch(`${DRIVE_FILES}?fields=id`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ name, mimeType:FOLDER_MIME, parents:[this.folderId] }) }, interactive)).json()).id;
+    LS.set(key, id); return id;
+  },
+  async findByName(name, parent) {
+    const q = encodeURIComponent(`'${parent}' in parents and trashed=false and name='${escQ(name)}'`);
+    const data = await (await this.fetch(`${DRIVE_FILES}?q=${q}&fields=files(id,name,modifiedTime)`)).json();
+    return data.files && data.files.length ? data.files[0] : null;
+  },
+  async readJson(id) { return (await this.fetch(`${DRIVE_FILES}/${id}?alt=media`)).json(); },
+  async uploadJson(name, obj, existingId, parentId) {
+    const body = JSON.stringify(obj);
+    if (existingId) return (await this.fetch(`${DRIVE_UPLOAD}/${existingId}?uploadType=media&fields=id,modifiedTime`, { method:'PATCH', headers:{ 'Content-Type':'application/json' }, body })).json();
+    const b = '-------bandtrainer' + Date.now().toString(36);
+    const meta = { name, parents:[parentId], mimeType:'application/json' };
+    const mp = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${b}--`;
+    return (await this.fetch(`${DRIVE_UPLOAD}?uploadType=multipart&fields=id,modifiedTime`, { method:'POST', headers:{ 'Content-Type':'multipart/related; boundary=' + b }, body:mp })).json();
+  },
+  async uploadBlob(blob, meta) {   // Audiodatei: ab 4 MB «resumable» (Drive-Grenze für Multipart: 5 MB), sonst Multipart
+    const type = blob.type || 'application/octet-stream';
+    if (blob.size > 4 * 1048576) {
+      try {
+        const init = await this.fetch(`${DRIVE_UPLOAD}?uploadType=resumable&fields=id`, { method:'POST', headers:{ 'Content-Type':'application/json; charset=UTF-8', 'X-Upload-Content-Type':type, 'X-Upload-Content-Length':String(blob.size) }, body:JSON.stringify(meta) }, true);
+        const loc = init.headers.get('Location'); if (!loc) throw new Error('kein Upload-Link');
+        return await (await this.fetch(loc, { method:'PUT', headers:{ 'Content-Type':type }, body:blob, timeout:600000 }, true)).json();
+      } catch (e) { if (e.message === 'unauthorized' || e.message === 'offline' || blob.size > 5 * 1048576) throw e; console.warn('Resumable-Upload fehlgeschlagen, versuche Multipart', e); }
+    }
+    const b = 'bandtrainer' + Date.now().toString(36), enc = new TextEncoder();
+    const head = enc.encode(`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: ${type}\r\n\r\n`);
+    return (await this.fetch(`${DRIVE_UPLOAD}?uploadType=multipart&fields=id`, { method:'POST', headers:{ 'Content-Type':'multipart/related; boundary=' + b }, body:new Blob([head, blob, enc.encode(`\r\n--${b}--`)]), timeout:300000 }, true)).json();
+  },
+
+  /* --- Abgleich --- */
+  markDirty() {   // lokale Änderung merken; kurz darauf mit Drive abgleichen (oder später, sobald online/angemeldet)
+    this.dirtySeq++; LS.set('dirty', '1');
+    clearTimeout(this.timer); this.timer = setTimeout(() => this.syncAll(true), 2500);
+    UI.sync();
+  },
+  enqueue(fn) { const p = this.chain.then(fn, fn); this.chain = p.catch(() => {}); return p; },
+  async syncAll(force) {
+    if (!this.canSync()) { UI.sync(); return false; }
+    if (!force && Date.now() - this.lastRun < 15000) return false;
+    this.lastRun = Date.now(); clearTimeout(this.timer);
+    return this.enqueue(async () => {
+      this.syncing++; UI.sync();
+      try {
+        await this.ensureFolder(false);
+        await this.syncLibrary();
+        await this.flushTrash();
+        await this.autoBackup().catch(e => console.warn('Sicherung', e));
+        this.lastError = ''; LS.set('lastSync', Date.now()); return true;
+      } catch (e) {
+        if (e.message !== 'offline' && e.message !== 'unauthorized') { console.error(e); this.lastError = explainError(e); }
+        return false;
+      } finally { this.syncing--; UI.sync(); }
+    });
+  },
+  async syncLibrary() {
+    const seq = this.dirtySeq;
+    let fid = LS.get('libId'), remote = null;
+    if (fid) { try { remote = await this.readJson(fid); } catch (e) { if (e.status !== 404) throw e; fid = null; LS.del('libId'); } }
+    if (!fid) { const f = await this.findByName('library.json', this.folderId); if (f) { fid = f.id; remote = await this.readJson(fid); } }
+    if (fid && (!remote || !Array.isArray(remote.songs))) throw new Error('library.json in Drive ist nicht lesbar. Datei in Drive prüfen oder löschen – der lokale Stand wird dann neu hochgeladen.');
+    // Ab hier bis Store.apply ohne «await»: zwischen Lesen und Übernehmen kann keine Eingabe verloren gehen.
+    const local = Store.snapshot(), rem = remote ? cleanData(remote) : null;
+    const merged = rem ? mergeData(local, rem) : local, mStr = canonData(merged);
+    if (mStr !== canonData(local)) { Store.apply(merged); App.refresh(); }
+    if (!rem || mStr !== canonData(rem)) { const out = await this.uploadJson('library.json', Store.payload(), fid, this.folderId); if (out && out.id) LS.set('libId', out.id); }
+    else if (fid) LS.set('libId', fid);
+    if (this.dirtySeq === seq) LS.del('dirty');
+  },
+  // Einmal pro Tag (gleicher Dateiname auf allen Geräten) eine JSON-Sicherung im Unterordner «Backups»; die letzten 14 bleiben.
+  async listBackups() {
+    const bid = await this.childFolder('Backups', 'backupFolder');
+    const q = encodeURIComponent(`'${bid}' in parents and trashed=false and name contains 'library-'`);
+    const files = (await (await this.fetch(`${DRIVE_FILES}?q=${q}&pageSize=200&fields=files(id,name,modifiedTime,size)`)).json()).files || [];
+    return files.filter(f => /^library-\d{4}-\d{2}-\d{2}\.json$/.test(f.name)).sort((a, b) => b.name.localeCompare(a.name));
+  },
+  async autoBackup(force) {
+    if (!this.canSync()) return false;
+    const day = new Date().toLocaleDateString('sv-SE');
+    if (!force && LS.get('lastbackup') === day) return false;
+    const bid = await this.childFolder('Backups', 'backupFolder'), name = `library-${day}.json`;
+    const ex = await this.findByName(name, bid);
+    if (!ex || force) await this.uploadJson(name, Store.payload(), ex ? ex.id : null, bid);
+    LS.set('lastbackup', day);
+    for (const old of (await this.listBackups()).slice(BK_KEEP)) await this.trash(old.id).catch(() => {});
+    return true;
+  },
+  trash(id) { return this.fetch(`${DRIVE_FILES}/${id}`, { method:'PATCH', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ trashed:true }) }); },
+  queueTrash(id) { if (!id) return; let a = []; try { a = JSON.parse(LS.get('trash') || '[]'); } catch (e) {} a.push(id); LS.set('trash', JSON.stringify(a.slice(-200))); },
+  async flushTrash() {   // in Drive gesicherte Stems, die lokal entfernt/ersetzt wurden, in den Drive-Papierkorb legen
+    let a = []; try { a = JSON.parse(LS.get('trash') || '[]'); } catch (e) {}
+    if (!Array.isArray(a) || !a.length) return;
+    const rest = [];
+    for (const id of a) { try { await this.trash(id); } catch (e) { if (e.message === 'offline' || e.message === 'unauthorized') rest.push(id); } }
+    if (rest.length) LS.set('trash', JSON.stringify(rest)); else LS.del('trash');
+  },
+
+  /* --- Stems optional in Drive --- */
+  async stemUpload(song, slot) {
+    const rec = await IDB.get(stemKey(song.id, slot)); if (!rec || !rec.blob) throw new Error('Keine lokale Datei in diesem Slot.');
+    await this.ensureFolder(true);
+    const sf = await this.childFolder('Stems', 'stemsFolder', true);
+    const out = await this.uploadBlob(rec.blob, { name:song.id + '__' + slot + '__' + rec.name, parents:[sf] });
+    if (!out || !out.id) throw new Error('Upload ohne Antwort');
+    const old = song.stems[slot] && song.stems[slot].driveId; if (old && old !== out.id) this.queueTrash(old);
+    song.stems[slot] = { name:rec.name, size:rec.size, type:rec.type || '', u:rec.u || Date.now(), driveId:out.id };
+    Store.touch(song);
+  },
+  async stemDownload(song, slot) {
+    const meta = song.stems[slot]; if (!meta || !meta.driveId) throw new Error('Diese Datei ist nicht in Drive gesichert.');
+    const res = await this.fetch(`${DRIVE_FILES}/${meta.driveId}?alt=media`, { timeout:600000 }, true);
+    const blob = await res.blob();
+    const rec = { blob:meta.type ? new Blob([blob], { type:meta.type }) : blob, name:meta.name, type:meta.type || blob.type, size:blob.size, u:meta.u || 0 };
+    await IDB.put(stemKey(song.id, slot), rec);
+    return rec;
+  },
+  folderHint() {   // einmaliger Hinweis nach dem ersten Verbinden
+    if (LS.get('folderHint') || !this.folderId) return;
+    LS.set('folderHint', '1'); Dialogs.folderHint();
+  },
+  status() {
+    if (this.syncing > 0) return { t:'⟳ Abgleich …', c:'' , long:'Abgleich mit Drive läuft …' };
+    if (!this.hadLogin()) return { t:'Nur lokal', c:'', long:'Nicht mit Google Drive verbunden – alles liegt nur auf diesem Gerät.' };
+    const d = this.isDirty();
+    if (!isOnline()) return { t:'Offline' + (d ? ' · offen' : ''), c:'warn', long:'Offline – Änderungen bleiben lokal gespeichert und werden später abgeglichen.' };
+    if (!this.tokenValid()) return { t:'Anmelden', c:'warn', long:'Bei Google abgemeldet – Änderungen bleiben vorerst nur auf diesem Gerät.' };
+    if (this.lastError) return { t:'⚠ Sync-Fehler', c:'err', long:'Abgleich fehlgeschlagen: ' + this.lastError };
+    if (d) return { t:'● offen', c:'warn', long:'Änderungen sind noch nicht in Drive – werden gleich abgeglichen.' };
+    return { t:'✓ Drive', c:'ok', long:'Drive ist auf dem neuesten Stand.' };
+  },
+  boot() {
+    this.loadStoredToken(); UI.sync();
+    document.addEventListener('pointerup', e => this.onPointerUp(e), true);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { if (this.canSync()) this.syncAll(false); else this.trySilentToken(); } });
+    window.addEventListener('online', () => { UI.sync(); this.loadGsi().then(() => setTimeout(() => { if (this.canSync()) this.syncAll(true); else this.trySilentToken(); }, 800)); });
+    window.addEventListener('offline', () => UI.sync());
+    setInterval(() => this.trySilentToken(), 60000);
+    if (this.hadLogin()) this.loadGsi().then(() => { if (this.canSync()) this.syncAll(true); else this.trySilentToken(); });
+  }
+};
+
+/* ---------- Audio: gemeinsamer AudioContext, Metronom, Stem-Player ---------- */
+const AC = {
+  _ctx:null,
+  get() {
+    if (!this._ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; this._ctx = new C(); }
+    if (this._ctx.state === 'suspended') this._ctx.resume().catch(() => {});
+    return this._ctx;
+  }
+};
+const Metro = {
+  on:false, bpm:100, next:0, beat:0, timer:null,
+  click(t, accent) {
+    const c = AC.get(); if (!c) return;
+    const o = c.createOscillator(), g = c.createGain();
+    o.frequency.value = accent ? 1568 : 1047;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.45, t + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    o.connect(g).connect(c.destination); o.start(t); o.stop(t + 0.09);
+  },
+  start(bpm) {
+    this.stop(); const c = AC.get(); if (!c) return;
+    this.on = true; this.bpm = bpm; this.next = c.currentTime + 0.08; this.beat = 0;
+    this.timer = setInterval(() => {
+      while (this.next < c.currentTime + 0.15) { this.click(this.next, this.beat % 4 === 0); this.next += 60 / this.bpm; this.beat++; }
+    }, 40);
+  },
+  stop() { clearInterval(this.timer); this.timer = null; this.on = false; },
+  countIn(bpm, beats = 4) {
+    const c = AC.get(); if (!c) return Promise.resolve();
+    const t0 = c.currentTime + 0.1;
+    for (let i = 0; i < beats; i++) this.click(t0 + i * 60 / bpm, i === 0);
+    return new Promise(r => setTimeout(r, (0.1 + beats * 60 / bpm) * 1000));
+  }
+};
+
+const Player = {
+  song:null, tracks:{}, rate:1, playing:false, counting:false, timer:null, seeking:false, _token:0,
+  async load(song) {
+    this.unload(); this.song = song; this.rate = 1; const token = ++this._token;
+    for (const s of SLOTS) {
+      try {
+        const rec = await IDB.get(stemKey(song.id, s.id));
+        if (token !== this._token) return;
+        const meta = song.stems[s.id];
+        if (rec && rec.blob) {
+          if (meta && meta.deleted && (meta.u || 0) > (rec.u || 0)) { IDB.del(stemKey(song.id, s.id)).catch(() => {}); continue; }   // auf einem anderen Gerät entfernt
+          this.attach(s.id, rec);
+          if (!meta || meta.deleted) song.stems[s.id] = { name:rec.name, size:rec.size, type:rec.type || '', u:rec.u || 0 };
+        }   // Metadaten ohne lokale Datei bleiben stehen: Die Datei liegt auf einem anderen Gerät bzw. in Drive
+      } catch (e) { console.warn('Stem nicht ladbar', e); }
+    }
+    UI.stems(); UI.transport();
+  },
+  attach(slot, rec) {
+    this.detach(slot);
+    const el = new Audio(); el.preload = 'auto';
+    const url = URL.createObjectURL(rec.blob); el.src = url;
+    el.preservesPitch = true; el.mozPreservesPitch = true; el.webkitPreservesPitch = true;   // Tempo ändern ohne Tonhöhenänderung
+    el.playbackRate = this.rate;
+    el.addEventListener('loadedmetadata', () => UI.transport());
+    el.addEventListener('ended', () => { if (this.playing && this.master() && this.master().el === el) this.onEnded(); });
+    el.addEventListener('error', () => toast('Datei kann nicht abgespielt werden: ' + (rec.name || slot)));
+    this.tracks[slot] = { el, url, name:rec.name, size:rec.size, u:rec.u || 0, node:null, gain:null };
+    this.applyMix();
+  },
+  detach(slot) {
+    const t = this.tracks[slot]; if (!t) return;
+    try { t.el.pause(); } catch {}
+    try { t.node && t.node.disconnect(); t.gain && t.gain.disconnect(); } catch {}
+    t.el.removeAttribute('src'); try { t.el.load(); } catch {}
+    URL.revokeObjectURL(t.url); delete this.tracks[slot];
+  },
+  unload() { this.pause(); this._token++; Object.keys(this.tracks).forEach(s => this.detach(s)); this.song = null; },
+  master() {   // längster geladener Stem gibt Position und Dauer vor
+    let best = null;
+    for (const t of Object.values(this.tracks)) { const d = isFinite(t.el.duration) ? t.el.duration : 0; if (!best || d > best.d) best = { t, d }; }
+    return best && best.t;
+  },
+  time() { const m = this.master(); return m ? m.el.currentTime : 0; },
+  duration() { const m = this.master(); return m && isFinite(m.el.duration) ? m.el.duration : 0; },
+  ensureGraph() {   // Lautstärke über GainNodes (auf iOS ist audio.volume nicht steuerbar)
+    const c = AC.get(); if (!c) return;
+    for (const t of Object.values(this.tracks)) {
+      if (t.node) continue;
+      try { t.node = c.createMediaElementSource(t.el); t.gain = c.createGain(); t.node.connect(t.gain).connect(c.destination); t.el.volume = 1; t.el.muted = false; }
+      catch (e) { console.warn('WebAudio-Routing nicht möglich, nutze Element-Lautstärke', e); }
+    }
+    this.applyMix();
+  },
+  applyMix() {
+    if (!this.song) return;
+    for (const [slot, t] of Object.entries(this.tracks)) {
+      const m = this.song.mix[slot] || { on:true, vol:1 }; const v = m.on ? m.vol : 0;
+      if (t.gain) t.gain.gain.value = v; else { t.el.muted = !m.on; try { t.el.volume = m.vol; } catch {} }
+    }
+  },
+  async play() {
+    const m = this.master();
+    if (!m) { toast('Noch keine Audiodatei geladen – Tab «Audio».'); return; }
+    if (this.playing || this.counting) return;
+    this.ensureGraph();
+    if (Store.data.settings.countIn) {
+      if (this.song.bpm) { this.counting = true; this._abortCount = false; UI.playBtn(); await Metro.countIn(this.song.bpm * this.rate); this.counting = false; if (this._abortCount) { UI.playBtn(); return; } }
+      else toast('Einzähler braucht eine BPM-Angabe beim Song.');
+    }
+    let t = m.el.currentTime; const lp = this.song.loop;
+    if (lp.a != null && lp.b != null && (t < lp.a || t >= lp.b)) t = lp.a;
+    if (this.duration() && t >= this.duration() - 0.05) t = lp.a != null ? lp.a : 0;
+    for (const tr of Object.values(this.tracks)) {
+      tr.el.playbackRate = this.rate;
+      try { tr.el.currentTime = Math.min(t, isFinite(tr.el.duration) ? tr.el.duration : t); } catch {}
+      tr.el.play().catch(e => console.warn('play()', e));
+    }
+    this.playing = true; clearInterval(this.timer); this.timer = setInterval(() => this.tick(), 60); UI.playBtn();
+  },
+  pause() {
+    if (this.counting) this._abortCount = true;
+    for (const tr of Object.values(this.tracks)) { try { tr.el.pause(); } catch {} }
+    this.playing = false; clearInterval(this.timer); this.timer = null; UI.playBtn();
+  },
+  toggle() { (this.playing || this.counting) ? this.pause() : this.play(); },
+  seek(t) {
+    t = Math.max(0, Math.min(t, this.duration() || 0));
+    for (const tr of Object.values(this.tracks)) { try { tr.el.currentTime = Math.min(t, isFinite(tr.el.duration) ? tr.el.duration : t); } catch {} }
+    UI.time();
+  },
+  setRate(r) { this.rate = r; for (const tr of Object.values(this.tracks)) tr.el.playbackRate = r; if (Metro.on && this.song && this.song.bpm) Metro.bpm = this.song.bpm * r; },
+  tick() {
+    const m = this.master(); if (!m) return;
+    const t = m.el.currentTime, lp = this.song.loop;
+    if (lp.b != null && t >= lp.b) { this.seek(lp.a != null ? lp.a : 0); return; }
+    for (const tr of Object.values(this.tracks)) {   // Stems zusammenhalten
+      if (tr === m || tr.el.ended) continue;
+      if (Math.abs(tr.el.currentTime - t) > 0.08 && t < (tr.el.duration || Infinity)) { try { tr.el.currentTime = t; } catch {} }
+    }
+    UI.time();
+  },
+  onEnded() { const lp = this.song.loop; if (lp.a != null && lp.b == null) { this.seek(lp.a); for (const tr of Object.values(this.tracks)) tr.el.play().catch(() => {}); } else this.pause(); }
+};
+
+/* ---------- Bassline: ABC-Rendering und Wiedergabe ---------- */
+const Bass = {
+  visual:null, synth:null, tr:0, playing:false, oscNodes:[], endTimer:null, loop:false,
+  render(song) {
+    const out = $('#abcOut'), warn = $('#abcWarn'); if (!out) return;
+    this.stop(); this.visual = null; warn.textContent = ''; this.tr = song.transpose || 0;
+    if (!song.bassAbc.trim()) { out.innerHTML = '<div class="empty" style="color:#555;padding:18px">Noch keine Bassline. Unter «Bearbeiten» in ABC-Notation eintragen.</div>'; return; }
+    if (!window.ABCJS) { out.innerHTML = '<div class="empty" style="color:#555;padding:18px">Notenanzeige nicht verfügbar: abcjs konnte nicht geladen werden. Seite neu laden.</div>'; return; }
+    try {
+      const v = ABCJS.renderAbc(out, song.bassAbc, { responsive:'resize', add_classes:true, visualTranspose:this.tr, staffwidth:(out.clientWidth || 720) < 560 ? 380 : 720, paddingtop:6, paddingbottom:6,
+        wrap:{ minSpacing:1.6, maxSpacing:2.8, preferredMeasuresPerLine:4 } });
+      this.visual = v && v[0];
+      const w = this.visual && this.visual.warnings;
+      if (w && w.length) warn.textContent = 'Hinweise zur ABC-Eingabe:\n' + w.map(x => String(x).replace(/<[^>]+>/g, '')).join('\n');
+    } catch (e) { out.textContent = 'ABC konnte nicht gerendert werden: ' + e.message; }
+  },
+  async play() {
+    if (!this.visual) { toast('Keine gerenderte Bassline vorhanden.'); return; }
+    this.stop(); const ctx = AC.get(); if (!ctx) { toast('Audio wird von diesem Browser nicht unterstützt.'); return; }
+    this.playing = true; UI.bassBtn();
+    try {   // 1) abcjs-Synth (lädt ein Soundfont aus dem Internet; Programm 33 = E-Bass)
+      if (!navigator.onLine) throw new Error('offline');
+      const synth = new ABCJS.synth.CreateSynth();
+      const init = synth.init({ visualObj:this.visual, audioContext:ctx, options:{ program:33, chordsOff:true, midiTranspose:this.tr, onEnded:() => this.ended() } }).then(r => { if (r && r.error && r.error.length) throw new Error('Soundfont unvollständig'); return synth.prime(); });
+      await Promise.race([init, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 7000))]);
+      if (!this.playing) return;
+      this.synth = synth; synth.start();
+    } catch (e) {   // 2) Offline-Ersatz: einfacher Synth-Bass per Oszillator
+      console.info('abcjs-Synth nicht verfügbar, nutze Oszillator-Bass:', e && e.message);
+      if (this.playing) this.playOsc(ctx);
+    }
+  },
+  playOsc(ctx) {
+    let seq; try { seq = this.visual.setUpAudio({ chordsOff:true, midiTranspose:this.tr }); } catch (e) { toast('Wiedergabe nicht möglich: ' + e.message); this.playing = false; UI.bassBtn(); return; }
+    const secPerWhole = 240 / (seq.tempo || 100);   // start/duration der Events sind in ganzen Noten angegeben
+    const t0 = ctx.currentTime + 0.12; let end = 0;
+    for (const track of seq.tracks || []) for (const ev of track) {
+      if (ev.cmd !== 'note') continue;
+      const st = t0 + ev.start * secPerWhole, du = Math.max(0.05, ev.duration * secPerWhole);
+      const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+      o.type = 'sawtooth'; o.frequency.value = 440 * Math.pow(2, (ev.pitch - 69) / 12);
+      f.type = 'lowpass'; f.frequency.value = 700;
+      g.gain.setValueAtTime(0.0001, st); g.gain.exponentialRampToValueAtTime(0.5, st + 0.012);
+      g.gain.setValueAtTime(0.5, st + du * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, st + du * 0.98);
+      o.connect(f).connect(g).connect(ctx.destination); o.start(st); o.stop(st + du);
+      this.oscNodes.push(o); end = Math.max(end, ev.start * secPerWhole + du);
+    }
+    this.endTimer = setTimeout(() => this.ended(), (end + 0.15) * 1000);
+  },
+  ended() { if (!this.playing) return; if (this.loop) { this.stop(); this.play(); } else this.stop(); },
+  stop() {
+    clearTimeout(this.endTimer); this.endTimer = null;
+    if (this.synth) { try { this.synth.stop(); } catch {} this.synth = null; }
+    this.oscNodes.forEach(o => { try { o.stop(); o.disconnect(); } catch {} }); this.oscNodes = [];
+    this.playing = false; UI.bassBtn();
+  }
+};
+
+/* ---------- YouTube & Suchlinks ---------- */
+function ytId(url) {
+  try {
+    const u = new URL(String(url).trim()); const h = u.hostname.replace(/^(www|m|music)\./, ''); let id = null;
+    if (h === 'youtu.be') id = u.pathname.split('/')[1];
+    else if (h === 'youtube.com' || h === 'youtube-nocookie.com') {
+      id = u.searchParams.get('v'); const m = u.pathname.match(/^\/(embed|shorts|live)\/([^/?]+)/); if (!id && m) id = m[2];
+    }
+    return id && /^[\w-]{11}$/.test(id) ? id : null;
+  } catch { return null; }
+}
+const ytEmbed = id => '<div class="yt"><iframe src="https://www.youtube-nocookie.com/embed/' + id + '?playsinline=1&rel=0" title="YouTube-Video" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"></iframe></div>';
+function searchLinks(song) {   // generierte SUCH-Links – keine fest hinterlegten Videos
+  const q = (song.title + ' ' + song.artist).trim(), e = encodeURIComponent;
+  const yt = s => 'https://www.youtube.com/results?search_query=' + e(q + ' ' + s);
+  return [
+    ['YouTube: Keyboard-Tutorial', yt('keyboard tutorial')],
+    ['YouTube: Piano-Akkorde', yt('piano chords tutorial')],
+    ['YouTube: Bass-Tutorial', yt('bass tutorial')],
+    ['YouTube: Bass-Cover', yt('bass cover')],
+    ['YouTube: isolierter Bass', yt('isolated bass')],
+    ['Ultimate Guitar: Akkorde', 'https://www.ultimate-guitar.com/search.php?search_type=title&value=' + e(q)],
+    ['Songsterr: Bass-Tabs', 'https://www.songsterr.com/?pattern=' + e(q)]
+  ];
+}
+
+/* ---------- Guide-Videos: Vorschläge über die YouTube Data API v3 ----------
+   Es werden ausschliesslich echte API-Treffer angezeigt (nichts fest hinterlegt). Ohne Schlüssel/Netz bleiben die Suchlinks. */
+function decodeHtml(t) { const x = document.createElement('textarea'); x.innerHTML = String(t == null ? '' : t); return x.value; }
+const Suggest = {
+  busy:new Set(), err:{},
+  available() { return !!CONFIG.YOUTUBE_API_KEY; },
+  async search(query) {
+    const url = 'https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=8&q=' + encodeURIComponent(query) + '&key=' + encodeURIComponent(CONFIG.YOUTUBE_API_KEY);
+    let res;
+    try { res = await fetch(url); } catch (e) { throw new Error('YouTube nicht erreichbar (offline?)'); }
+    if (!res.ok) { const t = await res.text().catch(() => ''); throw new Error(res.status === 403 ? 'YouTube-Suche abgelehnt (Tageskontingent aufgebraucht oder Schlüssel für diese Adresse nicht freigegeben).' : 'YouTube-Fehler ' + res.status + (/"message"/.test(t) ? '' : ' ' + t.slice(0, 120))); }
+    const data = await res.json();
+    return (data.items || []).filter(it => it && it.id && /^[\w-]{11}$/.test(it.id.videoId || '') && it.snippet).map(it => {
+      const th = it.snippet.thumbnails || {}, thumb = (th.medium || th.default || {}).url || '';
+      return { vid:it.id.videoId, title:decodeHtml(it.snippet.title), channel:decodeHtml(it.snippet.channelTitle), thumb:/^https:\/\/i\.ytimg\.com\//.test(thumb) ? thumb : '' };
+    });
+  },
+  // Je die besten 3 Treffer für Keyboard und Bass; bereits übernommene oder verworfene Videos werden übersprungen.
+  async run(song, force) {
+    if (!this.available() || song.isDemo || this.busy.has(song.id)) return;
+    if (!force && song.suggest && song.suggest.at) return;
+    if (!isOnline()) { if (force) toast('Offline – Vorschläge gibt es erst mit Internet.'); return; }
+    this.busy.add(song.id); delete this.err[song.id]; UI.suggest();
+    try {
+      const base = (song.title + ' ' + song.artist).trim(), prev = song.suggest || {};
+      const taken = new Set([...(prev.dismissed || []), ...song.links.map(l => ytId(l.url)).filter(Boolean)]);
+      const pick = (arr, kind, out) => { for (const v of arr) { if (out.length >= 3) break; if (taken.has(v.vid)) continue; taken.add(v.vid); out.push(Object.assign({ kind }, v)); } };
+      const keys = [], bass = [];
+      pick(await this.search(base + ' keyboard tutorial'), 'keys', keys);
+      pick(await this.search(base + ' bass tutorial'), 'bass', bass);
+      if (bass.length < 3) pick(await this.search(base + ' bass cover'), 'bass', bass);
+      song.suggest = { at:Date.now(), items:[...keys, ...bass], dismissed:prev.dismissed || [] };
+      Store.touch(song);
+    } catch (e) { this.err[song.id] = e.message; }
+    finally { this.busy.delete(song.id); UI.suggest(); }
+  },
+  accept(song, vid) {
+    const it = song.suggest && song.suggest.items.find(x => x.vid === vid); if (!it) return;
+    song.links.push({ id:uid(), label:it.title || LINK_KINDS[it.kind], url:'https://www.youtube.com/watch?v=' + it.vid, kind:it.kind });
+    song.suggest.items = song.suggest.items.filter(x => x.vid !== vid); Store.touch(song);
+  },
+  dismiss(song, vid) {
+    if (!song.suggest) return;
+    song.suggest.items = song.suggest.items.filter(x => x.vid !== vid);
+    if (!song.suggest.dismissed.includes(vid)) song.suggest.dismissed.push(vid);
+    Store.touch(song);
+  }
+};
+
+/* ---------- Transponieren der Akkordanzeige ---------- */
+const NOTES_SHARP = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'], NOTES_FLAT = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const NOTE_IX = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
+const CHORD_RE = /^([A-G][#b]?)([^\/\s]*)(?:\/([A-G][#b]?))?$/;
+const QUALITY_RE = /^(?:maj|min|dim|aug|sus|add|omit|alt|no|m|M|\+|-|°|ø|Δ|\d|[#b](?=\d)|\(|\)|,)*$/;   // nur echte Akkordzusätze – Wörter wie «Fine» bleiben unverändert
+const noteIx = n => (NOTE_IX[n[0]] + (n[1] === '#' ? 1 : n[1] === 'b' ? -1 : 0) + 12) % 12;
+const trNote = (n, st, flats) => (flats ? NOTES_FLAT : NOTES_SHARP)[((noteIx(n) + st) % 12 + 12) % 12];
+function trToken(tok, st, flats) {
+  const m = tok.match(CHORD_RE); if (!m || !QUALITY_RE.test(m[2])) return tok;
+  return trNote(m[1], st, flats) + m[2] + (m[3] ? '/' + trNote(m[3], st, flats) : '');
+}
+const trBar = (text, st, flats) => text.split(/(\s+)/).map(t => /\s/.test(t) || !t ? t : trToken(t.replace(/♯/g, '#').replace(/♭/g, 'b'), st, flats)).join('');
+function useFlats(song, st) {   // Schreibweise: fest gewählt oder passend zur Zieltonart (F, B♭, E♭, A♭, D♭ bzw. deren Mollparallelen → ♭)
+  if (song.flats === true || song.flats === false) return song.flats;
+  let ref = (song.key || '').trim().split(/\s+/)[0].match(CHORD_RE);
+  if (!ref || !QUALITY_RE.test(ref[2])) { ref = null; for (const tok of song.chords.replace(/\|/g, ' ').split(/\s+/)) { const m = tok.match(CHORD_RE); if (m && QUALITY_RE.test(m[2]) && tok.length < 12) { ref = m; break; } } }
+  if (!ref) return false;
+  const minor = /^m(?!aj)/.test(ref[2]), ix = ((noteIx(ref[1]) + st) % 12 + 12) % 12;
+  return (minor ? [2, 7, 0, 5, 10, 3] : [5, 10, 3, 8, 1]).includes(ix);
+}
+function chordsHtml(s) {
+  const st = s.transpose || 0, fl = st ? useFlats(s, st) : false;
+  return s.chords.split('\n').map(l => l.trim()).filter(Boolean).map(l => l.includes('|')
+    ? '<div class="bars">' + l.split('|').map(c => c.trim()).filter(Boolean).map(c => '<div class="bar">' + esc(st ? trBar(c, st, fl) : c) + '</div>').join('') + '</div>'
+    : '<div class="sect">' + esc(l) + '</div>').join('');
+}
+function keyLabel(s) { if (!s.key) return ''; const st = s.transpose || 0; return st ? s.key + ' → ' + trBar(s.key, st, useFlats(s, st)) : s.key; }
+const trLabel = st => st ? (st > 0 ? '+' : '−') + Math.abs(st) + ' HT' : 'Original';
+const hasAudio = s => Object.values(s.stems).some(m => m && !m.deleted);
+// innerHTML nur setzen, wenn sich etwas geändert hat (laufende Videos/Eingaben bleiben beim Abgleich unberührt)
+function setHtml(el, html) { if (!el || el._h === html) return; el._h = html; el.innerHTML = html; }
+
+/* ---------- App / UI ---------- */
+const App = {
+  filter:'all', query:'', tab:'noten', songId:null, stage:false, reorder:false, embedUrl:null, wake:null, stemBusy:{},
+  init() {
+    Store.load(); this.applyTheme();
+    window.addEventListener('hashchange', () => this.route());
+    document.addEventListener('click', e => this.onClick(e));
+    document.addEventListener('input', e => this.onInput(e));
+    document.addEventListener('change', e => this.onChange(e));
+    document.addEventListener('keydown', e => this.onKey(e));
+    document.addEventListener('pointerdown', e => this.onDragStart(e));
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && this.wakeWanted) this.setWake(true); });
+    let lastW = window.innerWidth;
+    window.addEventListener('resize', debounce(() => { if (window.innerWidth === lastW) return; lastW = window.innerWidth; const s = this.current(); if (s && !this.stage && !Bass.playing) Bass.render(s); }, 300));
+    this.route();
+  },
+  current() { return this.songId ? Store.get(this.songId) : null; },
+  applyTheme() { document.documentElement.dataset.theme = Store.data.settings.theme; const m = $('meta[name=theme-color]'); if (m) m.content = Store.data.settings.theme === 'light' ? '#f4f2ec' : '#121416'; },
+  route() {
+    const m = location.hash.match(/^#\/(song|stage)\/(.+)$/); const id = m ? decodeURIComponent(m[2]) : null;
+    const wasStage = this.stage;
+    Bass.stop(); Metro.stop();
+    this.stage = !!(m && m[1] === 'stage' && id && Store.get(id));
+    document.body.classList.toggle('stage-on', this.stage);
+    if (this.stage) { Player.unload(); this.songId = id; UI.stage(); this.setWake(true); }
+    else {
+      if (wasStage) { this.setWake(false); try { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch (e) {} }
+      if (id && Store.get(id)) { this.songId = id; this.embedUrl = null; UI.song(); Player.load(Store.get(id)); }
+      else { Player.unload(); this.songId = null; this.setWake(false); document.title = 'Band-Trainer'; UI.list(); }
+    }
+    window.scrollTo(0, 0);
+  },
+  // Nach einem Abgleich mit Drive: Anzeige auffrischen, ohne laufende Eingaben oder Wiedergabe zu stören
+  refresh() {
+    this.applyTheme();
+    if (this.songId && !Store.get(this.songId)) { location.hash = '#/'; toast('Dieser Song wurde auf einem anderen Gerät gelöscht.'); return; }
+    if (this.stage) { UI.stage(); return; }
+    const s = this.current(); if (!s) { UI.listItems(); UI.counts(); return; }
+    UI.header(); UI.chords(); UI.links(); UI.suggest(); UI.info(); UI.stems(); UI.loop();
+    for (const [id, v] of [['chordsIn', s.chords], ['abcIn', s.bassAbc], ['notesIn', s.notes], ['ytUrl', s.youtubeUrl]]) { const el = $('#' + id); if (el && document.activeElement !== el && el.value !== v) { el.value = v; if (id === 'abcIn' && !Bass.playing) Bass.render(s); } }
+  },
+  async setWake(on) {
+    this.wakeWanted = on;
+    try {
+      if (on && 'wakeLock' in navigator) { if (!this.wake) { this.wake = await navigator.wakeLock.request('screen'); this.wake.addEventListener && this.wake.addEventListener('release', () => { this.wake = null; }); } }
+      else if (!on && this.wake) { const w = this.wake; this.wake = null; await w.release(); }
+      else if (on && !this.stage) toast('Wachhalten wird von diesem Browser nicht unterstützt.');
+    } catch (e) { this.wake = null; }
+    const b = $('#bWake'); if (b) b.classList.toggle('on', !!this.wake);
+  },
+  /* ----- Auftrittsmodus ----- */
+  stageList() { const sl = Store.setlist(), cur = this.current(); return cur && !sl.includes(cur) ? [cur] : sl; },
+  stageOpen(id) {
+    const sl = Store.setlist(), s = id ? Store.get(id) : sl[0];
+    if (!s) { toast('Die Setlist ist leer – Songs mit Status «Setlist» versehen.'); return; }
+    try { const el = document.documentElement; if (el.requestFullscreen && !document.fullscreenElement) el.requestFullscreen().catch(() => {}); } catch (e) {}
+    location.hash = '#/stage/' + encodeURIComponent(s.id);
+  },
+  stageGo(d) {
+    const l = this.stageList(), i = l.findIndex(s => s.id === this.songId), n = l[i + d];
+    if (!n) { toast(d > 0 ? 'Ende der Setlist.' : 'Anfang der Setlist.'); return; }
+    history.replaceState(null, '', '#/stage/' + encodeURIComponent(n.id)); this.route();
+  },
+  stageExit() { location.hash = this.stageFrom === 'list' ? '#/' : '#/song/' + encodeURIComponent(this.songId); },
+  onKey(e) {
+    if (!this.stage || $('#dlg').open) return;
+    if ((e.key === ' ' || e.key === 'Enter') && e.target.closest && e.target.closest('button')) return;   // Knopf behält seine eigene Funktion
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); this.stageGo(1); }
+    else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); this.stageGo(-1); }
+    else if (e.key === 'Escape') { e.preventDefault(); this.stageExit(); }
+  },
+  /* ----- Setlist-Reihenfolge per Ziehen (Griff) ----- */
+  onDragStart(e) {
+    const h = e.target.closest && e.target.closest('.handle'); if (!h) return;
+    const li = h.closest('li'), ul = li.parentNode; e.preventDefault();
+    try { h.setPointerCapture(e.pointerId); } catch (err) {}
+    li.classList.add('drag');
+    const move = ev => {
+      let before = null;
+      for (const s of [...ul.children]) { if (s === li) continue; const r = s.getBoundingClientRect(); if (ev.clientY < r.top + r.height / 2) { before = s; break; } }
+      if (before !== li.nextElementSibling) ul.insertBefore(li, before);
+    };
+    const up = () => {
+      document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up);
+      li.classList.remove('drag'); Store.reorder([...ul.children].map(x => x.dataset.id).filter(Boolean)); UI.listItems();
+    };
+    document.addEventListener('pointermove', move); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);   // am Dokument: funktioniert auch, wenn der Griff beim Umsortieren kurz aus dem Baum genommen wird
+  },
+  moveBy(id, d) {
+    const ids = Store.setlist().map(s => s.id), i = ids.indexOf(id), j = i + d; if (i < 0 || j < 0 || j >= ids.length) return;
+    ids.splice(j, 0, ids.splice(i, 1)[0]); Store.reorder(ids); UI.listItems();
+    const b = $(`[data-act="${d < 0 ? 'up' : 'down'}"][data-id="${CSS.escape(id)}"]`); if (b) b.focus();
+  },
+
+  onClick(e) {
+    const el = e.target.closest('[data-act]'); if (!el) return;
+    const act = el.dataset.act, song = this.current();
+    switch (act) {
+      case 'open': location.hash = '#/song/' + encodeURIComponent(el.dataset.id); break;
+      case 'back': location.hash = '#/'; break;
+      case 'filter': this.filter = el.dataset.f; if (this.filter !== 'setlist') this.reorder = false; UI.list(); break;
+      case 'reorder': this.reorder = !this.reorder; UI.list(); break;
+      case 'up': this.moveBy(el.dataset.id, -1); break;
+      case 'down': this.moveBy(el.dataset.id, 1); break;
+      case 'stage': this.stageFrom = song ? 'song' : 'list'; this.stageOpen(song ? song.id : null); break;
+      case 'stagePrev': this.stageGo(-1); break;
+      case 'stageNext': this.stageGo(1); break;
+      case 'stageExit': this.stageExit(); break;
+      case 'stageZoom': { const st = Store.data.settings; st.stageSize = Math.min(2.4, Math.max(0.6, +(st.stageSize + Number(el.dataset.d)).toFixed(2))); Store.saveSettings(); UI.stage(); break; }
+      case 'add': Dialogs.song(null); break;
+      case 'edit': Dialogs.song(song); break;
+      case 'menu': Dialogs.menu(); break;
+      case 'close': $('#dlg').close(); break;
+      case 'theme': Store.data.settings.theme = Store.data.settings.theme === 'light' ? 'dark' : 'light'; Store.saveSettings(); this.applyTheme(); break;
+      case 'tab': this.tab = el.dataset.tab; UI.tabs(); if (this.tab === 'noten' && song) Bass.render(song); if (this.tab === 'videos' && song) Suggest.run(song, false); break;
+      case 'delete':
+        if (confirm('«' + song.title + '» wirklich löschen? Die Audiodateien dieses Songs werden ebenfalls entfernt (auch in Drive gesicherte).')) {
+          SLOTS.forEach(s => { IDB.del(stemKey(song.id, s.id)).catch(() => {}); const m = song.stems[s.id]; if (m && m.driveId) Cloud.queueTrash(m.driveId); });
+          Store.remove(song.id); $('#dlg').close(); location.hash = '#/'; toast('Song gelöscht.');
+        } break;
+      case 'export': IO.exportJson(); break;
+      case 'import': $('#importFile').click(); break;
+      // Drive
+      case 'signIn': Cloud.signIn().then(() => { if ($('#dlg').open && $('#cloudBox')) Dialogs.menu(); }); break;
+      case 'signOut': Cloud.signOut(); Dialogs.menu(); break;
+      case 'sync':
+        if (!Cloud.hadLogin()) { Dialogs.menu(); break; }
+        if (!isOnline()) { toast('Offline – alles wird lokal gespeichert und später abgeglichen.'); break; }
+        if (!Cloud.tokenValid()) { Cloud.signIn(); break; }
+        Cloud.syncAll(true).then(ok => { toast(ok ? 'Mit Drive abgeglichen.' : 'Abgleich nicht möglich' + (Cloud.lastError ? ': ' + Cloud.lastError : '.')); if ($('#dlg').open && $('#cloudBox')) Dialogs.menu(); });
+        break;
+      case 'backups': Dialogs.backups(); break;
+      case 'restore': IO.restoreBackup(el.dataset.id, el.dataset.name); break;
+      case 'folderInfo': Dialogs.folderHint(); break;
+      case 'reload': (async () => { try { for (const r of await navigator.serviceWorker.getRegistrations()) await r.update(); } catch (err) {} location.reload(); })(); break;
+      case 'tap': Dialogs.tap(); break;
+      // Player
+      case 'play': Player.toggle(); break;
+      case 'skip': Player.seek(Player.time() + Number(el.dataset.d)); break;
+      case 'loopA': song.loop.a = Player.time(); if (song.loop.b != null && song.loop.b <= song.loop.a) song.loop.b = null; Store.touch(song); UI.loop(); break;
+      case 'loopB': { const t = Player.time(); if (song.loop.a == null) song.loop.a = 0; if (t <= song.loop.a + 0.2) { toast('B muss nach A liegen.'); break; } song.loop.b = t; Store.touch(song); UI.loop(); break; }
+      case 'loopClr': song.loop = { a:null, b:null }; Store.touch(song); UI.loop(); break;
+      case 'more': { const o = $('.transport').classList.toggle('open'); el.classList.toggle('on', o); el.setAttribute('aria-expanded', o); break; }
+      case 'metro':
+        if (Metro.on) Metro.stop(); else if (song.bpm) Metro.start(song.bpm * Player.rate); else toast('Für das Metronom zuerst BPM beim Song eintragen.');
+        el.classList.toggle('on', Metro.on); break;
+      // Stems
+      case 'pick': $('#file-' + el.dataset.slot).click(); break;
+      case 'stemDel': {
+        const slot = el.dataset.slot, m = song.stems[slot];
+        if (!confirm('Audiodatei aus diesem Slot entfernen?' + (m && m.driveId ? ' Die Kopie in Drive wird ebenfalls entfernt.' : ''))) break;
+        if (m && m.driveId) Cloud.queueTrash(m.driveId);
+        Player.detach(slot); song.stems[slot] = { deleted:true, u:Date.now() }; IDB.del(stemKey(song.id, slot)).catch(() => {}); Store.touch(song); UI.stems(); UI.transport(); break;
+      }
+      case 'stemUp': this.stemCloud(song, el.dataset.slot, 'up'); break;
+      case 'stemDown': this.stemCloud(song, el.dataset.slot, 'down'); break;
+      case 'stemOn': { const m = song.mix[el.dataset.slot]; m.on = !m.on; Player.applyMix(); Store.touch(song); UI.stems(); break; }
+      case 'preset': {
+        const p = el.dataset.p, mix = song.mix;
+        SLOTS.forEach(s => { mix[s.id].on = false; });
+        if (p === 'original') mix.original.on = true; if (p === 'bass') mix.bass.on = true; if (p === 'nobass') mix.nobass.on = true;
+        if (p === 'both') { mix.bass.on = true; mix.nobass.on = true; }
+        const missing = SLOTS.filter(s => mix[s.id].on && !Player.tracks[s.id]).map(s => s.label);
+        if (missing.length) toast('Noch keine Datei für: ' + missing.join(', '));
+        Player.applyMix(); Store.touch(song); UI.stems(); break;
+      }
+      // Noten
+      case 'zoom': { const st = Store.data.settings; st.chordSize = Math.min(2.4, Math.max(0.7, +(st.chordSize + Number(el.dataset.d)).toFixed(2))); Store.saveSettings(); UI.chords(); break; }
+      case 'tr': song.transpose = Math.max(-11, Math.min(11, (song.transpose || 0) + Number(el.dataset.d))); Store.touch(song); this.trChanged(song); break;
+      case 'trReset': song.transpose = 0; song.flats = null; Store.touch(song); this.trChanged(song); break;
+      case 'trFlats': song.flats = !useFlats(song, song.transpose || 0); Store.touch(song); this.trChanged(song); break;
+      case 'wake': this.setWake(!this.wake); break;
+      case 'bassPlay': Bass.playing ? Bass.stop() : Bass.play(); break;
+      case 'abcTemplate': {
+        const ta = $('#abcIn'); if (ta.value.trim() && !confirm('Vorhandene Eingabe durch die leere Vorlage ersetzen?')) break;
+        ta.value = ['X:1', 'T:' + song.title + ' - Bass', 'M:4/4', 'L:1/8', 'Q:1/4=' + (song.bpm || 100), 'K:C clef=bass', '% Tonart in der Zeile K: anpassen, dann Takte eintragen:', 'z8 | z8 | z8 | z8 |'].join('\n');
+        song.bassAbc = ta.value; Store.touch(song); Bass.render(song); break;
+      }
+      // Links & Vorschläge
+      case 'linkAdd': {
+        const url = safeUrl($('#lnUrl').value); if (!url) { toast('Bitte eine gültige URL (https://…) einfügen.'); break; }
+        const kind = $('#lnKind').value; song.links.push({ id:uid(), label:$('#lnLabel').value.trim() || LINK_KINDS[kind], url, kind });
+        $('#lnUrl').value = ''; $('#lnLabel').value = ''; Store.touch(song); UI.links(); break;
+      }
+      case 'linkDel': song.links = song.links.filter(l => l.id !== el.dataset.id); Store.touch(song); UI.links(); break;
+      case 'embed': this.embedUrl = el.dataset.url; UI.links(); $('#ytBox').scrollIntoView({ behavior:'smooth', block:'center' }); break;
+      case 'sugAccept': Suggest.accept(song, el.dataset.vid); UI.links(); UI.suggest(); toast('Unter «Meine Links» abgelegt.'); break;
+      case 'sugDismiss': Suggest.dismiss(song, el.dataset.vid); UI.suggest(); break;
+      case 'sugRun': Suggest.run(song, true); break;
+    }
+  },
+  trChanged(song) { UI.header(); UI.chords(); UI.info(); if (!Bass.playing) Bass.render(song); },
+  async stemCloud(song, slot, dir) {
+    const k = song.id + ':' + slot; if (this.stemBusy[k]) return;
+    if (!isOnline()) { toast('Offline – das geht erst mit Internet.'); return; }
+    if (!Cloud.tokenClient) await Cloud.loadGsi();
+    this.stemBusy[k] = dir; UI.stems();
+    try {
+      if (dir === 'up') { await Cloud.stemUpload(song, slot); toast('In Drive gesichert.'); }
+      else { const rec = await Cloud.stemDownload(song, slot); if (this.songId === song.id) { const was = Player.playing; if (was) Player.pause(); Player.attach(slot, rec); } toast('Aus Drive geladen: ' + rec.name); }
+    } catch (e) { console.error(e); toast((dir === 'up' ? 'Sichern' : 'Laden') + ' fehlgeschlagen: ' + explainError(e)); }
+    finally { delete this.stemBusy[k]; UI.stems(); UI.transport(); UI.sync(); }
+  },
+  onInput(e) {
+    const t = e.target, song = this.current();
+    if (t.id === 'q') { this.query = t.value; UI.listItems(); return; }
+    if (!song || this.stage) return;
+    const edit = () => { song.updatedAt = Date.now(); saveSoon(song); };
+    if (t.id === 'seek') { Player.seeking = true; $('#tCur').textContent = fmt(Number(t.value)); }
+    else if (t.id === 'rate') { Player.setRate(Number(t.value) / 100); UI.rate(); }
+    else if (t.dataset.vol) { song.mix[t.dataset.vol].vol = Number(t.value) / 100; Player.applyMix(); edit(); }
+    else if (t.id === 'chordsIn') { song.chords = t.value; UI.chords(); edit(); }
+    else if (t.id === 'abcIn') { song.bassAbc = t.value; renderAbcSoon(song); edit(); }
+    else if (t.id === 'notesIn') { song.notes = t.value; edit(); }
+    else if (t.id === 'ytUrl') { song.youtubeUrl = t.value.trim(); this.embedUrl = null; edit(); embedSoon(); }
+  },
+  onChange(e) {
+    const t = e.target, song = this.current();
+    if (t.id === 'importFile') { IO.importJson(t.files[0]); t.value = ''; return; }
+    if (!song || this.stage) return;
+    if (t.id === 'seek') { Player.seek(Number(t.value)); Player.seeking = false; }
+    else if (t.id === 'countIn') { Store.data.settings.countIn = t.checked; Store.saveSettings(); }
+    else if (t.id === 'bassLoop') { Bass.loop = t.checked; }
+    else if (t.type === 'file' && t.dataset.slot) { this.addStem(song, t.dataset.slot, t.files[0]); t.value = ''; }
+  },
+  async addStem(song, slot, file) {
+    if (!file) return;
+    if (!/^audio\//.test(file.type) && !/\.(mp3|m4a|aac|wav|flac|ogg|opus)$/i.test(file.name)) { toast('Bitte eine Audiodatei wählen.'); return; }
+    try {
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+      const rec = { blob:file, name:file.name, type:file.type, size:file.size, u:Date.now() };
+      await IDB.put(stemKey(song.id, slot), rec);
+      const old = song.stems[slot]; if (old && old.driveId) Cloud.queueTrash(old.driveId);   // ersetzte Datei: alte Drive-Kopie entfernen
+      song.stems[slot] = { name:file.name, size:file.size, type:file.type || '', u:rec.u }; song.mix[slot].on = true; Store.touch(song);
+      const wasPlaying = Player.playing; if (wasPlaying) Player.pause();
+      Player.attach(slot, rec); UI.stems(); UI.transport(); toast('Gespeichert: ' + file.name);
+    } catch (e) { console.error(e); toast('Datei konnte nicht gespeichert werden (Speicherplatz?).'); }
+  }
+};
+const saveSoon = debounce(song => Store.touch(song), 500);
+const renderAbcSoon = debounce(song => Bass.render(song), 450);
+const embedSoon = debounce(() => UI.links(), 500);
+
+const UI = {
+  sync() {
+    const el = $('#syncState'); if (!el) return; const s = Cloud.status();
+    el.textContent = s.t; el.className = 'syncchip ' + s.c; el.title = s.long + ' Antippen = jetzt abgleichen.';
+  },
+  /* ----- Songliste ----- */
+  list() {
+    $('#app').innerHTML = `
+      <header class="top">
+        <div class="grow"><h1>Band-Trainer</h1><div class="sub">Keyboard · Akkorde rechts, Bass links</div></div>
+        <button class="syncchip" id="syncState" data-act="sync" aria-label="Abgleich mit Google Drive"></button>
+        <button class="icon ghost" data-act="theme" aria-label="Hell/Dunkel umschalten" title="Hell/Dunkel">${ICON.theme}</button>
+        <button class="icon ghost" data-act="menu" aria-label="Menü" title="Menü">${ICON.menu}</button>
+      </header>
+      <input type="search" id="q" placeholder="Song oder Interpret suchen" value="${esc(App.query)}" aria-label="Suche" autocomplete="off">
+      <div class="chips" role="group" aria-label="Filter" id="chipBox"></div>
+      <ul class="songs" id="songList"></ul>
+      <button class="fab primary" data-act="add">+ Song</button>
+      <input type="file" id="importFile" accept="application/json,.json" class="hidden">`;
+    this.counts(); this.listItems(); this.sync();
+  },
+  counts() {
+    const box = $('#chipBox'); if (!box) return;
+    const songs = Store.data.songs, n = f => songs.filter(s => f === 'all' || s.status === f).length;
+    box.innerHTML = [['all','Alle'],['setlist','Setlist'],['todo','To Do']].map(([f,l]) => `<button class="chip ${App.filter===f?'on':''}" data-act="filter" data-f="${f}">${l} · ${n(f)}</button>`).join('')
+      + '<span class="sep"></span>'
+      + (App.filter === 'setlist' ? `<button class="chip ${App.reorder ? 'on' : ''}" data-act="reorder" aria-pressed="${App.reorder}">Reihenfolge</button>` : '')
+      + '<button class="chip" data-act="stage" title="Auftrittsmodus: Setlist im Vollbild">▶ Auftritt</button>';
+  },
+  listItems() {
+    const el = $('#songList'); if (!el) return;
+    const q = App.query.trim().toLowerCase(), match = s => !q || (s.title + ' ' + s.artist).toLowerCase().includes(q);
+    if (App.filter === 'setlist' && App.reorder) {
+      const list = Store.setlist();
+      el.innerHTML = list.length ? list.map((s, i) => `
+        <li data-id="${esc(s.id)}"><div class="song re">
+          <button class="icon ghost handle" aria-label="Ziehen zum Verschieben" title="Ziehen">⠿</button>
+          <span class="pos">${i + 1}.</span>
+          <div class="grow"><div class="t">${esc(s.title)}</div><div class="a">${esc(s.artist)}</div></div>
+          <button class="icon" data-act="up" data-id="${esc(s.id)}" aria-label="«${esc(s.title)}» nach oben" ${i === 0 ? 'disabled' : ''}>▲</button>
+          <button class="icon" data-act="down" data-id="${esc(s.id)}" aria-label="«${esc(s.title)}» nach unten" ${i === list.length - 1 ? 'disabled' : ''}>▼</button>
+        </div></li>`).join('') : '<li class="empty">Die Setlist ist leer.</li>';
+      return;
+    }
+    const list = App.filter === 'setlist' ? Store.setlist().filter(match)
+      : Store.data.songs.filter(s => App.filter === 'all' || s.status === App.filter).filter(match).sort((a, b) => (a.isDemo - b.isDemo) || a.title.localeCompare(b.title, 'de'));
+    const pos = new Map(Store.setlist().map((s, i) => [s.id, i + 1]));
+    el.innerHTML = list.length ? list.map(s => `
+      <li data-id="${esc(s.id)}"><button class="song" data-act="open" data-id="${esc(s.id)}"><div>
+        <div class="l"><div><div class="t">${App.filter === 'setlist' ? `<span class="n">${pos.get(s.id)}.</span>` : ''}${esc(s.title)}</div><div class="a">${esc(s.artist)}</div></div>${statusBadge(s)}</div>
+        <div class="m">
+          ${s.bpm ? `<span class="badge">${esc(s.bpm)} BPM</span>` : ''}${s.key ? `<span class="badge">Tonart ${esc(keyLabel(s))}</span>` : ''}
+          ${s.uncertain ? '<span class="badge warn">Angabe prüfen</span>' : ''}
+          ${hasAudio(s) ? '<span class="badge">Audio</span>' : ''}${s.chords.trim() ? '<span class="badge">Akkorde</span>' : ''}${s.bassAbc.trim() ? '<span class="badge">Bassline</span>' : ''}
+        </div></div></button></li>`).join('')
+      : '<li class="empty">Keine Songs gefunden.</li>';
+  },
+
+  /* ----- Songansicht ----- */
+  song() {
+    const s = App.current(), st = Store.data.settings;
+    $('#app').innerHTML = `
+      <header class="top">
+        <button class="icon ghost" data-act="back" aria-label="Zurück zur Liste">${ICON.back}</button>
+        <div class="grow"><h1 id="sTitle"></h1><div class="sub" id="sSub"></div></div>
+        <button class="ghost" data-act="edit">Bearbeiten</button>
+      </header>
+      <div id="sNotice"></div>
+      <nav class="tabs" role="tablist">
+        ${[['noten','Noten'],['audio','Audio'],['videos','Videos'],['info','Info']].map(([t,l]) => `<button role="tab" data-act="tab" data-tab="${t}">${l}</button>`).join('')}
+      </nav>
+
+      <section data-pane="noten">
+        <div class="card">
+          <div class="row" style="justify-content:space-between;margin-bottom:10px">
+            <h3 style="margin:0">Rechte Hand · Akkorde</h3>
+            <div class="row"><button data-act="zoom" data-d="-0.15" aria-label="Akkorde kleiner">A−</button><button data-act="zoom" data-d="0.15" aria-label="Akkorde grösser">A+</button>
+            <button id="bWake" data-act="wake" title="Bildschirm wach halten">Wach</button>
+            <button data-act="stage" title="Auftrittsmodus: Akkorde im Vollbild">▶ Auftritt</button></div>
+          </div>
+          <div class="row trrow" role="group" aria-label="Transponieren">
+            <span class="small muted">Transponieren</span>
+            <button data-act="tr" data-d="-1" aria-label="Einen Halbton tiefer">−</button><b id="trOut"></b><button data-act="tr" data-d="1" aria-label="Einen Halbton höher">+</button>
+            <button data-act="trFlats" id="bFlats" title="Schreibweise mit ♯ oder ♭" aria-label="Schreibweise Kreuz oder Be umschalten">♯/♭</button>
+            <button data-act="trReset" id="bTrReset" class="ghost">Original</button>
+          </div>
+          <div class="chordview" id="chordOut"></div>
+          <details><summary>Akkorde bearbeiten</summary>
+            <textarea id="chordsIn" class="mono" spellcheck="false" placeholder="Strophe&#10;| A7 | D7 | A7 | A7 |">${esc(s.chords)}</textarea>
+            <p class="small muted" style="margin-top:6px">Ein Takt pro Feld, getrennt mit <code>|</code>. Zeilen ohne <code>|</code> werden als Abschnittstitel angezeigt (z.B. «Strophe», «Refrain»). Akkorde in der Originaltonart eintragen (Schreibweise C, F#, Bb, Am7, D/F#) – transponiert wird nur die Anzeige. Bitte nur Akkorde, keine Songtexte.</p>
+          </details>
+        </div>
+        <div class="card">
+          <div class="row" style="justify-content:space-between;margin-bottom:10px">
+            <h3 style="margin:0">Linke Hand · Bassline</h3>
+            <div class="row"><label class="chk small"><input type="checkbox" id="bassLoop"> Wiederholen</label>
+            <button id="bBass" data-act="bassPlay">${ICON.play} Bass anhören</button></div>
+          </div>
+          <div id="abcOut"></div><div id="abcWarn"></div>
+          <details><summary>Bassline bearbeiten (ABC-Notation)</summary>
+            <textarea id="abcIn" class="mono" spellcheck="false" autocapitalize="off" autocorrect="off" style="min-height:180px">${esc(s.bassAbc)}</textarea>
+            <div class="row" style="margin-top:8px"><button data-act="abcTemplate">Leere Vorlage einfügen</button></div>
+            <details class="help"><summary>Kurzhilfe ABC</summary>
+              <table class="kv">
+                <tr><td>K:A clef=bass</td><td>Tonart A-Dur, Bassschlüssel (Vorzeichen gelten automatisch)</td></tr>
+                <tr><td>M:4/4 · L:1/8</td><td>Taktart · Grundnotenlänge (hier Achtel)</td></tr>
+                <tr><td>Q:1/4=100</td><td>Tempo für die Wiedergabe</td></tr>
+                <tr><td>C, D, E,</td><td>Oktave unter dem mittleren C (C3–B3); <code>C,,</code> noch eine tiefer (C2–B2, typische Basslage)</td></tr>
+                <tr><td>A,,2 · A,,/2</td><td>doppelte · halbe Länge der Grundnote</td></tr>
+                <tr><td>^F · _B · =C</td><td>Kreuz · Be · Auflösungszeichen</td></tr>
+                <tr><td>z · z4</td><td>Pause · längere Pause</td></tr>
+                <tr><td>| · |] · |: :|</td><td>Taktstrich · Schluss · Wiederholung</td></tr>
+                <tr><td>"A7" A,,2</td><td>Akkordsymbol über der Note</td></tr>
+                <tr><td>A,,-A,,</td><td>Haltebogen</td></tr>
+              </table>
+              <p class="small muted" style="margin-top:8px">Tipp: Im Demo-Song siehst du ein vollständiges Beispiel. Beim Transponieren werden Notenbild und Wiedergabe mit verschoben.</p>
+            </details>
+          </details>
+        </div>
+      </section>
+
+      <section data-pane="audio">
+        <div class="card">
+          <h3>Schnellwahl</h3>
+          <div class="row">
+            <button data-act="preset" data-p="original">Original</button>
+            <button data-act="preset" data-p="bass">Nur Bass</button>
+            <button data-act="preset" data-p="nobass">Ohne Bass</button>
+            <button data-act="preset" data-p="both">Stems gemischt</button>
+          </div>
+        </div>
+        <div class="card" id="stemBox"></div>
+        <p class="small muted">Audiodateien liegen auf diesem Gerät (Browser-Speicher). Mit verbundenem Google Drive kannst du jede Datei einzeln in deinem eigenen Drive sichern und auf einem anderen Gerät wieder laden. Verwende eigene, legal erworbene Dateien und gib sie nicht weiter. Stems (Bass / ohne Bass) erzeugst du extern, z.B. mit Moises, LALAL.AI oder Demucs.</p>
+      </section>
+
+      <section data-pane="videos">
+        <div class="card">
+          <h3>Referenzvideo</h3>
+          <input type="url" id="ytUrl" inputmode="url" placeholder="YouTube-Link einfügen (https://…)" value="${esc(s.youtubeUrl)}" aria-label="YouTube-Link des Referenzvideos">
+          <div id="ytBox"></div>
+        </div>
+        <div class="card">
+          <h3>Vorschläge: Guide-Videos</h3>
+          <div id="sugBox"></div>
+        </div>
+        <div class="card">
+          <h3>Meine Links</h3>
+          <div id="linkList"></div>
+          <details><summary>Link hinzufügen</summary>
+            <label class="f"><span>URL</span><input type="url" id="lnUrl" inputmode="url" placeholder="https://…"></label>
+            <div class="grid2">
+              <label class="f"><span>Bezeichnung</span><input type="text" id="lnLabel" placeholder="z.B. Tutorial Strophe"></label>
+              <label class="f"><span>Art</span><select id="lnKind">${Object.entries(LINK_KINDS).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
+            </div>
+            <button class="primary" data-act="linkAdd">Hinzufügen</button>
+          </details>
+        </div>
+        <div class="card">
+          <h3>Suchen</h3>
+          <div id="searchBox"></div>
+        </div>
+      </section>
+
+      <section data-pane="info">
+        <div class="card" id="infoBox"></div>
+        <div class="card">
+          <h3>Notizen</h3>
+          <textarea id="notesIn" placeholder="Sound, Split-Punkt, Ablauf, Absprachen mit der Band …" aria-label="Notizen">${esc(s.notes)}</textarea>
+        </div>
+      </section>
+
+      <div class="transport" aria-label="Player">
+        <div class="rows">
+          <div>
+            <div class="seekrow"><span id="tCur">0:00</span><input type="range" id="seek" min="0" max="0" step="0.05" value="0" aria-label="Position"><span id="tDur">–:––</span></div>
+            <div class="btnrow">
+              <button data-act="skip" data-d="-5" aria-label="5 Sekunden zurück">−5s</button>
+              <button class="play primary" data-act="play" id="bPlay" aria-label="Abspielen">${ICON.play}</button>
+              <button data-act="skip" data-d="5" aria-label="5 Sekunden vor">+5s</button>
+              <button data-act="loopA" id="bA" aria-label="Loop-Anfang setzen">A</button>
+              <button data-act="loopB" id="bB" aria-label="Loop-Ende setzen">B</button>
+              <button data-act="loopClr" id="bClr" aria-label="Loop löschen">Aus</button>
+              <button data-act="more" id="bMore" aria-label="Tempo und Metronom ein-/ausblenden" aria-expanded="false">Tempo</button>
+            </div>
+            <div class="loopinfo" id="loopInfo"></div>
+          </div>
+          <div class="extra">
+            <div class="temporow"><span class="lab">Tempo <b id="rateOut">100 %</b></span><input type="range" id="rate" min="50" max="100" step="5" value="100" aria-label="Tempo in Prozent"></div>
+            <div class="temporow"><button data-act="metro" id="bMetro" class="grow">Metronom</button>
+              <label class="chk"><input type="checkbox" id="countIn" ${st.countIn ? 'checked' : ''}> Einzähler</label></div>
+          </div>
+        </div>
+      </div>`;
+    this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.suggest(); this.info(); this.transport();
+    const bw = $('#bWake'); if (bw) bw.classList.toggle('on', !!App.wake);
+    if (App.tab === 'videos') Suggest.run(s, false);
+  },
+  header() {
+    const s = App.current(); if (!s || !$('#sTitle')) return;
+    $('#sTitle').textContent = s.title; $('#sSub').textContent = [s.artist, s.bpm ? s.bpm + ' BPM' : '', s.key ? 'Tonart ' + keyLabel(s) : ''].filter(Boolean).join(' · ');
+    setHtml($('#sNotice'), (s.isDemo ? '<div class="notice">Demo: eigenes, generisches Übungsbeispiel – keinem echten Song zugeordnet.</div>' : '') +
+      (s.uncertain ? '<div class="notice"><b>Bitte prüfen:</b> ' + esc(s.uncertain) + '</div>' : ''));
+    document.title = s.title + ' – Band-Trainer';
+  },
+  tabs() { $$('[data-pane]').forEach(p => p.classList.toggle('hidden', p.dataset.pane !== App.tab)); $$('.tabs button').forEach(b => { const on = b.dataset.tab === App.tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }); },
+  chords() {
+    const s = App.current(), el = $('#chordOut'); if (!s || !el) return;
+    el.style.setProperty('--cs', Store.data.settings.chordSize);
+    el.innerHTML = chordsHtml(s) || '<div class="muted small" style="font-family:system-ui,sans-serif">Noch keine Akkorde eingetragen. Geprüfte Akkorde unter «Akkorde bearbeiten» eintragen – Suchlinks und Video-Vorschläge findest du im Tab «Videos».</div>';
+    const st = s.transpose || 0;
+    $('#trOut').textContent = trLabel(st); $('#bTrReset').disabled = !st && s.flats == null;
+    $('#bFlats').disabled = !st; $('#bFlats').textContent = st ? (useFlats(s, st) ? '♭' : '♯') : '♯/♭';
+  },
+  stems() {
+    const s = App.current(), box = $('#stemBox'); if (!s || !box) return;
+    const cloud = Cloud.hadLogin();
+    box.innerHTML = SLOTS.map(sl => {
+      const raw = s.stems[sl.id], meta = raw && !raw.deleted ? raw : null, m = s.mix[sl.id], tr = Player.tracks[sl.id], has = !!tr;
+      const busy = App.stemBusy[s.id + ':' + sl.id];
+      const stale = has && meta && meta.driveId && (meta.name !== tr.name || meta.size !== tr.size) && (meta.u || 0) > (tr.u || 0);
+      const mb = n => (n / 1048576).toFixed(1) + ' MB';
+      let info = esc(sl.hint), drv = '';
+      if (has) info = esc(tr.name) + ' · ' + mb(tr.size || 0);
+      else if (meta) info = esc(meta.name) + ' · ' + mb(meta.size) + ' – nicht auf diesem Gerät';
+      if (busy) drv = `<span>${busy === 'up' ? 'Wird in Drive gesichert …' : 'Wird aus Drive geladen …'}</span>`;
+      else if (stale) drv = `<span>In Drive liegt eine neuere Datei («${esc(meta.name)}»).</span><button data-act="stemDown" data-slot="${sl.id}">Aus Drive laden</button>`;
+      else if (has && meta && meta.driveId) drv = '<span class="okc">✓ In Drive gesichert</span>';
+      else if (has && cloud) drv = `<button data-act="stemUp" data-slot="${sl.id}">In Drive sichern</button>`;
+      else if (!has && meta && meta.driveId) drv = `<button data-act="stemDown" data-slot="${sl.id}" class="primary">Aus Drive laden</button>`;
+      else if (!has && meta) drv = '<span>Die Datei liegt nur auf einem anderen Gerät (dort «In Drive sichern» wählen) – oder hier neu laden.</span>';
+      return `<div class="stem" data-stem="${sl.id}">
+        <div class="grow"><b>${sl.label}</b><div class="fn">${info}</div></div>
+        <div class="row nowrap">${has ? `<button class="danger ghost" data-act="stemDel" data-slot="${sl.id}">Entfernen</button>` : ''}<button data-act="pick" data-slot="${sl.id}">${has ? 'Ersetzen' : 'Datei laden'}</button></div>
+        <input type="file" id="file-${sl.id}" data-slot="${sl.id}" accept="audio/*,.mp3,.m4a,.wav,.flac,.ogg">
+        ${drv ? `<div class="drv">${drv}</div>` : ''}
+        <div class="ctl"><button class="${m.on ? 'on' : ''}" data-act="stemOn" data-slot="${sl.id}" aria-pressed="${m.on}" ${has ? '' : 'disabled'}>${m.on ? 'An' : 'Aus'}</button>
+          <input type="range" min="0" max="100" value="${Math.round(m.vol * 100)}" data-vol="${sl.id}" aria-label="Lautstärke ${sl.label}" ${has ? '' : 'disabled'}></div>
+      </div>`; }).join('');
+  },
+  links() {
+    const s = App.current(); if (!s || !$('#ytBox')) return;
+    const url = App.embedUrl || s.youtubeUrl, id = url ? ytId(url) : null;
+    setHtml($('#ytBox'), id ? ytEmbed(id) : (url ? '<p class="small muted" style="margin-top:8px">Kein gültiger YouTube-Link erkannt.</p>' : '<p class="small muted" style="margin-top:8px">Füge den Link zu einer Aufnahme ein, an der du dich orientierst. Das Video wird direkt von YouTube geladen.</p>'));
+    setHtml($('#linkList'), s.links.length ? s.links.map(l => { const u = safeUrl(l.url); return `<div class="link">
+        <div class="grow"><div><b>${esc(l.label)}</b> <span class="badge">${esc(LINK_KINDS[l.kind] || '')}</span></div><div class="small muted">${esc(l.url)}</div></div>
+        ${u && ytId(u) ? `<button data-act="embed" data-url="${esc(u)}">Hier</button>` : ''}
+        ${u ? `<a class="btn" href="${esc(u)}" target="_blank" rel="noopener noreferrer">Öffnen</a>` : ''}
+        <button class="icon ghost danger" data-act="linkDel" data-id="${esc(l.id)}" aria-label="Link entfernen">✕</button></div>`; }).join('')
+      : '<p class="small muted">Noch keine Links. Vorschläge übernehmen oder gute Tutorials über die Suche unten finden und hier ablegen.</p>');
+    setHtml($('#searchBox'), s.isDemo ? '<p class="small muted">Für den Demo-Song gibt es keine Suchlinks.</p>'
+      : '<div class="searchgrid">' + searchLinks(s).map(([l, u]) => `<a class="btn" href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(l)}</a>`).join('') + '</div><p class="small muted" style="margin-top:10px">Das sind automatisch erzeugte Suchanfragen, keine geprüften Empfehlungen. Akkorde und Tabs aus dem Netz sind oft fehlerhaft – mit der Aufnahme und der Band abgleichen.</p>');
+  },
+  suggest() {
+    const s = App.current(), box = $('#sugBox'); if (!s || !box) return;
+    let h;
+    if (s.isDemo) h = '<p class="small muted">Für den Demo-Song gibt es keine Vorschläge.</p>';
+    else if (!Suggest.available()) h = '<p class="small muted">Automatische Vorschläge sind nicht eingerichtet (kein YouTube-API-Schlüssel). Nutze die Suchlinks unten.</p>';
+    else {
+      const sg = s.suggest, items = sg ? sg.items : [], busy = Suggest.busy.has(s.id), err = Suggest.err[s.id];
+      h = items.map(it => `<div class="sugg">
+          ${it.thumb ? `<img src="${esc(it.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}
+          <div class="grow"><div class="ti">${esc(it.title)}</div>
+            <div class="small muted">${esc(it.channel)}</div>
+            <div><span class="badge sug">Vorschlag</span> <span class="badge">${esc(LINK_KINDS[it.kind])}</span></div>
+            <div class="row"><button data-act="embed" data-url="https://www.youtube.com/watch?v=${esc(it.vid)}">Ansehen</button><button class="primary" data-act="sugAccept" data-vid="${esc(it.vid)}">Übernehmen</button><button class="ghost" data-act="sugDismiss" data-vid="${esc(it.vid)}">Verwerfen</button></div>
+          </div></div>`).join('');
+      if (busy) h += '<p class="small muted">Suche auf YouTube …</p>';
+      else if (err) h += `<p class="small" style="color:var(--warn)">Vorschläge nicht verfügbar: ${esc(err)} Die Suchlinks unten funktionieren weiterhin.</p>`;
+      else if (!sg || !sg.at) h += `<p class="small muted">${isOnline() ? 'Noch keine Vorschläge geladen.' : 'Offline – Vorschläge gibt es erst mit Internet.'}</p>`;
+      else if (!items.length) h += '<p class="small muted">Keine (weiteren) Treffer. Nutze die Suchlinks unten oder suche neu.</p>';
+      if (!busy) h += `<div class="row" style="margin-top:8px"><button data-act="sugRun">${sg && sg.at ? 'Neu suchen' : 'Vorschläge suchen'}</button></div>`;
+      h += '<p class="small muted" style="margin-top:8px">Automatische YouTube-Treffer zu «Titel Interpret keyboard tutorial» bzw. «bass tutorial/cover» – ungeprüft. Übernimm nur, was zur Aufnahme und zur Band passt.</p>';
+    }
+    setHtml(box, h);
+  },
+  info() {
+    const s = App.current(), el = $('#infoBox'); if (!s || !el) return;
+    el.innerHTML = `<h3>Angaben</h3><table class="kv">
+      <tr><td>Titel</td><td>${esc(s.title)}</td></tr><tr><td>Interpret</td><td>${esc(s.artist) || '–'}</td></tr>
+      <tr><td>BPM</td><td>${s.bpm ? esc(s.bpm) : '– (noch nicht eingetragen)'}</td></tr><tr><td>Tonart</td><td>${esc(keyLabel(s)) || '– (noch nicht eingetragen)'}${s.transpose ? ' <span class="badge">' + esc(trLabel(s.transpose)) + '</span>' : ''}</td></tr>
+      <tr><td>Status</td><td>${statusBadge(s)}</td></tr></table>
+      <div class="row" style="margin-top:12px"><button data-act="edit">Angaben bearbeiten</button></div>`;
+  },
+  transport() {
+    if (!$('#seek')) return; const d = Player.duration();
+    $('#seek').max = d || 0; $('#tDur').textContent = d ? fmt(d) : '–:––';
+    $('#seek').disabled = !d; this.time(); this.rate(); this.loop(); this.playBtn();
+  },
+  time() { const sk = $('#seek'); if (!sk || Player.seeking) return; const t = Player.time(); sk.value = t; $('#tCur').textContent = fmt(t); },
+  rate() { const r = $('#rate'); if (!r) return; r.value = Math.round(Player.rate * 100); const s = App.current(); $('#rateOut').textContent = Math.round(Player.rate * 100) + ' %' + (s && s.bpm ? ' · ' + Math.round(s.bpm * Player.rate) + ' BPM' : ''); },
+  loop() {
+    const s = App.current(); if (!s || !$('#bA')) return; const { a, b } = s.loop;
+    $('#bA').classList.toggle('on', a != null); $('#bB').classList.toggle('on', b != null);
+    $('#loopInfo').textContent = a != null || b != null ? 'Loop: A ' + (a != null ? fmt(a) : '–') + '  →  B ' + (b != null ? fmt(b) : 'Ende') : '';
+  },
+  playBtn() { const b = $('#bPlay'); if (!b) return; const on = Player.playing || Player.counting; b.innerHTML = Player.counting ? 'Einzählen …' : (on ? ICON.pause : ICON.play); b.setAttribute('aria-label', on ? 'Pause' : 'Abspielen'); },
+  bassBtn() { const b = $('#bBass'); if (!b) return; b.innerHTML = Bass.playing ? ICON.pause + ' Stopp' : ICON.play + ' Bass anhören'; b.classList.toggle('on', Bass.playing); },
+
+  /* ----- Auftrittsmodus: Akkordraster im Vollbild, Wischen/Tasten zum nächsten Song ----- */
+  stage() {
+    const s = App.current(), l = App.stageList(), i = l.indexOf(s), prev = l[i - 1], next = l[i + 1];
+    document.title = s.title + ' – Auftritt';
+    $('#app').innerHTML = `<div class="stage" id="stage">
+      <div class="shead">
+        <button class="icon ghost" data-act="stageExit" aria-label="Auftrittsmodus beenden">✕</button>
+        <div class="grow"><h1>${esc(s.title)}</h1></div>
+        <span class="spos" id="stagePos">${i + 1} / ${l.length}</span>
+        <button data-act="stageZoom" data-d="-0.15" aria-label="Akkorde kleiner">A−</button><button data-act="stageZoom" data-d="0.15" aria-label="Akkorde grösser">A+</button>
+      </div>
+      <div class="ssub">${esc([s.artist, s.bpm ? s.bpm + ' BPM' : '', s.key ? 'Tonart ' + keyLabel(s) : '', s.transpose ? trLabel(s.transpose) : ''].filter(Boolean).join(' · '))}</div>
+      <div class="sbody">
+        <div class="chordview" id="stageChords" style="--cs:${Number(Store.data.settings.stageSize) || 1}">${chordsHtml(s) || '<div class="muted small" style="font-family:system-ui,sans-serif">Für diesen Song sind noch keine Akkorde eingetragen.</div>'}</div>
+        ${s.notes.trim() ? `<div class="snotes">${esc(s.notes)}</div>` : ''}
+      </div>
+      <div class="snav">
+        <button data-act="stagePrev" ${prev ? '' : 'disabled'} aria-label="Vorheriger Song">‹ ${prev ? esc(prev.title) : 'Anfang'}</button>
+        <button class="nx primary" data-act="stageNext" ${next ? '' : 'disabled'} aria-label="Nächster Song">${next ? esc(next.title) : 'Ende der Setlist'} ›</button>
+      </div></div>`;
+    const el = $('#stage'); let x0 = null, y0 = 0;
+    el.addEventListener('touchstart', e => { if (e.touches.length === 1) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; } else x0 = null; }, { passive:true });
+    el.addEventListener('touchend', e => {
+      if (x0 == null) return; const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy)) App.stageGo(dx < 0 ? 1 : -1);
+    }, { passive:true });
+  }
+};
+function statusBadge(s) {
+  return s.status === 'setlist' ? '<span class="badge setlist">Setlist</span>' : s.status === 'demo' ? '<span class="badge demo">Demo</span>' : '<span class="badge todo">To Do</span>';
+}
+
+/* ---------- Dialoge ---------- */
+const Dialogs = {
+  taps:[],
+  song(song) {
+    const isNew = !song, s = song || newSong(), d = $('#dlg');
+    d.innerHTML = `<form id="songForm" novalidate>
+      <h2>${isNew ? 'Song hinzufügen' : 'Song bearbeiten'}</h2>
+      <label class="f"><span>Titel *</span><input type="text" name="title" required value="${esc(s.title)}" autocomplete="off"></label>
+      <label class="f"><span>Interpret</span><input type="text" name="artist" value="${esc(s.artist)}" autocomplete="off"></label>
+      <div class="grid2">
+        <label class="f"><span>BPM</span><div class="row nowrap"><input type="number" name="bpm" min="30" max="260" inputmode="numeric" value="${s.bpm ?? ''}"><button type="button" data-act="tap">Tap</button></div></label>
+        <label class="f"><span>Tonart (Original)</span><input type="text" name="key" placeholder="z.B. A, Em" value="${esc(s.key)}" autocomplete="off" autocapitalize="off"></label>
+      </div>
+      <label class="f"><span>Status</span><select name="status">
+        <option value="setlist" ${s.status==='setlist'?'selected':''}>Setlist</option><option value="todo" ${s.status==='todo'?'selected':''}>To Do</option>
+        ${s.isDemo ? '<option value="demo" selected>Demo</option>' : ''}</select></label>
+      <label class="f"><span>Hinweis «bitte prüfen» (leer = keine Unsicherheit)</span><input type="text" name="uncertain" value="${esc(s.uncertain)}" autocomplete="off"></label>
+      <div class="actions">
+        ${isNew ? '' : '<button type="button" class="danger ghost" data-act="delete" style="margin-right:auto">Löschen</button>'}
+        <button type="button" data-act="close">Abbrechen</button><button type="submit" class="primary">Speichern</button>
+      </div></form>`;
+    $('#songForm').addEventListener('submit', e => {
+      e.preventDefault(); const f = new FormData(e.target), title = String(f.get('title')).trim();
+      if (!title) { toast('Bitte einen Titel eingeben.'); return; }
+      const bpm = parseInt(f.get('bpm'), 10), status = ['setlist', 'todo', 'demo'].includes(f.get('status')) ? f.get('status') : 'todo';
+      Object.assign(s, { title, artist:String(f.get('artist')).trim(), bpm:bpm >= 30 && bpm <= 260 ? bpm : null, key:String(f.get('key')).trim(), status, uncertain:String(f.get('uncertain')).trim() });
+      if (status !== 'setlist') s.order = null;
+      if (isNew) Store.data.songs.push(s);
+      Store.fixOrder(true); Store.touch(s); d.close();
+      if (isNew) location.hash = '#/song/' + encodeURIComponent(s.id); else { UI.header(); UI.info(); UI.links(); UI.suggest(); UI.rate(); UI.chords(); }
+    });
+    this.taps = []; if (!d.open) d.showModal();
+  },
+  tap() {
+    const now = performance.now(); if (this.taps.length && now - this.taps[this.taps.length - 1] > 2000) this.taps = [];
+    this.taps.push(now); if (this.taps.length > 8) this.taps.shift();
+    if (this.taps.length >= 3) { const iv = (this.taps[this.taps.length - 1] - this.taps[0]) / (this.taps.length - 1); $('#songForm [name=bpm]').value = Math.round(60000 / iv); }
+  },
+  async menu() {
+    const d = $('#dlg'); let usage = '';
+    Cloud.loadGsi();   // Google-Skript schon jetzt laden: das Anmelde-Fenster muss später direkt auf den Tipp folgen (Popup-Blocker)
+    try { if (navigator.storage && navigator.storage.estimate) { const e = await navigator.storage.estimate(); usage = (e.usage / 1048576).toFixed(1) + ' MB belegt'; } } catch (e) {}
+    const st = Cloud.status(), had = Cloud.hadLogin(), ok = Cloud.tokenValid(), last = Number(LS.get('lastSync')) || 0, id = String(CONFIG.CLIENT_ID);
+    let sw = 'nicht aktiv'; try { if (navigator.serviceWorker && navigator.serviceWorker.controller) sw = 'aktiv'; } catch (e) {}
+    d.innerHTML = `<h2>Daten & Einstellungen</h2>
+      <h3>Google Drive</h3>
+      <div id="cloudBox">
+        <p class="small" id="cloudState">${esc(st.long)}${last && had ? ' Letzter Abgleich: ' + esc(new Date(last).toLocaleString('de-CH', { dateStyle:'short', timeStyle:'short' })) + '.' : ''}</p>
+        <div class="row" style="margin-bottom:8px">
+          ${had && ok ? '<button class="primary" data-act="sync">Jetzt abgleichen</button><button data-act="backups">Sicherungen</button><button class="ghost" data-act="signOut">Abmelden</button>'
+            : `<button class="primary" data-act="signIn">${had ? 'Wieder anmelden' : 'Mit Google Drive verbinden'}</button>${had ? '<button class="ghost" data-act="signOut">Trennen</button>' : ''}`}
+        </div>
+        <p class="small muted">Die App legt in deinem Drive den Ordner «${esc(CONFIG.FOLDER_NAME)}» an (Songs und Einstellungen in <code>library.json</code>, Unterordner «Stems» und «Backups») und sieht nur Dateien, die sie selbst erstellt hat. Ohne Anmeldung bleibt alles lokal nutzbar. ${had ? '<button class="ghost" data-act="folderInfo" style="min-height:32px;padding:0 8px">Hinweis zum Ordner</button>' : ''}</p>
+      </div>
+      <h3 style="margin-top:14px">Sichern & Übertragen</h3>
+      <div class="row" style="margin-bottom:8px"><button data-act="export">Export (JSON)</button><button data-act="import">Import (JSON)</button></div>
+      <p class="small muted">Export enthält Songs, Akkorde, Basslines, Links und Notizen – keine Audiodateien. Import führt zusammen: bei gleichem Song gewinnt der neuere Stand.</p>
+      <h3 style="margin-top:14px">Hinweise</h3>
+      <p class="small muted">Keine Songtexte oder vollständigen Transkriptionen Dritter veröffentlichen. Eigene Notizen für den Proberaum sind in Ordnung; Audiodateien bleiben auf dem Gerät bzw. in deinem privaten Drive.</p>
+      <p class="small muted" id="verLine">Version ${APP_VERSION} · abcjs ${ABCJS_VERSION} · Offline-Speicher ${sw}${usage ? ' · ' + usage : ''}</p>
+      <p class="small muted">Läuft auf ${esc(location.origin)} · Client-ID ${esc(id.length > 24 ? id.slice(0, 12) + '…' + id.slice(-27) : id)}</p>
+      <div class="actions"><button data-act="reload">Neu laden / Update suchen</button><button data-act="close" class="primary">Schliessen</button></div>`;
+    if (!d.open) d.showModal();
+  },
+  folderHint() {
+    const d = $('#dlg');
+    d.innerHTML = `<h2>Ordner in Google Drive</h2>
+      <p>Die App hat in deinem Drive den Ordner <b>«${esc(CONFIG.FOLDER_NAME)}»</b> eingerichtet. Darin liegen <code>library.json</code> (Songs und Einstellungen) sowie die Unterordner «Stems» und «Backups» (tägliche Sicherung, die letzten ${BK_KEEP} bleiben).</p>
+      <p>Du darfst den Ordner in Drive verschieben, zum Beispiel nach <b>«04_Band»</b> – die App findet ihn weiterhin, weil sie ihn selbst erstellt hat und sich seine Kennung nicht ändert. Bitte nicht umbenennen und die Dateien darin nicht von Hand bearbeiten.</p>
+      <div class="actions"><button data-act="close" class="primary">Verstanden</button></div>`;
+    if (!d.open) d.showModal();
+  },
+  async backups() {
+    const d = $('#dlg');
+    d.innerHTML = '<h2>Sicherungen in Drive</h2><p class="small muted" id="bkState">Lade Liste …</p><div class="scroll" id="bkList"></div><div class="actions"><button data-act="menu">Zurück</button><button data-act="close" class="primary">Schliessen</button></div>';
+    try {
+      const list = await Cloud.listBackups();
+      if (!$('#bkList')) return;
+      $('#bkState').textContent = list.length ? 'Wiederherstellen holt den Stand der Sicherung zurück (auch Gelöschtes). Songs, die es nur jetzt gibt, bleiben erhalten.' : 'Noch keine Sicherung vorhanden.';
+      $('#bkList').innerHTML = list.map(f => `<div class="link"><div class="grow"><b>${esc(f.name.slice(8, 18).split('-').reverse().join('.'))}</b></div><button data-act="restore" data-id="${esc(f.id)}" data-name="${esc(f.name)}">Wiederherstellen</button></div>`).join('');
+    } catch (e) { if ($('#bkState')) $('#bkState').textContent = 'Sicherungen nicht erreichbar: ' + explainError(e); }
+  }
+};
+
+/* ---------- Import / Export / Wiederherstellen ---------- */
+const IO = {
+  exportJson() {
+    const a = document.createElement('a'); const url = URL.createObjectURL(new Blob([JSON.stringify(Object.assign({ exportedAt:new Date().toISOString() }, Store.payload()), null, 2)], { type:'application/json' }));
+    a.href = url; a.download = 'band-trainer-' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000); toast('Export erstellt.');
+  },
+  merge(inc) {   // eingehenden Stand zusammenführen; gibt zurück, wie viele Songs neu/aktualisiert sind
+    const before = new Map(Store.data.songs.map(s => [s.id, s.updatedAt || 0]));
+    Store.apply(mergeData(Store.snapshot(), inc)); Store.fixOrder(true); Store.save();
+    let added = 0, updated = 0;
+    for (const s of Store.data.songs) { if (!before.has(s.id)) added++; else if ((s.updatedAt || 0) > before.get(s.id)) updated++; }
+    return { added, updated };
+  },
+  async importJson(file) {
+    if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      if (!data || !Array.isArray(data.songs)) throw new Error('Keine Songliste gefunden.');
+      const inc = cleanData(data); inc.settingsAt = 0;   // Einstellungen dieses Geräts bleiben
+      const r = this.merge(inc);
+      $('#dlg').close(); App.route(); toast('Import: ' + r.added + ' neu, ' + r.updated + ' aktualisiert.');
+    } catch (e) { toast('Import fehlgeschlagen: ' + e.message); }
+  },
+  async restoreBackup(id, name) {
+    if (!confirm('Stand aus «' + name + '» zurückholen? Die Songs der Sicherung ersetzen den heutigen Stand; Songs, die es nur jetzt gibt, bleiben.')) return;
+    try {
+      const inc = cleanData(await Cloud.readJson(id)), now = Date.now();
+      if (!inc.songs.length) throw new Error('Die Sicherung enthält keine Songs.');
+      const cur = new Map(Store.data.songs.map(s => [s.id, s]));
+      for (const s of inc.songs) { const c = cur.get(s.id); s.stems = c ? c.stems : s.stems; if (!c || canon(Object.assign({}, c, { updatedAt:0 })) !== canon(Object.assign({}, s, { updatedAt:0 }))) s.updatedAt = now; else s.updatedAt = c.updatedAt; delete Store.data.deleted[s.id]; }
+      inc.deleted = {}; inc.settingsAt = 0;
+      const r = this.merge(inc);
+      $('#dlg').close(); App.route(); toast('Wiederhergestellt: ' + (r.added + r.updated) + ' Songs zurückgeholt.');
+    } catch (e) { toast('Wiederherstellen fehlgeschlagen: ' + explainError(e)); }
+  }
+};
+
+/* ---------- Start (offline-first): erst lokale Daten anzeigen, dann Google/Drive im Hintergrund ---------- */
+App.init();
+// Service Worker: Programm-Dateien offline verfügbar machen (nur über https bzw. localhost möglich)
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js').catch(e => console.warn('Service Worker:', e));
+  // Neue App-Version installiert: im Leerlauf sofort neu laden, sonst Hinweis zum Antippen
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return;
+    const ae = document.activeElement, idle = !$('#dlg').open && !App.stage && !Player.playing && !Bass.playing && !(ae && /^(TEXTAREA|INPUT)$/.test(ae.tagName));
+    if (idle) { reloading = true; location.reload(); return; }
+    const t = document.createElement('button'); t.className = 'primary'; t.textContent = '⟳ Neue Version – hier antippen zum Aktualisieren';
+    t.style.cssText = 'position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top));transform:translateX(-50%);z-index:30;max-width:92vw;white-space:normal';
+    t.addEventListener('click', () => { reloading = true; location.reload(); }); document.body.append(t);
+  });
+}
+Cloud.boot();
+</script>
+</body>
+</html>
