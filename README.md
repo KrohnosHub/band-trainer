@@ -112,6 +112,12 @@ Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): e
 
 ## Änderungslog
 
+### v1.6.0 – Setlist teilen/PDF, Song aus Spotify-Link, Dateien aus Drive, Tonhöhe des Playbacks
+- **Teilen / PDF** (bei gewählter Liste): Setlist als Text teilen (Teilen-Menü des Handys bzw. Zwischenablage) oder als Druckansicht – im Druckdialog «Als PDF speichern». Wählbar: Tonart (wie angezeigt, inkl. Transponieren), BPM, Sound-Setup, Notizen, Akkordblätter anhängen (je Song eine Seite).
+- **Song aus Spotify-Link:** Im Song-Dialog Spotify-Link einfügen → «Übernehmen» füllt Titel und Interpret (braucht Spotify-Zugangsdaten); der Link wird als bestätigter Spotify-Titel gespeichert.
+- **Aus Drive wählen:** Audiodateien (pro Slot «Aus Drive») und Notenblätter («Aus Drive wählen», mehrere auf einmal) direkt aus deiner Drive-Ablage übernehmen; die Auswahl startet in «04_Band/Audio & Stems» bzw. «04_Band/Noten & Tabs». Technisch: Google-Dateiauswahl (Picker) – gibt der App genau die gewählten Dateien frei, Scope bleibt `drive.file`. **Voraussetzung:** Im Google-Cloud-Projekt muss die «Google Picker API» aktiviert und für den Browser-Schlüssel erlaubt sein.
+- **Tonhöhe Audio** (Player → «Tempo»): Playback in Halbtönen verschieben (−12 … +12), unabhängig vom Tempo; «= Akkorde» übernimmt die Transposition der Akkordanzeige. Läuft als AudioWorklet (`pitch-worklet.js`) in Echtzeit – Klang für Übezwecke gut, leichte Artefakte möglich.
+
 ### v1.5.0 – Sound-Setup, Voicing-Hilfe, Bassline-Vorschlag
 - **Sound-Setup pro Song** (Tab «Noten»): Split-Punkt, Sound links/rechts (mit Vorschlagsliste), Orgel-Registerzüge (9 Ziffern 0–8, als Balken dargestellt) und Sound-Notizen. Erscheint im Auftrittsmodus gross unter dem Titel.
 - **Griffe · Voicing-Hilfe:** Jeder Akkord des Songs einmal auf einer Mini-Klaviatur – rechte Hand als Umkehrung mit möglichst kleinen Wegen zum vorherigen Akkord (Voice Leading, Lage F3–C6), linke Hand Grundton bzw. Basston bei Slash-Akkorden. Folgt dem Transponieren. Akkorde mit unbekanntem Zusatz werden genannt statt falsch dargestellt.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-QSphmpbPcfR9bs7PGVy3JCboUzNeLo/gwd5InEMfjxA=' 'sha256-i4l37YvTQYMdFuWPt2tIZ68f0T3UZDsSLnJyJfYHNkE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-+PaxgWlf5M/e4YWvZBeKxyybB7TPBqyUMSKMFUjPiAs='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -32,6 +32,12 @@
     // Spotify (ab v1.2.0): automatische Verknüpfung jedes Songs mit dem Spotify-Titel. Client-Credentials-Ablauf wie in der
     // Gesangs-App. Das Secret steht bewusst NICHT im Quellcode (öffentliche Seite), sondern wird pro Gerät lokal gespeichert.
     // Gleicher Ursprung wie die Gesangs-App → deren lokal gespeicherte Zugangsdaten (sp_id/sp_secret) werden mitbenutzt.
+    // Google-Dateiauswahl (v1.6.0): Projektnummer des Cloud-Projekts (= erster Teil der Client-ID) und Browser-Schlüssel mit freigeschalteter
+    // «Google Picker API». Startordner = deine Ablage in Drive («04_Band/Audio & Stems» bzw. «04_Band/Noten & Tabs»); Ordner-IDs geben keinen Zugriff.
+    PICKER_APP_ID: '159994249880',
+    PICKER_API_KEY: '',   // leer = gleicher Browser-Schlüssel wie YOUTUBE_API_KEY (s. unten)
+    PICK_AUDIO_FOLDER: '1JrlWj9_whlC4JvsSCavczD9rHp7Nhyfe',
+    PICK_SHEET_FOLDER: '13HO6QKgVt98zVcN87VmHJJu3rrEb8i7c',
     SPOTIFY_CLIENT_ID: 'cba857fdd8fc4118bed7aad8e470ea5d',
     SPOTIFY_CLIENT_SECRET: ''
   };
@@ -233,6 +239,17 @@ dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;fl
 .song.re button{flex:none}
 li.drag{opacity:.75;position:relative;z-index:3}
 li.drag .song{border-color:var(--accent);box-shadow:0 6px 20px rgba(0,0,0,.35)}
+#printArea{display:none}
+@media print{
+  body.printing > *:not(#printArea){display:none!important}
+  body.printing #printArea{display:block;color:#000;background:#fff;font:11pt/1.35 system-ui,sans-serif}
+  #printArea h1{font-size:18pt;margin:0} #printArea .pd{color:#555;margin:2px 0 10px}
+  #printArea .pt{width:100%;border-collapse:collapse} #printArea .pt th,#printArea .pt td{border-bottom:1px solid #bbb;padding:5px 6px;text-align:left;vertical-align:top}
+  #printArea .pt td span,#printArea .pn{color:#555;font-size:9.5pt}
+  #printArea .psheet{break-before:page} #printArea .psheet h2{font-size:15pt;margin:0}
+  #printArea .chordview{font-size:13pt} #printArea .chordview .bar,#printArea .chordview .fc{background:#eee;color:#000}
+  #printArea .chordview .sect{color:#444}
+}
 .vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .vc{background:var(--surface2);border-radius:10px;padding:6px 8px}
 .vn{font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
@@ -364,7 +381,7 @@ for (const C of [Map, WeakMap]) {
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 const SCHEMA = 4;   // 4 (v1.3.0): eigene Listen (lists) + Favoriten (fav) statt fester Status Setlist/To Do
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
@@ -481,7 +498,8 @@ function newSong(p = {}) {
     mix:defMix(),
     loop:{ a:null, b:null },
     grid:{ offset:null, beats:4 },   // Takt-Raster (v1.4.0): Zeitpunkt der ersten «1» im Audio (s) + Schläge pro Takt; Tempo = BPM
-    sound:{ split:'', left:'', right:'', drawbars:'', notes:'' },   // Sound-Setup am Keyboard (v1.5.0)
+    sound:{ split:'', left:'', right:'', drawbars:'', notes:'' },
+    audioShift:0,            // Tonhöhe des Playbacks in Halbtönen (v1.6.0)   // Sound-Setup am Keyboard (v1.5.0)
     marks:[],                // Abschnitte im Audio (v1.4.0): [{id, name, t}] – Sprungmarken und Abschnitts-Loops
     isDemo:false, updatedAt: Date.now()
   }, p);
@@ -536,6 +554,7 @@ function cleanSong(r) {
     suggest, stems, mix,
     loop: { a: r.loop && num(r.loop.a), b: r.loop && num(r.loop.b) },
     grid: { offset: r.grid && typeof r.grid.offset === 'number' && isFinite(r.grid.offset) && r.grid.offset >= 0 ? r.grid.offset : null, beats: r.grid && [2,3,4,5,6,7,8,9,10,11,12].includes(r.grid.beats) ? r.grid.beats : 4 },
+    audioShift: Number.isInteger(r.audioShift) && Math.abs(r.audioShift) <= 12 ? r.audioShift : 0,
     sound: { split:str(r.sound && r.sound.split, 12), left:str(r.sound && r.sound.left, 60), right:str(r.sound && r.sound.right, 60), drawbars:String((r.sound && r.sound.drawbars) || '').replace(/[^0-8]/g, '').slice(0, 9), notes:str(r.sound && r.sound.notes, 300) },
     marks: (Array.isArray(r.marks) ? r.marks : []).filter(m => m && typeof m.t === 'number' && isFinite(m.t) && m.t >= 0).slice(0, 60)
       .map(m => ({ id: typeof m.id === 'string' && /^[\w-]{1,40}$/.test(m.id) ? m.id : uid(), name: str(m.name, 40) || 'Abschnitt', t: m.t })).sort((a, b) => a.t - b.t),
@@ -1182,7 +1201,7 @@ const Player = {
   detach(slot) {
     const t = this.tracks[slot]; if (!t) return;
     try { t.el.pause(); } catch {}
-    try { t.node && t.node.disconnect(); t.gain && t.gain.disconnect(); } catch {}
+    try { t.node && t.node.disconnect(); t.shift && t.shift.disconnect(); t.gain && t.gain.disconnect(); } catch {}
     t.el.removeAttribute('src'); try { t.el.load(); } catch {}
     URL.revokeObjectURL(t.url); delete this.tracks[slot];
   },
@@ -1194,14 +1213,30 @@ const Player = {
   },
   time() { const m = this.master(); return m ? m.el.currentTime : 0; },
   duration() { const m = this.master(); return m && isFinite(m.el.duration) ? m.el.duration : 0; },
-  ensureGraph() {   // Lautstärke über GainNodes (auf iOS ist audio.volume nicht steuerbar)
+  ensureGraph() {   // Lautstärke über GainNodes (auf iOS ist audio.volume nicht steuerbar); optional Tonhöhenverschiebung dazwischen
     const c = AC.get(); if (!c) return;
     for (const t of Object.values(this.tracks)) {
       if (t.node) continue;
       try { t.node = c.createMediaElementSource(t.el); t.gain = c.createGain(); t.node.connect(t.gain).connect(c.destination); t.el.volume = 1; t.el.muted = false; }
       catch (e) { console.warn('WebAudio-Routing nicht möglich, nutze Element-Lautstärke', e); }
     }
-    this.applyMix();
+    this.applyMix(); this.applyShift();
+  },
+  // Tonhöhe (v1.6.0): AudioWorklet «pitch-shifter» zwischen Quelle und Lautstärke; einmal laden, bei 0 Halbtönen direkt verbunden
+  workletReady:null,
+  loadWorklet() {
+    const c = AC.get(); if (!c || !c.audioWorklet) return Promise.resolve(false);
+    if (!this.workletReady) this.workletReady = c.audioWorklet.addModule('pitch-worklet.js').then(() => true).catch(e => { console.warn('Pitch-Worklet', e); this.workletReady = null; return false; });
+    return this.workletReady;
+  },
+  async applyShift() {
+    const s = this.song; if (!s) return; const st = s.audioShift || 0, c = AC.get(); if (!c) return;
+    if (st && !(await this.loadWorklet())) { toast('Tonhöhe ändern wird von diesem Browser nicht unterstützt.'); return; }
+    for (const t of Object.values(this.tracks)) {
+      if (!t.node || !t.gain) continue;
+      if (st && !t.shift) { try { t.shift = new AudioWorkletNode(c, 'pitch-shifter', { outputChannelCount:[2], processorOptions:{ ratio:Math.pow(2, st / 12) } }); t.node.disconnect(); t.node.connect(t.shift).connect(t.gain); } catch (e) { console.warn(e); t.shift = null; t.node.connect(t.gain); continue; } }
+      if (t.shift) t.shift.port.postMessage({ ratio:Math.pow(2, st / 12) });
+    }
   },
   applyMix() {
     if (!this.song) return;
@@ -1837,6 +1872,45 @@ const Suggest = {
   }
 };
 
+/* ---------- Google-Dateiauswahl (v1.6.0): Dateien aus deiner Drive-Ablage übernehmen ----------
+   Mit dem Scope drive.file sieht die App nur eigene Dateien – über die Google-Auswahl gibst du ihr ausgewählte Dateien frei.
+   Benötigt im Cloud-Projekt die freigeschaltete «Google Picker API» für den Browser-Schlüssel (CONFIG.PICKER_API_KEY). */
+const Picker = {
+  loading:null,
+  load() {
+    if (window.google && google.picker) return Promise.resolve(true);
+    if (!this.loading) this.loading = new Promise(res => {
+      const go = () => window.gapi.load('picker', { callback:() => res(true), onerror:() => res(false), timeout:15000, ontimeout:() => res(false) });
+      if (window.gapi) return go();
+      const sc = document.createElement('script'); sc.src = 'https://apis.google.com/js/api.js'; sc.async = true; sc.onload = go; sc.onerror = () => { this.loading = null; res(false); }; document.head.appendChild(sc);
+    });
+    return this.loading;
+  },
+  async pick({ kind, multi }) {
+    if (!Cloud.hadLogin()) { toast('Zuerst mit Google Drive verbinden (Menü ⋯).'); return []; }
+    if (!isOnline()) { toast('Offline – die Dateiauswahl braucht Internet.'); return []; }
+    if (!Cloud.tokenValid()) { const ok = await Cloud.signIn(); if (!ok) return []; }
+    if (!(await this.load())) { toast('Google-Dateiauswahl nicht erreichbar.'); return []; }
+    return new Promise(resolve => {
+      try {
+        const P = google.picker, audio = kind === 'audio';
+        const view = new P.DocsView(P.ViewId.DOCS).setIncludeFolders(true).setSelectFolderEnabled(false)
+          .setMimeTypes(audio ? 'audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/wav,audio/x-wav,audio/flac,audio/ogg,audio/opus,audio/webm' : 'application/pdf,image/jpeg,image/png,image/webp,image/heic,image/gif')
+          .setParent(audio ? CONFIG.PICK_AUDIO_FOLDER : CONFIG.PICK_SHEET_FOLDER);
+        const b = new P.PickerBuilder().addView(view).setOAuthToken(Cloud.token).setDeveloperKey(CONFIG.PICKER_API_KEY || CONFIG.YOUTUBE_API_KEY).setAppId(CONFIG.PICKER_APP_ID)
+          .setOrigin(location.protocol + '//' + location.host).setLocale('de').setTitle(audio ? 'Audiodatei aus Drive wählen' : 'Notenblätter aus Drive wählen')
+          .setCallback(d => { if (d.action === P.Action.PICKED) resolve((d.docs || []).map(x => ({ id:x.id, name:x.name, mimeType:x.mimeType, size:Number(x.sizeBytes) || 0 }))); else if (d.action === P.Action.CANCEL) resolve([]); });
+        if (multi) b.enableFeature(P.Feature.MULTISELECT_ENABLED);
+        b.build().setVisible(true);
+      } catch (e) { console.warn(e); toast('Dateiauswahl fehlgeschlagen: ' + (e.message || e) + ' – ist die «Google Picker API» im Cloud-Projekt freigeschaltet?'); resolve([]); }
+    });
+  },
+  async download(doc) {   // freigegebene Datei als File holen
+    const res = await Cloud.fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(doc.id) + '?alt=media', {}, true);
+    const blob = await res.blob(); return new File([blob], doc.name || 'datei', { type:doc.mimeType || blob.type || '' });
+  }
+};
+
 /* ---------- Spotify: Titel pro Song automatisch verknüpfen (ab v1.2.0) ----------
    Client-Credentials-Token (kein Nutzer-Login), Suche nach Titel + Interpret. Verknüpft wird nur, wenn Interpret UND Titel
    passen – sonst bleibt der Song ohne Link (Suchlink und manuelles Einfügen gehen immer). Automatische Treffer sind «Vorschlag». */
@@ -1897,6 +1971,12 @@ const Spotify = {
     if (this.queue || !this.available() || !isOnline()) return; this.queue = true;
     try { for (const s of Store.data.songs.slice()) { if (s.spotify || s.spTried || s.isDemo) continue; await this.run(s, false); if (this.err[s.id]) break; await new Promise(r => setTimeout(r, 250)); } }
     finally { this.queue = false; }
+  },
+  async track(id) {   // Titel + Interpret + Länge zu einem Spotify-Titel (v1.6.0, «Song aus Spotify-Link»)
+    const tok = await this.getToken(); let res;
+    try { res = await fetch('https://api.spotify.com/v1/tracks/' + encodeURIComponent(id), { headers:{ Authorization:'Bearer ' + tok } }); } catch (e) { throw new Error('Spotify nicht erreichbar (offline?)'); }
+    if (!res.ok) throw new Error(res.status === 404 ? 'Titel bei Spotify nicht gefunden.' : 'Spotify-Fehler ' + res.status);
+    const d = await res.json(); return { id, name:String(d.name || ''), artists:(d.artists || []).map(a => String(a.name || '')), ms:Number(d.duration_ms) || 0 };
   },
   setManual(song, url) {
     const id = spId(url); if (!id) { if (url.trim()) toast('Kein Spotify-Titel-Link erkannt (open.spotify.com/track/…).'); return false; }
@@ -1967,6 +2047,28 @@ function chordsHtml(s) {
         + (r.rep ? '<div class="rep" title="' + esc(r.rep) + '-mal spielen">×' + esc(r.rep) + '</div>' : '') + '</div>'
     : '<div class="barrow"><div class="bars">' + r.bars.map((c, ci) => '<div class="bar" data-r="' + ri + '" data-c="' + ci + '">' + esc(st ? trBar(c, st, fl) : c) + '</div>').join('') + '</div>'
       + (r.rep ? '<div class="rep" title="' + esc(r.rep) + '-mal spielen">×' + esc(r.rep) + '</div>' : '') + '</div>').join('');
+}
+function setlistLine(s, i, o) {
+  const st = s.transpose || 0, key = s.key ? (st ? trBar(s.key, st, useFlats(s, st)) : s.key) : '';
+  return { n:i + 1, title:s.title, artist:s.artist, key:o.key ? key : '', bpm:o.bpm && s.bpm ? String(s.bpm) : '', sound:o.sound ? soundSummary(s) : '', notes:o.notes ? s.notes.trim() : '' };
+}
+function setlistText(l, o) {
+  const rows = Store.listSongs(l).map((s, i) => { const x = setlistLine(s, i, o);
+    return x.n + '. ' + x.title + (x.artist ? ' – ' + x.artist : '') + ([x.key && 'Tonart ' + x.key, x.bpm && x.bpm + ' BPM'].filter(Boolean).length ? ' (' + [x.key && 'Tonart ' + x.key, x.bpm && x.bpm + ' BPM'].filter(Boolean).join(', ') + ')' : '')
+      + (x.sound ? '\n   ' + x.sound : '') + (x.notes ? '\n   ' + x.notes.replace(/\n/g, ' ') : ''); });
+  return l.name + '\n' + rows.join('\n');
+}
+function printSetlist(l, o) {   // eigene Druckansicht; im Druckdialog «Als PDF speichern» wählen
+  let el = $('#printArea'); if (!el) { el = document.createElement('div'); el.id = 'printArea'; document.body.appendChild(el); }
+  const songs = Store.listSongs(l), date = new Date().toLocaleDateString('de-CH');
+  el.innerHTML = `<h1>${esc(l.name)}</h1><p class="pd">${esc(date)} · ${songs.length} Songs</p><table class="pt"><thead><tr><th>#</th><th>Song</th>${o.key ? '<th>Tonart</th>' : ''}${o.bpm ? '<th>BPM</th>' : ''}${o.sound ? '<th>Sound</th>' : ''}</tr></thead><tbody>`
+    + songs.map((s, i) => { const x = setlistLine(s, i, o); return `<tr><td>${x.n}</td><td><b>${esc(x.title)}</b>${x.artist ? `<br><span>${esc(x.artist)}</span>` : ''}${x.notes ? `<div class="pn">${esc(x.notes)}</div>` : ''}</td>${o.key ? `<td>${esc(x.key)}</td>` : ''}${o.bpm ? `<td>${esc(x.bpm)}</td>` : ''}${o.sound ? `<td>${esc(x.sound)}</td>` : ''}</tr>`; }).join('')
+    + '</tbody></table>'
+    + (o.chords ? songs.filter(s => s.chords.trim()).map((s, i) => `<section class="psheet"><h2>${songs.indexOf(s) + 1}. ${esc(s.title)}</h2><p class="pd">${esc([s.artist, s.key ? 'Tonart ' + keyLabel(s) : '', s.transpose ? trLabel(s.transpose) : '', s.bpm ? s.bpm + ' BPM' : ''].filter(Boolean).join(' · '))}</p><div class="chordview">${chordsHtml(s)}</div></section>`).join('') : '');
+  document.body.classList.add('printing');
+  const done = () => { document.body.classList.remove('printing'); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  setTimeout(() => { try { window.print(); } catch (e) { toast('Drucken wird hier nicht unterstützt.'); done(); } }, 50);
 }
 function soundSummary(s) {
   const o = s.sound || {}; return [o.split ? 'Split ' + o.split : '', o.left ? 'L: ' + o.left : '', o.right ? 'R: ' + o.right : '', o.drawbars ? 'Register ' + o.drawbars : ''].filter(Boolean).join(' · ');
@@ -2223,6 +2325,17 @@ const App = {
       case 'markEdit': { const m = song.marks.find(x => x.id === el.dataset.id); if (m) Dialogs.mark(song, m, m.t); break; }
       // Stems
       case 'pick': $('#file-' + el.dataset.slot).click(); break;
+      case 'pickDrive': { const slot = el.dataset.slot; Picker.pick({ kind:'audio' }).then(async docs => { if (!docs.length) return;
+        App.stemBusy[song.id + ':' + slot] = 'down'; UI.stems();
+        try { const f = await Picker.download(docs[0]); await App.addStem(song, slot, f); } catch (e) { console.warn(e); toast('Laden aus Drive fehlgeschlagen.'); }
+        finally { delete App.stemBusy[song.id + ':' + slot]; UI.stems(); } }); break; }
+      case 'sheetDrive': Picker.pick({ kind:'sheet', multi:true }).then(async docs => { if (!docs.length) return; toast(docs.length === 1 ? 'Wird geladen …' : docs.length + ' Dateien werden geladen …');
+        const files = []; for (const d of docs) { try { files.push(await Picker.download(d)); } catch (e) { console.warn(e); toast('«' + d.name + '» konnte nicht geladen werden.'); } }
+        App.addSheets(song, files); }); break;
+      case 'shift': { const v = el.dataset.v === 'chords' ? (song.transpose || 0) : el.dataset.v === '0' ? 0 : (song.audioShift || 0) + Number(el.dataset.d);
+        song.audioShift = Math.max(-12, Math.min(12, v)); Store.touch(song); Player.ensureGraph(); Player.applyShift(); UI.shift(); break; }
+      case 'listShare': { const l = Store.list(this.filter); if (l) Dialogs.share(l); break; }
+      case 'spLookup': Dialogs.spLookup(); break;
       case 'stemDel': {
         const slot = el.dataset.slot, m = song.stems[slot];
         if (!confirm('Audiodatei aus diesem Slot entfernen?' + (m && m.driveId ? ' Die Kopie in Drive wird ebenfalls entfernt.' : ''))) break;
@@ -2388,7 +2501,7 @@ const UI = {
       + '<button class="chip" data-act="listNew" title="Neue Liste anlegen">+ Liste</button>';
     const tb = $('#listBar');
     if (tb) setHtml(tb, L ? `<button class="chip ${App.reorder ? 'on' : ''}" data-act="reorder" aria-pressed="${App.reorder}">Reihenfolge</button>
-        <button class="chip" data-act="listPick">Songs wählen</button><button class="chip" data-act="listRename">Umbenennen</button>
+        <button class="chip" data-act="listPick">Songs wählen</button><button class="chip" data-act="listShare">Teilen / PDF</button><button class="chip" data-act="listRename">Umbenennen</button>
         <button class="chip ghost danger" data-act="listDel">Liste löschen</button><span class="sep"></span>
         <button class="chip" data-act="stage" title="Auftrittsmodus: diese Liste im Vollbild">▶ Auftritt</button>`
       : '<span class="sep"></span><button class="chip" data-act="stage" title="Auftrittsmodus: erste Liste im Vollbild">▶ Auftritt</button>');
@@ -2519,7 +2632,7 @@ const UI = {
               <label class="f"><span>Bezeichnung (leer = Dateiname)</span><input type="text" id="shLabel" placeholder="z.B. Leadsheet Band-Version" autocomplete="off"></label>
               <label class="f"><span>Typ</span><select id="shKind">${Object.entries(SHEET_KINDS).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
             </div>
-            <button class="primary" data-act="sheetPick">Datei wählen oder fotografieren</button>
+            <div class="row"><button class="primary" data-act="sheetPick">Datei wählen oder fotografieren</button><button data-act="sheetDrive" title="Aus «04_Band/Noten &amp; Tabs» übernehmen">Aus Drive wählen</button></div>
             <input type="file" id="sheetFile" accept="application/pdf,image/*,.pdf" multiple class="hidden">
             <p class="small muted" style="margin-top:8px">Mehrere Dateien auf einmal sind möglich. Auf dem Handy bietet die Auswahl auch die Kamera an – jede Aufnahme wird ein eigenes Blatt.</p>
           </details>
@@ -2609,12 +2722,13 @@ const UI = {
             <div class="temporow"><button data-act="metro" id="bMetro" class="grow">Metronom</button>
               <label class="chk"><input type="checkbox" id="countIn" ${st.countIn ? 'checked' : ''}> Einzähler</label></div>
             <div class="temporow gridrow" id="gridBox"></div>
+            <div class="temporow gridrow" id="shiftBox"></div>
           </div>
         </div>
       </div>`;
     const hh = () => { const t = $('#app .top'); if (t) document.documentElement.style.setProperty('--hh', t.offsetHeight + 'px'); };
     hh(); requestAnimationFrame(hh);
-    this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.spotify(); this.suggest(); this.info(); this.transport(); this.marks(); this.grid(); this.sound(); this.sheets();
+    this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.spotify(); this.suggest(); this.info(); this.transport(); this.marks(); this.grid(); this.shift(); this.sound(); this.sheets();
     const vd = $('#vDet'); if (vd) vd.addEventListener('toggle', () => this.voicings());
     if (liveSheets(s).length) Sheets.scan(s);
     const bw = $('#bWake'); if (bw) bw.classList.toggle('on', !!App.wake);
@@ -2678,7 +2792,7 @@ const UI = {
       else if (!has && meta) drv = '<span>Die Datei liegt nur auf einem anderen Gerät (dort «In Drive sichern» wählen) – oder hier neu laden.</span>';
       return `<div class="stem" data-stem="${sl.id}">
         <div class="grow"><b>${sl.label}</b><div class="fn">${info}</div></div>
-        <div class="row nowrap">${has ? `<button class="danger ghost" data-act="stemDel" data-slot="${sl.id}">Entfernen</button>` : ''}<button data-act="pick" data-slot="${sl.id}">${has ? 'Ersetzen' : 'Datei laden'}</button></div>
+        <div class="row nowrap">${has ? `<button class="danger ghost" data-act="stemDel" data-slot="${sl.id}">Entfernen</button>` : ''}<button data-act="pick" data-slot="${sl.id}">${has ? 'Ersetzen' : 'Datei laden'}</button>${cloud ? `<button data-act="pickDrive" data-slot="${sl.id}" title="Aus «04_Band/Audio &amp; Stems» übernehmen">Aus Drive</button>` : ''}</div>
         <input type="file" id="file-${sl.id}" data-slot="${sl.id}" accept="audio/*,.mp3,.m4a,.wav,.flac,.ogg">
         ${drv ? `<div class="drv">${drv}</div>` : ''}
         <div class="ctl"><button class="${m.on ? 'on' : ''}" data-act="stemOn" data-slot="${sl.id}" aria-pressed="${m.on}" ${has ? '' : 'disabled'}>${m.on ? 'An' : 'Aus'}</button>
@@ -2758,6 +2872,11 @@ const UI = {
     const s = App.current(); if (!s) return; const sum = soundSummary(s);
     const el = $('#soundSum'); if (el) el.textContent = sum ? '· ' + sum : '';
     const d = $('#drawOut'); if (d) setHtml(d, /^[0-8]{9}$/.test(s.sound.drawbars) ? drawbarsHtml(s.sound.drawbars) : '');
+  },
+  shift() {
+    const s = App.current(), box = $('#shiftBox'); if (!s || !box) return; const v = s.audioShift || 0;
+    setHtml(box, `<span class="lab">Tonhöhe Audio <b>${v > 0 ? '+' + v : v} HT</b></span><button data-act="shift" data-d="-1" aria-label="Audio einen Halbton tiefer">−</button><button data-act="shift" data-d="1" aria-label="Audio einen Halbton höher">+</button>
+      ${s.transpose && s.transpose !== v ? `<button data-act="shift" data-v="chords" title="Wie die Akkordanzeige">= Akkorde (${trLabel(s.transpose)})</button>` : ''}${v ? '<button class="ghost" data-act="shift" data-v="0">Original</button>' : ''}`);
   },
   voicings() { const s = App.current(), el = $('#voiceOut'); if (s && el && $('#vDet').open) setHtml(el, voicingsHtml(s)); },
   // Abschnitte (Sprungmarken, Loop pro Abschnitt) und Takt-Raster
@@ -2856,6 +2975,29 @@ const Dialogs = {
       d.close(); UI.marks(); UI.follow(true); });
     if (!d.open) d.showModal(); if (!m) setTimeout(() => f.name.focus(), 30);
   },
+  async spLookup() {   // Spotify-Link im Song-Dialog → Titel/Interpret ausfüllen
+    const f = $('#songForm'); if (!f) return; const id = spId(f.spurl.value);
+    if (!id) { toast('Kein Spotify-Titel-Link erkannt (open.spotify.com/track/…).'); return; }
+    if (!Spotify.available()) { toast('Spotify-Zugangsdaten fehlen – der Link wird gespeichert, Titel bitte selbst eintragen.'); return; }
+    try { const t = await Spotify.track(id); f.title.value = t.name; f.artist.value = t.artists.join(', '); this._spName = t.name; this._spArt = t.artists.join(', '); toast('Übernommen: ' + t.name); }
+    catch (e) { toast(e.message); }
+  },
+  share(l) {   // Setlist teilen: als Text (Teilen/Kopieren) oder Druckansicht (als PDF speichern)
+    const d = $('#dlg');
+    d.innerHTML = `<form id="shareForm" novalidate><h2>«${esc(l.name)}» teilen</h2>
+      <p class="small muted">${Store.listSongs(l).length} Songs in der Reihenfolge der Liste.</p>
+      <div class="col">${[['key', 'Tonart (wie angezeigt, inkl. Transponieren)', true], ['bpm', 'BPM', true], ['sound', 'Sound-Setup', true], ['notes', 'Notizen', false], ['chords', 'Akkordblätter anhängen (nur Druck/PDF)', false]]
+        .map(([k, t, on]) => `<label class="chk"><input type="checkbox" name="${k}" ${on ? 'checked' : ''}> ${t}</label>`).join('')}</div>
+      <div class="actions"><button type="button" data-act="close">Schliessen</button><button type="button" data-act="shareText">Text teilen / kopieren</button><button type="button" class="primary" data-act="sharePrint">Drucken / PDF</button></div></form>`;
+    const f = $('#shareForm'), opt = () => ({ key:f.key.checked, bpm:f.bpm.checked, sound:f.sound.checked, notes:f.notes.checked, chords:f.chords.checked });
+    f.addEventListener('click', async e => { const b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.act === 'shareText') {
+        const txt = setlistText(l, opt());
+        try { if (navigator.share) { await navigator.share({ title:l.name, text:txt }); return; } } catch (er) { if (er && er.name === 'AbortError') return; }
+        try { await navigator.clipboard.writeText(txt); toast('Setlist in die Zwischenablage kopiert.'); } catch (er) { toast('Kopieren nicht möglich.'); }
+      } else if (b.dataset.act === 'sharePrint') { d.close(); printSetlist(l, opt()); } });
+    if (!d.open) d.showModal();
+  },
   listName(l) {   // neue Liste anlegen oder umbenennen
     const d = $('#dlg');
     d.innerHTML = `<form id="listForm" novalidate><h2>${l ? 'Liste umbenennen' : 'Neue Liste'}</h2>
@@ -2879,9 +3021,10 @@ const Dialogs = {
     if (!d.open) d.showModal();
   },
   song(song) {
-    const isNew = !song, s = song || newSong(), d = $('#dlg');
+    const isNew = !song, s = song || newSong(), d = $('#dlg'); this._spName = ''; this._spArt = '';
     d.innerHTML = `<form id="songForm" novalidate>
       <h2>${isNew ? 'Song hinzufügen' : 'Song bearbeiten'}</h2>
+      <label class="f"><span>Spotify-Link (optional – füllt Titel und Interpret)</span><div class="row nowrap"><input type="url" name="spurl" id="spLinkIn" inputmode="url" placeholder="https://open.spotify.com/track/…" value="${s.spotify && !s.spotify.auto ? 'https://open.spotify.com/track/' + esc(s.spotify.id) : ''}" autocomplete="off"><button type="button" data-act="spLookup">Übernehmen</button></div></label>
       <label class="f"><span>Titel *</span><input type="text" name="title" required value="${esc(s.title)}" autocomplete="off"></label>
       <label class="f"><span>Interpret</span><input type="text" name="artist" value="${esc(s.artist)}" autocomplete="off"></label>
       <div class="grid2">
@@ -2905,7 +3048,9 @@ const Dialogs = {
       Object.assign(s, { title, artist:String(f.get('artist')).trim(), bpm:bpm >= 30 && bpm <= 260 ? bpm : null, key:String(f.get('key')).trim(), fav:!!f.get('fav'), uncertain:String(f.get('uncertain')).trim() });
       if (isNew) Store.data.songs.push(s);
       const inL = new Set(f.getAll('lst')); for (const l of Store.data.lists) Store.inList(l, s.id, inL.has(l.id));
-      if (oldKey !== s.title + '|' + s.artist && (!s.spotify || s.spotify.auto)) { s.spotify = null; s.spTried = 0; }
+      const spid = spId(String(f.get('spurl') || ''));
+      if (spid) { if (!s.spotify || s.spotify.id !== spid) s.spotify = { id:spid, name:this._spName || '', artists:this._spArt || '', auto:false }; s.spTried = s.spTried || Date.now(); }
+      else if (oldKey !== s.title + '|' + s.artist && (!s.spotify || s.spotify.auto)) { s.spotify = null; s.spTried = 0; }
       Store.fixOrder(true); Store.touch(s); d.close();
       Spotify.run(s, false);   // neuer oder umbenannter Song: Spotify-Link gleich suchen
       if (isNew) location.hash = '#/song/' + encodeURIComponent(s.id); else { UI.header(); UI.info(); UI.links(); UI.suggest(); UI.rate(); UI.chords(); }
