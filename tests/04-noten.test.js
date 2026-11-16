@@ -75,5 +75,16 @@ module.exports = async () => {
       await pg.click('[data-act=stageExit]'); await pg.waitForSelector('#sTitle');
       eq(pg.errs, []); eq(pg.csp, []); await pg.context().close();
     });
+    await test('Akkordfolge ohne Taktstriche («A – D/F# G (x2)») wird erkannt und transponiert; Hinweise bleiben Text (v1.2.2)', async () => {
+      const pg = await open(b, D, { hash: '#/song/seed-06' }); await pg.waitForSelector('#sTitle');
+      await pg.evaluate(() => { const s = App.current(); s.chords = '[Intro]\nA – D/F# G – D/F# A (x2)\n[Solo]\nÜber Verse-Folge\n[Outro]\nA – D/A G (wiederholen)'; s.transpose = 0; Store.touch(s); UI.chords(); });
+      const view = () => pg.evaluate(() => [[...document.querySelectorAll('.chordview .fc')].map(e => e.textContent).join(' '), [...document.querySelectorAll('.chordview .sect')].map(e => e.textContent), [...document.querySelectorAll('.chordview .cnote')].map(e => e.textContent), [...document.querySelectorAll('.chordview .rep')].map(e => e.textContent)]);
+      eq(await view(), ['A D/F# G D/F# A A D/A G', ['Intro', 'Solo', 'Outro'], ['Über Verse-Folge', '(wiederholen)'], ['×2']]);
+      await pg.evaluate(() => { const s = App.current(); s.transpose = 3; Store.touch(s); UI.chords(); });
+      eq((await view())[0], 'C F/A A# F/A C C F/C A#', 'Ziel C-Dur → ♯-Schreibweise');
+      await pg.evaluate(() => { const s = App.current(); s.flats = true; Store.touch(s); UI.chords(); });
+      eq((await view())[0], 'C F/A Bb F/A C C F/C Bb', '♭ umgeschaltet');
+      eq(pg.errs, []); await pg.context().close();
+    });
   } finally { await b.close(); }
 };

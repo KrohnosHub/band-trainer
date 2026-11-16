@@ -18,9 +18,10 @@ module.exports = async () => {
       eq(await pg.locator('#sugBox .badge.sug').count(), 6); eq(await pg.locator('#sugBox .badge.sug').first().innerText(), 'Vorschlag');
       eq(await pg.evaluate(() => [document.querySelector('#sugBox .ti').textContent, document.querySelector('#sugBox .ti b'), document.querySelector('#sugBox img').getAttribute('src')]), ['Keys & <b>Piano</b> Lesson', null, 'https://i.ytimg.com/vi/KEYS0000001/mqdefault.jpg'], 'Titel als Text, nicht als HTML');
       eq(await pg.evaluate(() => App.current().links.length), 0, 'nichts ungefragt übernommen');
-      // Ansehen bettet ein (youtube-nocookie)
+      // Ansehen bettet ein (youtube.com, damit Premium gilt) + Link in die YouTube-App
       await pg.locator('#sugBox [data-act=embed]').first().click();
-      eq(await pg.locator('#ytBox iframe').getAttribute('src'), 'https://www.youtube-nocookie.com/embed/KEYS0000001?playsinline=1&rel=0');
+      eq(await pg.locator('#ytBox iframe').getAttribute('src'), 'https://www.youtube.com/embed/KEYS0000001?playsinline=1&rel=0');
+      eq(await pg.locator('#ytBox a.btn').getAttribute('href'), 'https://www.youtube.com/watch?v=KEYS0000001');
       // Übernehmen
       await pg.locator('#sugBox [data-act=sugAccept]').first().click();
       eq(await pg.evaluate(() => App.current().links.map(l => [l.label, l.url, l.kind])), [['Keys & <b>Piano</b> Lesson', 'https://www.youtube.com/watch?v=KEYS0000001', 'keys']]);

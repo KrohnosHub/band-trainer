@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-QSphmpbPcfR9bs7PGVy3JCboUzNeLo/gwd5InEMfjxA=' 'sha256-+qDmPMvXt9QlLTngfLfNkxWbzdHH6QwEWGH0AZ8sbHY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-QSphmpbPcfR9bs7PGVy3JCboUzNeLo/gwd5InEMfjxA=' 'sha256-kzGXOoHmrw8xTPuQdrZfFV9+KLXmK+fVQQwYAwXxAHE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -135,6 +135,10 @@ label.chk{display:inline-flex;align-items:center;gap:8px;min-height:var(--tap);c
 .chordview{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:calc(1.15rem * var(--cs,1));line-height:1.25}
 .chordview .sect{font-family:system-ui,sans-serif;font-size:.6em;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:14px 0 6px}
 .chordview .sect:first-child{margin-top:0}
+.chordview .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px;flex:1;min-width:0}
+.chordview .fc{background:var(--surface2);border-radius:10px;padding:.45em .6em;font-weight:650}
+.chordview .sep{color:var(--muted)}
+.chordview .cnote{font-family:system-ui,sans-serif;font-size:.62em;color:var(--muted);margin:2px 0 6px}
 .chordview .bars{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px}
 .chordview .bar{background:var(--surface2);border-radius:10px;padding:.55em .3em;text-align:center;font-weight:650;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -323,7 +327,7 @@ for (const C of [Map, WeakMap]) {
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.2.2';
 const SCHEMA = 3;
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
@@ -1512,7 +1516,10 @@ function ytId(url) {
     return id && /^[\w-]{11}$/.test(id) ? id : null;
   } catch { return null; }
 }
-const ytEmbed = id => '<div class="yt"><iframe src="https://www.youtube-nocookie.com/embed/' + id + '?playsinline=1&rel=0" title="YouTube-Video" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"></iframe></div>';
+// Ab v1.2.2 über youtube.com statt youtube-nocookie.com: nur so gilt die Anmeldung im Browser (YouTube Premium = keine Werbung).
+// Blockiert der Browser Drittanbieter-Cookies (z. B. Safari), kennt die Einbettung das Konto nicht → Link «In YouTube öffnen» (App, werbefrei mit Premium).
+const ytEmbed = id => '<div class="yt"><iframe src="https://www.youtube.com/embed/' + id + '?playsinline=1&rel=0" title="YouTube-Video" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"></iframe></div>'
+  + '<div class="row small" style="margin:-4px 0 8px"><a class="btn" href="https://www.youtube.com/watch?v=' + id + '" target="_blank" rel="noopener noreferrer">In YouTube öffnen</a><span class="muted grow">Werbung trotz Premium? Dann blockiert der Browser die Anmeldung in der Einbettung – in YouTube öffnen.</span></div>';
 /* Quellen für Akkorde und Noten: generierte SUCH-Links. Für Hooktheory, Musicnotes und Sheet Music Direct bewusst eine
    Google-Suche mit «site:» – deren eigene Such-Adressen sind nicht verlässlich dokumentiert, die Google-Form funktioniert immer. */
 function sourceLinks(song) {
@@ -1661,6 +1668,7 @@ const spSearchUrl = s => 'https://open.spotify.com/search/' + encodeURIComponent
 const NOTES_SHARP = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'], NOTES_FLAT = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
 const NOTE_IX = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
 const CHORD_RE = /^([A-G][#b]?)([^\/\s]*)(?:\/([A-G][#b]?))?$/;
+const _flowRef = r => r.t === 'bars' ? r.bars : r.t === 'flow' ? r.parts : [];
 const QUALITY_RE = /^(?:maj|min|dim|aug|sus|add|omit|alt|no|m|M|\+|-|°|ø|Δ|\d|[#b](?=\d)|\(|\)|,)*$/;   // nur echte Akkordzusätze – Wörter wie «Fine» bleiben unverändert
 const noteIx = n => (NOTE_IX[n[0]] + (n[1] === '#' ? 1 : n[1] === 'b' ? -1 : 0) + 12) % 12;
 const trNote = (n, st, flats) => (flats ? NOTES_FLAT : NOTES_SHARP)[((noteIx(n) + st) % 12 + 12) % 12];
@@ -1672,7 +1680,7 @@ const trBar = (text, st, flats) => text.split(/(\s+)/).map(t => /\s/.test(t) || 
 function useFlats(song, st) {   // Schreibweise: fest gewählt oder passend zur Zieltonart (F, B♭, E♭, A♭, D♭ bzw. deren Mollparallelen → ♭)
   if (song.flats === true || song.flats === false) return song.flats;
   let ref = (song.key || '').trim().split(/\s+/)[0].match(CHORD_RE);
-  if (!ref || !QUALITY_RE.test(ref[2])) { ref = null; for (const tok of parseChords(song.chords).flatMap(r => r.t === 'bars' ? r.bars : []).join(' ').split(/\s+/)) { const m = tok.match(CHORD_RE); if (m && QUALITY_RE.test(m[2]) && tok.length < 12) { ref = m; break; } } }
+  if (!ref || !QUALITY_RE.test(ref[2])) { ref = null; for (const tok of parseChords(song.chords).flatMap(_flowRef).join(' ').split(/\s+/)) { const m = tok.match(CHORD_RE); if (m && QUALITY_RE.test(m[2]) && tok.length < 12) { ref = m; break; } } }
   if (!ref) return false;
   const minor = /^m(?!aj)/.test(ref[2]), ix = ((noteIx(ref[1]) + st) % 12 + 12) % 12;
   return (minor ? [2, 7, 0, 5, 10, 3] : [5, 10, 3, 8, 1]).includes(ix);
@@ -1688,7 +1696,17 @@ function parseChords(text) {
     l = l.trim(); if (!l) continue;
     const h = l.match(/^\[([^\]]*)\]\s*(.*)$/);
     if (h) { if (h[1].trim()) out.push({ t:'sect', text:h[1].trim() }); l = h[2]; if (!l) continue; }
-    if (!l.includes('|')) { out.push({ t:'sect', text:l }); continue; }
+    if (!l.includes('|')) {
+      // Ab v1.2.2: Akkordfolge ohne Taktstriche, z. B. «A – D/F# G – D/F# A (x2)» → einzelne, transponierbare Akkorde
+      let rp = '', tail = '', body = l, m2 = body.match(REP_TAIL);
+      if (m2) { rp = m2[1] || m2[2]; body = body.replace(REP_TAIL, ''); }
+      else if ((m2 = body.match(/\s*(\([^)]*\))\s*$/))) { tail = m2[1]; body = body.slice(0, m2.index); }
+      const toks = body.split(/\s+|(?<=\S)\s*[–—]\s*|\s*[–—]\s*(?=\S)/).map(x => x.trim()).filter(x => x && !/^[–—-]+$/.test(x));
+      const isCh = x => { const m = x.replace(/♯/g, '#').replace(/♭/g, 'b').match(CHORD_RE); return !!m && QUALITY_RE.test(m[2]); };
+      if (toks.length && toks.filter(isCh).length / toks.length >= 0.6) { out.push({ t:'flow', parts:body.split(/(\s*[–—]\s*|\s+)/).filter(x => x !== ''), rep:rp, tail }); continue; }
+      const prev = out[out.length - 1];
+      out.push(prev && prev.t === 'sect' || /[()]/.test(l) || l.split(/\s+/).length > 3 ? { t:'note', text:l } : { t:'sect', text:l }); continue;
+    }
     const cells = l.split('|').map(c => c.trim()); let rep = '', m = cells[cells.length - 1].match(REP_RE);
     if (m) { rep = m[1] || m[2]; cells.pop(); }
     const bars = cells.filter(Boolean), last = bars.length - 1;
@@ -1699,7 +1717,12 @@ function parseChords(text) {
 }
 function chordsHtml(s) {
   const st = s.transpose || 0, fl = st ? useFlats(s, st) : false;
+  const tr = c => esc(st ? trBar(c, st, fl) : c);
   return parseChords(s.chords).map(r => r.t === 'sect' ? '<div class="sect">' + esc(r.text) + '</div>'
+    : r.t === 'note' ? '<div class="cnote">' + esc(r.text) + '</div>'
+    : r.t === 'flow' ? '<div class="barrow"><div class="flow">' + r.parts.map(x => /^\s*[–—]\s*$/.test(x) ? '<span class="sep">–</span>' : /^\s+$/.test(x) ? ' ' : '<span class="fc">' + tr(x) + '</span>').join('')
+        + (r.tail ? ' <span class="cnote">' + esc(r.tail) + '</span>' : '') + '</div>'
+        + (r.rep ? '<div class="rep" title="' + esc(r.rep) + '-mal spielen">×' + esc(r.rep) + '</div>' : '') + '</div>'
     : '<div class="barrow"><div class="bars">' + r.bars.map(c => '<div class="bar">' + esc(st ? trBar(c, st, fl) : c) + '</div>').join('') + '</div>'
       + (r.rep ? '<div class="rep" title="' + esc(r.rep) + '-mal spielen">×' + esc(r.rep) + '</div>' : '') + '</div>').join('');
 }

@@ -112,6 +112,10 @@ Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): e
 
 ## Änderungslog
 
+### v1.2.2 – Transponieren auch ohne Taktstriche, YouTube mit Premium
+- **Akkorde:** Akkordfolgen ohne Taktstriche (z. B. «A – D/F# G – D/F# A (x2)», so bei vielen recherchierten Songs) werden jetzt als einzelne Akkorde erkannt, transponiert und als Kacheln angezeigt; vorher galten sie als Abschnittstitel und blieben unverändert. Hinweise wie «Über Verse-Folge» oder «(wiederholen)» bleiben normaler Text.
+- **YouTube:** Einbettung über youtube.com statt youtube-nocookie.com, damit die Anmeldung im Browser (YouTube Premium, werbefrei) gilt. Zusätzlich Knopf «In YouTube öffnen» unter jedem Video – öffnet die YouTube-App, falls der Browser die Anmeldung in Einbettungen blockiert.
+
 ### v1.2.1 – Automatisch mit Drive verbunden, Suchfeld ohne Autofill, kompakter am Handy
 - **Drive:** Ist auf demselben Gerät/Browser die Gesangs-App angemeldet, verbindet sich der Band-Trainer jetzt still und automatisch mit demselben Konto (gleicher Ursprung, gleicher OAuth-Client) – ohne Tippen. Das Google-Skript wird immer schon beim Start geladen, damit «Mit Google Drive verbinden» das Fenster direkt im ersten Tipp öffnet (vorher teils vom Popup-Blocker geschluckt → mehrfaches Tippen nötig). Konto-Hinweis aus der Gesangs-App wird mitbenutzt. Nach «Abmelden» im Band-Trainer wird nicht mehr automatisch verbunden.
 - **Suchfeld:** Der Browser hat dort gespeicherte Zugangsdaten (Spotify-Client-ID) eingefüllt, auch nach dem Löschen wieder. Das Suchfeld ist jetzt für Autofill gesperrt (erst beim Antippen beschreibbar, Eingaben ohne Fokus werden ignoriert); das Spotify-Secret-Feld ist kein Passwortfeld mehr, damit der Browser es nicht als Login speichert.
