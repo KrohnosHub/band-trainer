@@ -1,6 +1,6 @@
 # Band-Trainer
 
-Übungs-App für Keyboard in der Coverband: pro Song Akkordraster für die rechte Hand, Bassline für die linke Hand (Notenbild im Bassschlüssel), Aufnahmen/Stems zum Mitspielen mit Tempo und Loop, Guide-Videos, Notizen, Setlist und Auftrittsmodus. Single-File-HTML-App (`index.html`), installierbar als PWA, offline nutzbar, Abgleich über Google Drive (Scope `drive.file`). Aufbau und Abläufe wie bei der Gesangs-App.
+Übungs-App für Keyboard in der Coverband: pro Song Akkordraster mit Abschnitten für die rechte Hand, Notenblätter (PDF/Scan) mit Freihand-Notizen, Bassline für die linke Hand (Notenbild im Bassschlüssel), Aufnahmen/Stems zum Mitspielen mit Tempo und Loop, Guide-Videos, Notizen, Setlist und Auftrittsmodus. Single-File-HTML-App (`index.html`), installierbar als PWA, offline nutzbar, Abgleich über Google Drive (Scope `drive.file`). Aufbau und Abläufe wie bei der Gesangs-App.
 
 Adresse: **https://krohnoshub.github.io/band-trainer/**
 
@@ -13,7 +13,7 @@ Die App besteht aus mehreren Dateien, die **zusammen im Hauptverzeichnis des Git
 | `index.html` | die App (CSP-Hashes der Inline-Skripte stehen im `<meta>`-Tag) |
 | `sw.js` | Service Worker (Offline-Betrieb; `VERSION` und `VENDOR_CACHE` werden beim Release gesetzt) |
 | `manifest.webmanifest` + `icons/` | Installation als App auf Handy/Tablet («Zum Startbildschirm») |
-| `vendor/` | abcjs 6.7.2 lokal (Notensatz + Synth, kein CDN nötig – Voraussetzung für Offline) inkl. Lizenzdatei (MIT) |
+| `vendor/` | abcjs 6.7.2 (Notensatz + Synth, MIT) und pdf.js 6.3.289 (Notenblätter; inkl. Wasm-Decoder und Ersatzschriften, Apache-2.0) lokal – kein CDN nötig, Voraussetzung für Offline; Lizenzdateien liegen bei |
 | `tests/` | automatisierte Tests (siehe «Tests») |
 | `tools/finalize.py` | Release-Hilfsskript (CSP-Hashes + `sw.js`-Version) |
 | `tools/check-version.py` | prüft bei Pull Requests, dass die Version erhöht wurde |
@@ -47,19 +47,26 @@ Die App besteht aus mehreren Dateien, die **zusammen im Hauptverzeichnis des Git
 **Setlist-Reihenfolge.** Filter «Setlist» → «Reihenfolge»: Einträge am Griff (⠿) ziehen oder mit ▲/▼ verschieben. Die Reihenfolge gilt für die Liste und den Auftrittsmodus und wird synchronisiert.
 
 **Song → Noten.**
-- *Akkorde (rechte Hand):* unter «Akkorde bearbeiten» zeilenweise eintragen, ein Takt pro Feld: `| A7 | D7 | A7 | A7 |`. Zeilen ohne `|` sind Abschnittstitel («Strophe», «Refrain»). A−/A+ ändert die Grösse.
+- *Akkorde (rechte Hand):* unter «Akkorde bearbeiten» zeilenweise eintragen, ein Takt pro Feld: `| A7 | D7 | A7 | A7 |`. Abschnitte stehen in eckigen Klammern auf einer eigenen Zeile (`[Intro]`, `[Verse]`; Zeilen ohne `|` gelten ebenfalls als Abschnitt) und werden hervorgehoben. Wiederholungen hinter der Zeile: `| Bm A | E |  (x4)` (auch `x4`, `4x`). A−/A+ ändert die Grösse.
+- *Akkord-Quelle und Status:* im selben Bereich eine URL als Quelle und den Status «ungeprüft / geprüft» hinterlegen; der Status erscheint als Badge beim Song und in der Liste.
 - *Transponieren:* −/+ verschiebt die Anzeige in Halbtönen (wird pro Song gespeichert), «♯/♭» wechselt die Schreibweise, «Original» setzt zurück. Die Eingabe bleibt in der Originaltonart; das Notenbild und die Wiedergabe der Bassline folgen. Schreibweise der Akkorde: `C`, `F#`, `Bb`, `Am7`, `D/F#` (deutsches «H» wird nicht erkannt – `B` schreiben).
 - *Bassline (linke Hand):* in ABC-Notation eintragen (Kurzhilfe in der App, vollständiges Beispiel im Demo-Song). «Bass anhören» spielt sie ab – online mit E-Bass-Klang (Soundfont von paulrosen.github.io), offline mit einem einfachen Synth-Bass.
 - *Wach:* hält den Bildschirm an.
+
+**Song → Blätter.**
+- *Notenblätter:* pro Song beliebig viele PDFs oder Bilder (Scan, Foto – auf dem Handy bietet die Dateiauswahl auch die Kamera an) mit Bezeichnung und Typ (Leadsheet/Akkorde, Klaviernoten, Bassnoten/Tabs, Sonstiges). «Öffnen» zeigt das Blatt bildschirmfüllend: blättern mit ‹ ›, Wischen, Pfeiltasten oder Bild↑/Bild↓, Zoom −/+, Umschalter «Seitenbreite / Ganze Seite», Esc schliesst.
+- *Freihand-Notizen:* Stift, Marker und Radierer (löscht ganze Striche), je vier Farben, Rückgängig. Gespeichert wird pro Blatt und Seite; «Lesen» schaltet zurück auf Scrollen/Blättern.
+- *✎:* Bezeichnung und Typ ändern, das Blatt für den Auftrittsmodus wählen oder entfernen.
+- *Quellen:* Suchlinks zu Hooktheory TheoryTab, Musicnotes und Sheet Music Direct (jeweils als Google-Suche mit `site:`) sowie Ultimate Guitar. Songtexte und Melodien sind urheberrechtlich geschützt – gekaufte oder selbst gedruckte Blätter als PDF/Scan hinterlegen, nur für den eigenen Gebrauch.
 
 **Song → Audio.** Drei Slots: Original, Bass-Stem, Ohne Bass. Eigene Dateien laden (MP3, M4A, WAV, FLAC, OGG), pro Slot an/aus und Lautstärke, Schnellwahl. Player unten: Tempo 50–100 % ohne Tonhöhenänderung, A-B-Loop, ±5 s, Metronom und Einzähler (brauchen BPM). Stems erzeugst du extern (z. B. Moises, LALAL.AI, Demucs/UVR).
 
 **Song → Videos.**
 - *Referenzvideo:* YouTube-Link einfügen, wird eingebettet.
 - *Vorschläge:* Beim ersten Öffnen des Tabs sucht die App über die YouTube Data API nach «Titel Interpret keyboard tutorial» und «… bass tutorial» (ergänzt um «… bass cover», falls weniger als drei Treffer) und zeigt je die besten drei Treffer als «Vorschlag». «Ansehen» bettet ein, «Übernehmen» legt den Link unter «Meine Links» ab, «Verwerfen» blendet ihn dauerhaft aus, «Neu suchen» holt frische Treffer. Es werden nur echte API-Treffer gezeigt; sie sind ungeprüft. Die Suche kostet API-Kontingent (pro Song 200–300 von standardmässig 10 000 Einheiten pro Tag, gemeinsam mit der Gesangs-App) – deshalb wird das Ergebnis gespeichert und nicht bei jedem Öffnen neu gesucht.
-- *Suchen:* fertige Suchlinks (YouTube, Ultimate Guitar, Songsterr) – funktionieren auch ohne Schlüssel.
+- *Suchen:* fertige Suchlinks (YouTube, Hooktheory, Musicnotes, Sheet Music Direct, Ultimate Guitar, Songsterr) – funktionieren auch ohne Schlüssel.
 
-**Auftrittsmodus.** «▶ Auftritt» in der Liste (ab dem ersten Setlist-Song) oder im Song: Akkordraster im Vollbild mit Notizen, Bildschirm bleibt wach. Weiter/zurück: wischen, Pfeiltasten, Bild↑/Bild↓, Leertaste (auch Bluetooth-Pedale, die diese Tasten senden) oder die Knöpfe unten. Beenden mit ✕ oder Esc.
+**Auftrittsmodus.** «▶ Auftritt» in der Liste (ab dem ersten Setlist-Song) oder im Song: Akkordraster im Vollbild mit Notizen, Bildschirm bleibt wach. Hat ein Song Notenblätter, wählst du oben zwischen «Akkordraster» und einem Blatt (wird pro Song gemerkt); beim Blatt blättern Wischen/Tasten/Pedal zuerst durch dessen Seiten und dann zum nächsten Song. Weiter/zurück: wischen, Pfeiltasten, Bild↑/Bild↓, Leertaste (auch Bluetooth-Pedale, die diese Tasten senden) oder die Knöpfe unten. Beenden mit ✕ oder Esc.
 
 **Google Drive.** Menü (⋯) → «Mit Google Drive verbinden». Die App legt beim ersten Anmelden den Ordner **«Band-Trainer»** an (bzw. findet ihn auf einem weiteren Gerät über den Namen) und merkt sich seine ID:
 
@@ -67,20 +74,24 @@ Die App besteht aus mehreren Dateien, die **zusammen im Hauptverzeichnis des Git
 |---|---|
 | `library.json` | Songs (inkl. Akkorde, Basslines, Links, Notizen, Reihenfolge, Transposition) und Einstellungen |
 | `Stems/` | Audiodateien, die du pro Slot mit «In Drive sichern» hochlädst |
+| `Notenblätter/` | Notenblätter (PDF/Bild) und daneben pro Blatt die Freihand-Notizen als `….annotations.json`; entsteht mit dem ersten Blatt |
 | `Backups/` | tägliche Sicherung `library-JJJJ-MM-TT.json`, die letzten 14 bleiben |
 
 - **Der Ordner darf in Drive verschoben werden, z. B. nach «04_Band».** Die App findet ihn weiterhin: Sie hat ihn selbst erstellt, und seine ID ändert sich beim Verschieben nicht. Bitte nicht umbenennen und die Dateien nicht von Hand bearbeiten. (Der Hinweis erscheint einmalig auch in der App.)
 - Abgleich: automatisch kurz nach jeder Änderung, beim Start, beim Zurückkehren in die App und nach Wiederverbindung. Pro Song gewinnt der zuletzt geänderte Stand; Löschungen werden als Löschmarken übertragen. Der Knopf oben rechts zeigt den Zustand («✓ Drive», «● offen», «Offline», «Anmelden») – antippen gleicht sofort ab.
 - Offline-first: Ohne Netz oder Anmeldung läuft alles lokal; Änderungen werden gemerkt und später abgeglichen. Das Google-Token gilt ca. 1 Stunde und wird still erneuert; klappt das nicht, genügt ein Tipp.
 - Stems: Audiodateien liegen lokal im Browser-Speicher. «In Drive sichern» lädt eine Datei in deinen Drive, auf einem anderen Gerät holt «Aus Drive laden» sie zurück. Nur für den eigenen Gebrauch – Dateien nicht weitergeben.
+- Notenblätter: werden beim Abgleich automatisch in den Unterordner «Notenblätter» hochgeladen und auf anderen Geräten automatisch geholt (damit sie am Auftritt offline bereitliegen). Bei den Freihand-Notizen gewinnt pro Blatt der zuletzt geänderte Stand; gleichzeitiges Zeichnen auf zwei Geräten am selben Blatt wird nicht zusammengeführt.
 - «Sicherungen» im Menü: Stand eines Tages zurückholen (auch Gelöschtes; Songs, die es nur heute gibt, bleiben).
 - Die App sieht in Drive ausschliesslich Dateien, die sie selbst angelegt hat (Scope `drive.file`).
 
-**Export/Import (JSON)** im Menü: Sicherung ohne Drive bzw. Übertrag zwischen Geräten (ohne Audiodateien).
+**Export/Import (JSON)** im Menü: Sicherung ohne Drive bzw. Übertrag zwischen Geräten (ohne Audiodateien und Notenblätter).
+
+**Akkorde importieren (JSON)** im Menü: liest eine Datei der Form `{"songs":[{"title":"…","artist":"…","key":"Bm","chords":"[Intro]\n| Bm A | E |","chordSource":"https://…","chordStatus":"ungeprüft"}]}` (`chords` als Text oder als Liste von Zeilen; `chordStatus` «geprüft»/`checked` oder «ungeprüft»/`unchecked`). Die Einträge werden über Titel + Interpret den vorhandenen Songs zugeordnet – unabhängig von Gross-/Kleinschreibung, Satzzeichen, Klammerzusätzen, «The», «&/N/and» und Abkürzungen wie «CCR». Eine Vorschau zeigt pro Eintrag den zugeordneten Song und was sich ändert; überschrieben werden nur Tonart, Akkorde, Akkord-Quelle und Status der angehakten Songs. Weicht der Interpret ab, ist der Eintrag nicht vorausgewählt; ohne Treffer wird nichts angelegt.
 
 ## Rechtliches (keine Rechtsberatung)
 
-Das Repository enthält nur Code und ein eigenes, generisches Demo-Beispiel – keine Songtexte, kein Audio, keine Transkriptionen. Audiodateien stammen aus deinen eigenen, legal erworbenen Dateien und bleiben auf deinem Gerät bzw. in deinem privaten Drive. YouTube wird nur über die offizielle Einbettung und API genutzt. Eigene Akkord- und Bassnotizen gehören in deine Daten, nicht ins öffentliche Repository.
+Das Repository enthält nur Code und ein eigenes, generisches Demo-Beispiel – keine Songtexte, kein Audio, keine Transkriptionen. Audiodateien und Notenblätter stammen aus deinen eigenen, legal erworbenen Dateien und bleiben auf deinem Gerät bzw. in deinem privaten Drive. YouTube wird nur über die offizielle Einbettung und API genutzt. Eigene Akkord- und Bassnotizen gehören in deine Daten, nicht ins öffentliche Repository.
 
 ## Tests
 
@@ -94,11 +105,23 @@ Das Repository enthält nur Code und ein eigenes, generisches Demo-Beispiel – 
 | `04-noten` | ABC-Notenbild, Akkordraster, Transponieren, Bass-Wiedergabe (Oszillator-Ersatz), Auftrittsmodus |
 | `05-sync` | Anmelden, Ordner/Unterordner, Merge zweier Geräte, Löschmarken, Offline → später abgleichen, 401, stille Anmeldung, Stems hoch/runter, Sicherungen (14 behalten, Wiederherstellen) |
 | `06-videos` | Vorschläge aus der (gestubbten) YouTube-API, übernehmen/verwerfen/neu suchen, ohne Schlüssel und bei API-Fehler |
-| `07-offline` | Service Worker: Start und Notenbild ohne Netz |
+| `07-offline` | Service Worker: Start und Notenbild ohne Netz, pdf.js samt Worker/Wasm/Schriften aus dem Cache |
+| `08-blaetter` | Notenblätter: Test-PDF über pdf.js rendern, Bild-Upload, Blättern/Zoom/Seitenbreite, Freihand-Notizen speichern/laden, Drive-Abgleich (Attrappe) mit zwei Geräten, Abschnitte + Transponieren, Quellen-Links, Akkord-Import mit Zuordnung und Vorschau, Notenblatt im Auftrittsmodus |
 
-Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): echte Google-Anmeldung und Drive, echte YouTube-Treffer, Soundfont-Klang, Tempoänderung ohne Tonhöhenänderung nach Gehör, Wake Lock/Vollbild auf iOS/Android, Installation als PWA.
+Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): echte Google-Anmeldung und Drive, echte YouTube-Treffer, die Suchlinks zu den Noten-Quellen, Zeichnen mit Stift/Finger und Kamera-Aufnahme auf Handy/Tablet, Soundfont-Klang, Tempoänderung ohne Tonhöhenänderung nach Gehör, Wake Lock/Vollbild auf iOS/Android, Installation als PWA.
 
 ## Änderungslog
+
+### v1.1.0 – Notenblätter (PDF/Scan), Abschnitte in Akkorden, Quellen-Links, Akkord-Import (16.11.2026)
+- Neu: Tab «Blätter» – mehrere PDFs oder Bilder (Scan/Foto) pro Song mit Bezeichnung und Typ; Anzeige über pdf.js (lokal in `vendor/`, offline), Blättern per Wischen/Tasten, Zoom, Seitenbreite/ganze Seite. Viewer und Zeichnen aus der Gesangs-App übernommen und reduziert.
+- Neu: Freihand-Notizen auf den Blättern (Stift, Marker, Radierer, Rückgängig), pro Seite gespeichert.
+- Neu: Drive-Abgleich der Blätter in den Unterordner «Notenblätter» (automatisch hoch und auf anderen Geräten herunter), Notizen als JSON neben der Datei; Merge pro Blatt nach Änderungszeit wie bei den Stems, Löschungen als Löschmarken.
+- Neu: Auftrittsmodus zeigt wahlweise das Akkordraster oder ein Notenblatt; Tasten/Wischen blättern erst die Seiten, dann zum nächsten Song.
+- Neu: Akkordfeld mit Abschnitten (`[Intro]`, `[Verse]`) und Wiederholungen (`(x4)`); Abschnitte hervorgehoben, im Auftrittsmodus gross. Transponieren unverändert.
+- Neu: pro Song «Akkord-Quelle» (URL) und Status «ungeprüft / geprüft» als Badge.
+- Neu: «Akkorde importieren (JSON)» mit unscharfer Zuordnung über Titel + Interpret und Vorschau; überschreibt nur Tonart, Akkorde, Quelle und Status.
+- Neu: Suchlinks zu Hooktheory TheoryTab, Musicnotes und Sheet Music Direct (Google-Suche mit `site:`), Hinweis zum Urheberrecht.
+- Technik: Datenformat `SCHEMA` 3 (neue Felder `sheets`, `stageSheet`, `chordSource`, `chordStatus`; abwärtskompatibel). CSP um `'wasm-unsafe-eval'` ergänzt (nur WebAssembly für die Bild-Decoder von pdf.js, kein JS-`eval`); Service Worker hält pdf.js vorab bereit (`vendor/` jetzt ca. 3,5 MB).
 
 ### v1.0.0 – Erste einsatzbereite Version (16.11.2026)
 - Aus dem Prototyp 0.1.0: Songliste (23 Songs + Demo), Player mit bis zu drei Stems, Tempo/Loop/Metronom/Einzähler, Akkordraster, Bassline in ABC mit Notenbild und Wiedergabe, YouTube-Einbettung, Link-Liste, Suchlinks, Export/Import.

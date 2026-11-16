@@ -95,3 +95,32 @@ async function open(b, vp, { drive, yt, cfg, sw = false, init, hash = '', logs =
   return pg;
 }
 module.exports = { launch, open, wav, FakeDrive };
+
+// Kleine Test-PDF (eigene Datei, kein fremdes Material): pro Seite eine Textzeile in Helvetica (Standardschrift, nicht eingebettet)
+function pdf(pages = 2) {
+  const objs = [], add = s => { objs.push(s); return objs.length; };
+  add('<< /Type /Catalog /Pages 2 0 R >>'); add('');   // 2 = Pages (wird unten gefüllt)
+  const font = add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'), kids = [];
+  for (let i = 1; i <= pages; i++) {
+    const txt = 'BT /F1 48 Tf 40 300 Td (Testblatt Seite ' + i + ') Tj ET\n0 0 0 rg 40 200 200 30 re f';
+    const c = add('<< /Length ' + txt.length + ' >>\nstream\n' + txt + '\nendstream');
+    kids.push(add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 400 560] /Resources << /Font << /F1 ' + font + ' 0 R >> >> /Contents ' + c + ' 0 R >>'));
+  }
+  objs[1] = '<< /Type /Pages /Count ' + pages + ' /Kids [' + kids.map(k => k + ' 0 R').join(' ') + '] >>';
+  let out = '%PDF-1.4\n'; const offs = [];
+  objs.forEach((o, i) => { offs.push(out.length); out += (i + 1) + ' 0 obj\n' + o + '\nendobj\n'; });
+  const xref = out.length;
+  out += 'xref\n0 ' + (objs.length + 1) + '\n0000000000 65535 f \n' + offs.map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('') + 'trailer\n<< /Size ' + (objs.length + 1) + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n';
+  return Buffer.from(out, 'latin1');
+}
+// Kleines PNG (w×h, einfarbig mit dunklem Balken) – als «Scan/Foto»
+function png(w = 60, h = 80) {
+  const zlib = require('zlib'), raw = Buffer.alloc((w * 3 + 1) * h);
+  for (let y = 0; y < h; y++) { raw[y * (w * 3 + 1)] = 0; for (let x = 0; x < w; x++) { const v = y > 20 && y < 30 ? 20 : 235; raw.fill(v, y * (w * 3 + 1) + 1 + x * 3, y * (w * 3 + 1) + 4 + x * 3); } }
+  const crcT = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; crcT[n] = c >>> 0; }
+  const crc = b => { let c = 0xffffffff; for (const x of b) c = crcT[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+  const chunk = (t, d) => { const l = Buffer.alloc(4); l.writeUInt32BE(d.length); const td = Buffer.concat([Buffer.from(t), d]), c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([l, td, c]); };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
+}
+module.exports.pdf = pdf; module.exports.png = png;

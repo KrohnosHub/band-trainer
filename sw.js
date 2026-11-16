@@ -1,10 +1,10 @@
-// Service Worker des Band-Trainers – hält Programm und abcjs offline bereit.
-// Songs liegen in localStorage, Audiodateien in IndexedDB (nicht hier).
-const VERSION = '1.0.0-dccb98a4';
+// Service Worker des Band-Trainers – hält Programm, abcjs und pdf.js (Notenblätter) offline bereit.
+// Songs liegen in localStorage, Audiodateien und Notenblätter in IndexedDB (nicht hier).
+const VERSION = '1.1.0-34aff4c8';
 const CACHE = 'band-trainer-' + VERSION;
 // vendor/ und icons/ ändern sich selten: eigener Cache, dessen Name nur wechselt, wenn sich der Inhalt
 // dieser Dateien ändert (Hash von tools/finalize.py) – sie werden nicht bei jeder Version neu geladen.
-const VENDOR_CACHE = 'band-trainer-vendor-40807ebb';
+const VENDOR_CACHE = 'band-trainer-vendor-d6bab1a5';
 const PRECACHE = [
  "./",
  "index.html",
@@ -14,7 +14,26 @@ const PRECACHE_VENDOR = [
  "icons/icon-192.png",
  "icons/icon-512.png",
  "icons/icon-maskable-512.png",
- "vendor/abcjs-basic-min.js"
+ "vendor/abcjs-basic-min.js",
+ "vendor/pdf.min.mjs",
+ "vendor/pdf.worker.min.mjs",
+ "vendor/wasm/jbig2.wasm",
+ "vendor/wasm/openjpeg.wasm",
+ "vendor/wasm/qcms_bg.wasm",
+ "vendor/standard_fonts/FoxitDingbats.pfb",
+ "vendor/standard_fonts/FoxitFixed.pfb",
+ "vendor/standard_fonts/FoxitFixedBold.pfb",
+ "vendor/standard_fonts/FoxitFixedBoldItalic.pfb",
+ "vendor/standard_fonts/FoxitFixedItalic.pfb",
+ "vendor/standard_fonts/FoxitSerif.pfb",
+ "vendor/standard_fonts/FoxitSerifBold.pfb",
+ "vendor/standard_fonts/FoxitSerifBoldItalic.pfb",
+ "vendor/standard_fonts/FoxitSerifItalic.pfb",
+ "vendor/standard_fonts/FoxitSymbol.pfb",
+ "vendor/standard_fonts/LiberationSans-Bold.ttf",
+ "vendor/standard_fonts/LiberationSans-BoldItalic.ttf",
+ "vendor/standard_fonts/LiberationSans-Italic.ttf",
+ "vendor/standard_fonts/LiberationSans-Regular.ttf"
 ];
 
 self.addEventListener('install', (e) => {

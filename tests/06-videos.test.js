@@ -44,13 +44,13 @@ module.exports = async () => {
       await pg.waitForSelector('#sTitle'); await pg.click('[data-act=tab][data-tab=videos]'); await pg.waitForTimeout(300);
       eq(pg.ytQueries, []); ok(/nicht eingerichtet/.test(await pg.locator('#sugBox').innerText()), 'Hinweis ohne Schlüssel');
       const links = await pg.evaluate(() => [...document.querySelectorAll('#searchBox a')].map(a => a.href));
-      eq(links.length, 7); eq(links[0], 'https://www.youtube.com/results?search_query=Hotel%20California%20Eagles%20keyboard%20tutorial'); ok(links.every(l => /^https:\/\/(www\.youtube\.com\/results|www\.ultimate-guitar\.com|www\.songsterr\.com)/.test(l)), 'nur Suchlinks');
+      eq(links.length, 10); eq(links[0], 'https://www.youtube.com/results?search_query=Hotel%20California%20Eagles%20keyboard%20tutorial'); ok(links.every(l => /^https:\/\/(www\.youtube\.com\/results|www\.ultimate-guitar\.com|www\.songsterr\.com|www\.google\.com\/search\?q=site%3A)/.test(l)), 'nur Suchlinks');
       await pg.context().close();
       pg = await open(b, D, { yt: () => ({ status: 403 }), cfg: { YOUTUBE_API_KEY: 'TESTKEY' }, hash: '#/song/seed-05' });
       await pg.waitForSelector('#sTitle'); await pg.click('[data-act=tab][data-tab=videos]');
       await pg.waitForFunction(() => /nicht verfügbar/.test(document.querySelector('#sugBox').textContent));
       ok(/Tageskontingent|freigegeben/.test(await pg.locator('#sugBox').innerText()), 'Fehlertext');
-      eq(await pg.evaluate(() => [document.querySelectorAll('#sugBox .sugg').length, App.current().suggest, document.querySelectorAll('#searchBox a').length]), [0, null, 7]);
+      eq(await pg.evaluate(() => [document.querySelectorAll('#sugBox .sugg').length, App.current().suggest, document.querySelectorAll('#searchBox a').length]), [0, null, 10]);
       eq(pg.errs, []); await pg.context().close();
     });
   } finally { await b.close(); }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com https://apis.google.com 'sha256-ysbSSgPNLHl7WTosSm8j7CcJIEMPX5fgTlZZv7pHwLg=' 'sha256-HLDp8i2pU4nKbJlG2HSTWlv1P9PiRlC8IjGJ4DahjnM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-ysbSSgPNLHl7WTosSm8j7CcJIEMPX5fgTlZZv7pHwLg=' 'sha256-XmE+cd2W+TfKUXKbYdvERm3kxYxfQgizJ6rMZ4voI1I='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -231,6 +231,39 @@ body.stage-on #app{max-width:none;padding:0}
 .stage .snav button{flex:1;min-height:60px;white-space:normal;line-height:1.2;overflow:hidden}
 .stage .snav .nx{flex:2}
 @media (min-width:760px){ .stage .chordview{font-size:calc(2.6rem * var(--cs,1))} .stage .shead h1{font-size:1.9rem} }
+/* ----- v1.1.0: Abschnitte im Akkordraster, Akkord-Status, Notenblätter (PDF/Bild) mit Freihand-Notizen, Akkord-Import ----- */
+.chordview .sect{font-size:.62em;color:var(--accent);font-weight:700;border-left:3px solid var(--accent);padding-left:.5em;margin:16px 0 6px}
+.chordview .barrow{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.chordview .barrow .bars{flex:1;min-width:0;margin-bottom:0}
+.chordview .rep{flex:none;font-size:.72em;font-weight:700;color:var(--accent);min-width:2.2em;text-align:center;white-space:nowrap}
+.stage .chordview .sect{font-size:.74em;margin-top:.9em}
+.badge.cs-ok{color:var(--ok);border-color:var(--ok)}
+.badge.cs-un{color:var(--warn);border-color:var(--warn)}
+#chordMeta{margin:8px 0 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#chordMeta a{overflow-wrap:anywhere}
+.sheet button{flex:none;min-height:44px;padding:0 12px}
+.viewer{position:fixed;inset:0;z-index:15;background:var(--bg);display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.vembed{flex:1;min-height:0;display:flex;flex-direction:column}
+.vbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 8px;background:var(--surface);border-bottom:1px solid var(--border)}
+.vembed .vbar{padding:4px 0;background:transparent;border:0}
+.vbar button{min-height:44px;min-width:44px;padding:0 10px;flex:none}
+.vbar .vname{flex:1;min-width:4em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vbar .vpos{min-width:3.6em;text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
+.vbar .vtools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.vbar .col{width:34px;min-width:34px;min-height:34px;border-radius:999px;padding:0;border:2px solid var(--border)}
+.vbar .col.on{border-color:var(--fg);box-shadow:0 0 0 2px var(--bg) inset}
+.vwrap{flex:1;min-height:0;overflow:auto;background:#3a3d42;text-align:center;position:relative;overscroll-behavior:contain}
+.vstack{position:relative;display:inline-block;vertical-align:top;background:#fff;touch-action:pan-x pan-y}
+.vstack.draw{touch-action:none;cursor:crosshair}
+.vstack canvas{position:absolute;left:0;top:0;width:100%;height:100%}
+.vmsg{position:absolute;left:0;right:0;top:30%;color:#fff;padding:0 16px}
+.stage.has-sheet{height:100dvh}
+.stage.has-sheet .sbody{padding:4px 0;overflow:hidden;display:flex;flex-direction:column}
+.stage .shead select{width:auto;max-width:9.5em;flex:none}
+.imp{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--border)}
+.imp:first-child{border-top:0}
+.imp .grow div{overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -242,16 +275,22 @@ body.stage-on #app{max-width:none;padding:0}
 <script src="vendor/abcjs-basic-min.js"></script>
 <script>
 'use strict';
+// Polyfill für neue JS-Funktionen, die pdf.js 6.x voraussetzt (ältere Tablet-Browser kennen sie noch nicht)
+for (const C of [Map, WeakMap]) {
+  if (!C.prototype.getOrInsert) C.prototype.getOrInsert = function (k, v) { if (!this.has(k)) this.set(k, v); return this.get(k); };
+  if (!C.prototype.getOrInsertComputed) C.prototype.getOrInsertComputed = function (k, f) { if (!this.has(k)) this.set(k, f(k)); return this.get(k); };
+}
 /* =====================================================================
    Band-Trainer – Übungs-PWA für Keyboard (Akkorde rechts, Bass links)
    Aufbau analog zur Gesangs-App: eine Datei, GitHub Pages, offline-first
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.0.0';
-const SCHEMA = 2;
+const APP_VERSION = '1.1.0';
+const SCHEMA = 3;
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
+const PDFJS_VERSION = '6.3.289';
 const TOMB_TTL = 180 * 864e5;           // Löschmarken (Tombstones) bleiben 180 Tage
 const BK_KEEP = 14;                     // so viele Tages-Sicherungen bleiben in Drive
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
@@ -261,6 +300,8 @@ const SLOTS = [
   { id:'bass',     label:'Bass-Stem', hint:'Nur der Bass – zum Raushören der Bassline' },
   { id:'nobass',   label:'Ohne Bass', hint:'Playback ohne Bass – du spielst ihn mit links' }
 ];
+const SHEET_KINDS = { lead:'Leadsheet / Akkorde', piano:'Klaviernoten', bass:'Bassnoten / Tabs', other:'Sonstiges' };
+const SHEET_MAX = 60 * 1048576;         // grösste Datei pro Notenblatt
 const LINK_KINDS = { keys:'Keyboard-Guide', bass:'Bass-Guide', tabs:'Tabs / Noten', other:'Sonstiges' };
 
 /* Vorbefüllte Songliste (Titel und Interpreten von dir bestätigt). Bewusst OHNE Tonarten, Akkorde, Basslines oder Video-IDs –
@@ -326,13 +367,17 @@ const ICON = {
 
 /* ---------- Datenmodell & lokale Speicherung ---------- */
 const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+const byId = (p, q) => p.id < q.id ? -1 : p.id > q.id ? 1 : 0;
+const liveSheets = s => (s.sheets || []).filter(x => !x.deleted);
 const DEF_SETTINGS = { theme:'dark', chordSize:1, stageSize:1, countIn:false };
 const defMix = () => ({ original:{on:true,vol:1}, bass:{on:false,vol:1}, nobass:{on:false,vol:1} });
 function newSong(p = {}) {
   return Object.assign({
     id: uid(), title:'', artist:'', bpm:null, key:'', status:'todo', notes:'',
     uncertain:'',            // Hinweistext, wenn Angaben unsicher sind
-    chords:'',               // Akkordzeilen rechte Hand, Textformat "| A7 | D7 |"
+    chords:'',               // Akkordzeilen rechte Hand, Textformat "[Intro]" / "| A7 | D7 | (x4)"
+    chordSource:'',          // Quelle der Akkorde (URL)
+    chordStatus:'unchecked', // 'unchecked' (ungeprüft) | 'checked' (geprüft)
     bassAbc:'',              // Bassline linke Hand, ABC-Notation
     transpose:0, flats:null, // Anzeige transponieren (Halbtöne); Schreibweise ♯/♭ (null = automatisch)
     order:null,              // Position in der Setlist
@@ -340,6 +385,8 @@ function newSong(p = {}) {
     links:[],                // [{id,label,url,kind}]
     suggest:null,            // YouTube-Vorschläge {at, items:[{vid,title,channel,thumb,kind}], dismissed:[vid]}
     stems:{},                // Metadaten {slot:{name,size,type,u,driveId?}|{deleted,u}}; Audiodaten liegen in IndexedDB
+    sheets:[],               // Notenblätter: Metadaten [{id,name,kind,file,type,size,u,driveId?,annId?,au?}|{id,deleted,u}]; Dateien und Freihand-Notizen liegen in IndexedDB
+    stageSheet:'',           // Auftrittsmodus: ID des Notenblatts, das statt des Akkordrasters gezeigt wird ('' = Akkordraster)
     mix:defMix(),
     loop:{ a:null, b:null },
     isDemo:false, updatedAt: Date.now()
@@ -358,6 +405,19 @@ function cleanSong(r) {
     stems[sl.id] = { name:str(m.name, 300), size:num(m.size) || 0, type:str(m.type, 100), u:num(m.u) || 0 };
     if (typeof m.driveId === 'string' && /^[\w-]{5,200}$/.test(m.driveId)) stems[sl.id].driveId = m.driveId;
   }
+  const driveOk = v => typeof v === 'string' && /^[\w-]{5,200}$/.test(v);
+  const sheets = [];
+  if (Array.isArray(r.sheets)) for (const m of r.sheets.slice(0, 300)) {
+    if (!m || typeof m !== 'object' || typeof m.id !== 'string' || !/^[\w-]{1,40}$/.test(m.id) || sheets.some(x => x.id === m.id)) continue;
+    if (m.deleted) { sheets.push({ id:m.id, deleted:true, u:num(m.u) || 0 }); continue; }
+    if (typeof m.name !== 'string') continue;
+    const e = { id:m.id, name:str(m.name, 200), kind:hasOwn(SHEET_KINDS, m.kind) ? m.kind : 'other', file:str(m.file, 300), type:str(m.type, 100), size:num(m.size) || 0, u:num(m.u) || 0 };
+    if (driveOk(m.driveId)) e.driveId = m.driveId;
+    if (driveOk(m.annId)) e.annId = m.annId;
+    if (num(m.au)) e.au = m.au;
+    sheets.push(e);
+  }
+  sheets.sort(byId);
   const mix = defMix();
   if (r.mix && typeof r.mix === 'object') for (const sl of SLOTS) { const m = r.mix[sl.id]; if (m && typeof m === 'object') mix[sl.id] = { on:!!m.on, vol:Math.min(1, Math.max(0, num(m.vol) == null ? 1 : m.vol)) }; }
   let suggest = null;
@@ -372,6 +432,8 @@ function cleanSong(r) {
     bpm: bpm != null && bpm >= 30 && bpm <= 260 ? Math.round(bpm) : null, key:str(r.key, 20),
     status: ['setlist', 'todo', 'demo'].includes(r.status) ? r.status : 'todo',
     notes:str(r.notes), uncertain:str(r.uncertain, 500), chords:str(r.chords), bassAbc:str(r.bassAbc, 60000),
+    chordSource: (typeof r.chordSource === 'string' && r.chordSource.length <= 1000 && safeUrl(r.chordSource)) || '', chordStatus: r.chordStatus === 'checked' ? 'checked' : 'unchecked',
+    sheets, stageSheet: sheets.some(x => x.id === r.stageSheet && !x.deleted) ? r.stageSheet : '',
     transpose: tr != null ? Math.max(-11, Math.min(11, Math.round(tr))) : 0, flats: r.flats === true || r.flats === false ? r.flats : null,
     order: num(r.order), youtubeUrl:str(r.youtubeUrl, 500),
     links: (Array.isArray(r.links) ? r.links : []).filter(l => l && safeUrl(l.url)).slice(0, 100).map(l => ({ id:str(l.id, 40) || uid(), label:str(l.label, 300), url:safeUrl(l.url), kind:hasOwn(LINK_KINDS, l.kind) ? l.kind : 'other' })),
@@ -379,6 +441,26 @@ function cleanSong(r) {
     loop: { a: r.loop && num(r.loop.a), b: r.loop && num(r.loop.b) },
     isDemo: !!r.isDemo, updatedAt: num(r.updatedAt) || 0
   });
+}
+/* Freihand-Notizen eines Notenblatts (lokal oder aus Drive): nur Striche mit gültigen Punkten, Farben und Breiten übernehmen. */
+function cleanAnn(d) {
+  const out = { v:1, pages:{}, u:0 }, fin = v => typeof v === 'number' && isFinite(v);
+  if (!d || typeof d !== 'object') return out;
+  out.u = fin(d.u) ? d.u : 0;
+  if (d.pages && typeof d.pages === 'object') for (const [k, arr] of Object.entries(d.pages)) {
+    if (!/^[1-9]\d{0,3}$/.test(k) || !Array.isArray(arr)) continue;
+    const list = [];
+    for (const o of arr.slice(0, 4000)) {
+      if (!o || typeof o !== 'object' || !Array.isArray(o.p)) continue;
+      const pts = o.p.slice(0, 6000).filter(q => Array.isArray(q) && fin(q[0]) && fin(q[1])).map(q => [q[0], q[1]]);
+      if (!pts.length) continue;
+      const st = { id:typeof o.id === 'string' && /^[\w-]{1,40}$/.test(o.id) ? o.id : uid(), p:pts, c:typeof o.c === 'string' && /^#[0-9a-f]{6}$/i.test(o.c) ? o.c : '#d32f2f', w:Math.min(0.08, Math.max(0.0005, fin(o.w) ? o.w : 0.004)) };
+      if (o.hl) st.hl = 1;
+      list.push(st);
+    }
+    if (list.length) out.pages[k] = list;
+  }
+  return out;
 }
 function cleanData(raw) {
   raw = raw && typeof raw === 'object' ? raw : {};
@@ -414,6 +496,21 @@ function mergeStems(x, y) {
   }
   return out;
 }
+/* Notenblätter: pro Blatt gewinnt das neuere `u` (auch Löschmarken); Drive-Kennungen und der neuere Stand der
+   Freihand-Notizen (`au`) gehen dabei nicht verloren. Sortiert nach ID, damit alle Geräte dieselbe Reihenfolge erhalten. */
+function mergeSheets(x, y) {
+  const map = new Map();
+  for (const e of [...(x || []), ...(y || [])]) {
+    const c = map.get(e.id); if (!c) { map.set(e.id, Object.assign({}, e)); continue; }
+    const w = (e.u || 0) > (c.u || 0) ? e : (c.u || 0) > (e.u || 0) ? c : (e.deleted && !c.deleted ? e : c), o = w === e ? c : e, m = Object.assign({}, w);
+    if (!m.deleted && !o.deleted) {
+      if (!m.driveId && o.driveId) m.driveId = o.driveId;
+      if ((o.au || 0) > (m.au || 0)) { m.au = o.au; if (o.annId) m.annId = o.annId; } else if (!m.annId && o.annId) m.annId = o.annId;
+    }
+    map.set(e.id, m);
+  }
+  return [...map.values()].sort(byId);
+}
 function mergeData(a, b) {
   const cutoff = Date.now() - TOMB_TTL, deleted = {};
   for (const src of [a.deleted, b.deleted]) for (const [id, t] of Object.entries(src || {})) if (t > cutoff && !UNSAFE_KEYS.has(id)) deleted[id] = Math.max(deleted[id] || 0, t);
@@ -422,7 +519,9 @@ function mergeData(a, b) {
     const cur = map.get(s.id);
     if (!cur) { map.set(s.id, s); continue; }
     const win = (s.updatedAt || 0) > (cur.updatedAt || 0) ? s : cur, other = win === s ? cur : s;
-    const m = JSON.parse(JSON.stringify(win)); m.stems = mergeStems(win.stems, other.stems); map.set(s.id, m);
+    const m = JSON.parse(JSON.stringify(win)); m.stems = mergeStems(win.stems, other.stems); m.sheets = mergeSheets(win.sheets, other.sheets);
+    if (m.stageSheet && !m.sheets.some(x => x.id === m.stageSheet && !x.deleted)) m.stageSheet = '';
+    map.set(s.id, m);
   }
   const songs = [];
   for (const s of map.values()) {
@@ -476,7 +575,7 @@ const Store = {
   payload() { return { app:'band-trainer', schema:SCHEMA, v:APP_VERSION, savedAt:new Date().toISOString(), songs:this.data.songs, deleted:this.data.deleted, settings:this.data.settings, settingsAt:this.data.settingsAt }; }
 };
 
-/* Audiodateien (Stems) in IndexedDB – bleiben nur auf diesem Gerät. */
+/* Audiodateien (Stems), Notenblätter und deren Freihand-Notizen in IndexedDB (ein gemeinsamer Speicher, Schlüssel mit Präfix). */
 const IDB = {
   _db:null,
   open() {
@@ -500,6 +599,8 @@ const IDB = {
   del(key) { return this._req('readwrite', s => s.delete(key)); }
 };
 const stemKey = (songId, slot) => songId + ':' + slot;
+const sheetKey = (songId, id) => 'nb|' + songId + '|' + id;   // Notenblatt-Datei {blob,name,type,size,u}
+const annKey = (songId, id) => 'na|' + songId + '|' + id;     // Freihand-Notizen {data:{v,pages},u}
 
 /* ---------- Google Drive: Anmeldung, Ordner, Abgleich, Stems, Sicherungen ----------
    Muster aus der Gesangs-App: Google Identity Services (Token-Client, rein clientseitig), Scope drive.file.
@@ -648,7 +749,7 @@ const Cloud = {
         const info = await (await this.fetch(`${DRIVE_FILES}/${this.folderId}?fields=id,trashed`, {}, interactive)).json();
         if (info && !info.trashed) return this.folderId;
       } catch (e) { if (e.message === 'unauthorized' || e.message === 'offline') throw e; }
-      this.folderId = null; ['folderId', 'libId', 'stemsFolder', 'backupFolder'].forEach(k => LS.del(k));
+      this.folderId = null; ['folderId', 'libId', 'stemsFolder', 'backupFolder', 'sheetsFolder'].forEach(k => LS.del(k));
     }
     const q = encodeURIComponent(`name='${escQ(CONFIG.FOLDER_NAME)}' and mimeType='${FOLDER_MIME}' and trashed=false`);
     const data = await (await this.fetch(`${DRIVE_FILES}?q=${q}&fields=files(id,name)`, {}, interactive)).json();
@@ -684,18 +785,18 @@ const Cloud = {
     const mp = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${b}--`;
     return (await this.fetch(`${DRIVE_UPLOAD}?uploadType=multipart&fields=id,modifiedTime`, { method:'POST', headers:{ 'Content-Type':'multipart/related; boundary=' + b }, body:mp })).json();
   },
-  async uploadBlob(blob, meta) {   // Audiodatei: ab 4 MB «resumable» (Drive-Grenze für Multipart: 5 MB), sonst Multipart
+  async uploadBlob(blob, meta, interactive = true) {   // Datei: ab 4 MB «resumable» (Drive-Grenze für Multipart: 5 MB), sonst Multipart
     const type = blob.type || 'application/octet-stream';
     if (blob.size > 4 * 1048576) {
       try {
-        const init = await this.fetch(`${DRIVE_UPLOAD}?uploadType=resumable&fields=id`, { method:'POST', headers:{ 'Content-Type':'application/json; charset=UTF-8', 'X-Upload-Content-Type':type, 'X-Upload-Content-Length':String(blob.size) }, body:JSON.stringify(meta) }, true);
+        const init = await this.fetch(`${DRIVE_UPLOAD}?uploadType=resumable&fields=id`, { method:'POST', headers:{ 'Content-Type':'application/json; charset=UTF-8', 'X-Upload-Content-Type':type, 'X-Upload-Content-Length':String(blob.size) }, body:JSON.stringify(meta) }, interactive);
         const loc = init.headers.get('Location'); if (!loc) throw new Error('kein Upload-Link');
-        return await (await this.fetch(loc, { method:'PUT', headers:{ 'Content-Type':type }, body:blob, timeout:600000 }, true)).json();
+        return await (await this.fetch(loc, { method:'PUT', headers:{ 'Content-Type':type }, body:blob, timeout:600000 }, interactive)).json();
       } catch (e) { if (e.message === 'unauthorized' || e.message === 'offline' || blob.size > 5 * 1048576) throw e; console.warn('Resumable-Upload fehlgeschlagen, versuche Multipart', e); }
     }
     const b = 'bandtrainer' + Date.now().toString(36), enc = new TextEncoder();
     const head = enc.encode(`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: ${type}\r\n\r\n`);
-    return (await this.fetch(`${DRIVE_UPLOAD}?uploadType=multipart&fields=id`, { method:'POST', headers:{ 'Content-Type':'multipart/related; boundary=' + b }, body:new Blob([head, blob, enc.encode(`\r\n--${b}--`)]), timeout:300000 }, true)).json();
+    return (await this.fetch(`${DRIVE_UPLOAD}?uploadType=multipart&fields=id`, { method:'POST', headers:{ 'Content-Type':'multipart/related; boundary=' + b }, body:new Blob([head, blob, enc.encode(`\r\n--${b}--`)]), timeout:300000 }, interactive)).json();
   },
 
   /* --- Abgleich --- */
@@ -714,6 +815,7 @@ const Cloud = {
       try {
         await this.ensureFolder(false);
         await this.syncLibrary();
+        if (await this.syncSheets()) await this.syncLibrary();   // neue Drive-Kennungen der Blätter gleich mit in library.json
         await this.flushTrash();
         await this.autoBackup().catch(e => console.warn('Sicherung', e));
         this.lastError = ''; LS.set('lastSync', Date.now()); return true;
@@ -783,6 +885,58 @@ const Cloud = {
     const rec = { blob:meta.type ? new Blob([blob], { type:meta.type }) : blob, name:meta.name, type:meta.type || blob.type, size:blob.size, u:meta.u || 0 };
     await IDB.put(stemKey(song.id, slot), rec);
     return rec;
+  },
+  /* --- Notenblätter: Datei und Freihand-Notizen (JSON daneben) im Unterordner «Notenblätter» ---
+     Beim Abgleich werden lokale Blätter automatisch hochgeladen und fehlende geholt (damit sie am Auftritt offline da sind).
+     Freihand-Notizen: pro Blatt gewinnt der neuere Stand (`au`) – gleiche Regel wie bei den Stems. */
+  sheetName(song, m) { return song.id + '__' + m.id + '__' + (m.file || m.name || 'blatt'); },
+  async sheetDownload(song, m, interactive = false) {
+    const res = await this.fetch(`${DRIVE_FILES}/${m.driveId}?alt=media`, { timeout:600000 }, interactive);
+    const blob = await res.blob(), type = m.type || blob.type;
+    const rec = { blob:new Blob([blob], { type }), name:m.file || m.name, type, size:blob.size, u:m.u || 0 };
+    await IDB.put(sheetKey(song.id, m.id), rec); Sheets.have.add(sheetKey(song.id, m.id));
+    return rec;
+  },
+  async syncSheets() {
+    let changed = false, seen = false, folder = null;
+    const nf = async () => folder || (folder = await this.childFolder('Notenblätter', 'sheetsFolder'));
+    const dirty = new Set(Sheets.dirtyList());
+    for (const song of [...Store.data.songs]) for (const m of [...song.sheets]) {
+      const bk = sheetKey(song.id, m.id), ak = annKey(song.id, m.id), key = song.id + '|' + m.id;
+      // nach jedem «await» neu nachschlagen: ein Abgleich oder eine Eingabe kann den Eintrag inzwischen ersetzt haben
+      const cur = () => { const s = Store.get(song.id), x = s && s.sheets.find(y => y.id === m.id); return x && !x.deleted ? [s, x] : null; };
+      try {
+        if (m.deleted) {   // auf einem anderen Gerät entfernt: lokale Kopie einmal pro Sitzung aufräumen
+          if (!Sheets.gone.has(bk)) { Sheets.gone.add(bk); Sheets.have.delete(bk); await IDB.del(bk); await IDB.del(ak); Sheets.setDirty(key, false); }
+          continue;
+        }
+        const rec = await IDB.get(bk);
+        if (rec && rec.blob && !m.driveId) {
+          const out = await this.uploadBlob(rec.blob, { name:this.sheetName(song, m), parents:[await nf()] }, false);
+          if (!out || !out.id) throw new Error('Upload ohne Antwort');
+          const c = cur();
+          if (!c || (c[1].driveId && c[1].driveId !== out.id)) this.queueTrash(out.id);
+          else { c[1].driveId = out.id; c[0].updatedAt = Date.now(); changed = true; }
+        } else if (!rec && m.driveId) { await this.sheetDownload(song, m); seen = true; }
+        const c = cur(); if (!c) continue;
+        const x = c[1], arec = await IDB.get(ak), lu = (arec && arec.u) || 0;
+        if (arec && arec.data && dirty.has(key) && lu > (x.au || 0)) {
+          const name = song.id + '__' + m.id + '.annotations.json', body = { app:'band-trainer', kind:'annotations', v:1, u:lu, pages:arec.data.pages || {} };
+          let out;
+          try { out = await this.uploadJson(name, body, x.annId || null, await nf()); }
+          catch (e) { if (e.status !== 404 || !x.annId) throw e; out = await this.uploadJson(name, body, null, await nf()); }   // Datei in Drive von Hand gelöscht → neu anlegen
+          const c2 = cur();
+          if (c2) { if (out && out.id) c2[1].annId = out.id; c2[1].au = lu; c2[0].updatedAt = Date.now(); changed = true; }
+          const now = await IDB.get(ak); if (!now || (now.u || 0) <= lu) Sheets.setDirty(key, false);
+        } else if (x.annId && (x.au || 0) > lu) {
+          const data = cleanAnn(await this.readJson(x.annId));
+          await IDB.put(ak, { data:{ v:1, pages:data.pages }, u:x.au }); Sheets.setDirty(key, false); Viewer.annChanged(song.id, m.id);
+        } else if (dirty.has(key) && !arec) Sheets.setDirty(key, false);
+      } catch (e) { if (e.message === 'offline' || e.message === 'unauthorized') throw e; console.warn('Notenblatt-Abgleich «' + (m.name || m.id) + '»', e); }
+    }
+    if (changed) { Store.persist(); LS.set('dirty', '1'); }
+    if (changed || seen) UI.sheets();
+    return changed;
   },
   folderHint() {   // einmaliger Hinweis nach dem ersten Verbinden
     if (LS.get('folderHint') || !this.folderId) return;
@@ -1006,6 +1160,287 @@ const Bass = {
   }
 };
 
+/* ---------- Notenblätter: PDFs und Bilder (Scans/Fotos) pro Song ----------
+   Dateien liegen in IndexedDB, die Metadaten im Song (`sheets`). Freihand-Notizen pro Blatt und Seite ebenfalls in IndexedDB;
+   mit verbundenem Drive wandert beides in den Unterordner «Notenblätter» (Cloud.syncSheets). */
+const Sheets = {
+  have:new Set(), gone:new Set(),   // have: Schlüssel der Blätter, deren Datei auf diesem Gerät liegt (für die Anzeige)
+  dirtyList() { try { const a = JSON.parse(LS.get('annDirty') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } },
+  setDirty(key, on) { const a = this.dirtyList().filter(k => k !== key); if (on) a.push(key); if (a.length) LS.set('annDirty', JSON.stringify(a.slice(-500))); else LS.del('annDirty'); },
+  isPdf(x) { return x.type === 'application/pdf' || /\.pdf$/i.test(x.name || x.file || ''); },
+  async scan(song) {
+    for (const m of liveSheets(song)) { const k = sheetKey(song.id, m.id); try { if (await IDB.get(k)) this.have.add(k); else this.have.delete(k); } catch (e) {} }
+    UI.sheets();
+  },
+  async add(song, file, kind, label) {
+    const pdf = this.isPdf(file), img = /^image\//.test(file.type) || /\.(png|jpe?g|webp|gif|bmp|heic|heif)$/i.test(file.name);
+    if (!pdf && !img) throw new Error('«' + file.name + '»: bitte eine PDF- oder Bilddatei wählen.');
+    if (file.size > SHEET_MAX) throw new Error('«' + file.name + '» ist zu gross (höchstens ' + Math.round(SHEET_MAX / 1048576) + ' MB).');
+    const id = uid(), u = Date.now(), type = pdf ? 'application/pdf' : (file.type || 'image/jpeg');
+    try { await IDB.put(sheetKey(song.id, id), { blob:file, name:file.name, type, size:file.size, u }); }
+    catch (e) { throw new Error('«' + file.name + '» konnte nicht gespeichert werden (Speicherplatz?).'); }
+    this.have.add(sheetKey(song.id, id));
+    song.sheets.push({ id, name:(label || file.name.replace(/\.[^.]+$/, '') || 'Blatt').slice(0, 200), kind:hasOwn(SHEET_KINDS, kind) ? kind : 'other', file:file.name.slice(0, 300), type, size:file.size, u });
+    Store.touch(song); return id;
+  },
+  remove(song, id) {
+    const i = song.sheets.findIndex(x => x.id === id), m = song.sheets[i]; if (!m || m.deleted) return;
+    if (m.driveId) Cloud.queueTrash(m.driveId); if (m.annId) Cloud.queueTrash(m.annId);
+    song.sheets[i] = { id, deleted:true, u:Date.now() }; if (song.stageSheet === id) song.stageSheet = '';
+    const bk = sheetKey(song.id, id); this.have.delete(bk); this.gone.add(bk); this.setDirty(song.id + '|' + id, false);
+    IDB.del(bk).catch(() => {}); IDB.del(annKey(song.id, id)).catch(() => {});
+    Store.touch(song);
+  },
+  async rec(song, m) {   // Datei von diesem Gerät, sonst aus Drive holen
+    const local = await IDB.get(sheetKey(song.id, m.id)); if (local && local.blob) return local;
+    if (!m.driveId) throw new Error('Diese Datei liegt nur auf einem anderen Gerät. Dort die App mit Drive verbinden und abgleichen.');
+    if (!isOnline()) throw new Error('Dieses Blatt ist noch nicht auf diesem Gerät – einmal mit Internet öffnen.');
+    if (!Cloud.tokenClient) await Cloud.loadGsi();
+    const rec = await Cloud.sheetDownload(song, m, true); UI.sheets(); return rec;
+  },
+  async loadAnn(song, id) { let r = null; try { r = await IDB.get(annKey(song.id, id)); } catch (e) {} return cleanAnn(r && r.data ? { u:r.u, pages:r.data.pages } : null); },
+  async saveAnn(songId, id, ann) {
+    await IDB.put(annKey(songId, id), { data:{ v:1, pages:ann.pages }, u:ann.u });
+    this.setDirty(songId + '|' + id, true); Cloud.markDirty();
+  }
+};
+
+/* ---------- Notenblatt-Anzeige: PDF über pdf.js (lokal aus vendor/, auch offline) oder Bild; Freihand-Notizen pro Seite ----------
+   Aus dem Lyric-Blätter-Modul der Gesangs-App übernommen und auf das Nötige reduziert: ein Blatt, eine Seite, Stift/Marker/Radierer.
+   Striche sind in Seitenbreiten gespeichert (x/W, y/W) und passen sich jeder Darstellungsgrösse an. */
+let pdfjsLib = null;
+async function getPdfjs() {
+  if (pdfjsLib) return pdfjsLib;
+  const m = await import('./vendor/pdf.min.mjs');
+  m.GlobalWorkerOptions.workerSrc = new URL('./vendor/pdf.worker.min.mjs', location.href).href;
+  pdfjsLib = m;
+  return m;
+}
+const PDF_OPTS = { wasmUrl:new URL('./vendor/wasm/', location.href).href, standardFontDataUrl:new URL('./vendor/standard_fonts/', location.href).href, isEvalSupported:false };
+function drawStroke(ctx, o, W) {
+  const P = o.p; if (!P || !P.length) return;
+  ctx.save();
+  ctx.lineCap = o.hl ? 'butt' : 'round'; ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(o.w * W, 1);
+  ctx.strokeStyle = o.c; ctx.fillStyle = o.c;
+  if (o.hl) ctx.globalAlpha = 0.45;
+  if (P.length === 1) { ctx.beginPath(); ctx.arc(P[0][0] * W, P[0][1] * W, ctx.lineWidth / 2, 0, Math.PI * 2); ctx.fill(); }
+  else {
+    ctx.beginPath(); ctx.moveTo(P[0][0] * W, P[0][1] * W);
+    for (let i = 1; i < P.length - 1; i++) ctx.quadraticCurveTo(P[i][0] * W, P[i][1] * W, (P[i][0] + P[i + 1][0]) / 2 * W, (P[i][1] + P[i + 1][1]) / 2 * W);
+    const L = P[P.length - 1]; ctx.lineTo(L[0] * W, L[1] * W); ctx.stroke();
+  }
+  ctx.restore();
+}
+function distSeg(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+  const t = Math.min(1, Math.max(0, l2 ? ((px - ax) * dx + (py - ay) * dy) / l2 : 0));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+function hitStroke(o, x, y, tol) {
+  const P = o.p, r = o.w / 2 + tol;
+  if (P.length === 1) return Math.hypot(x - P[0][0], y - P[0][1]) <= r;
+  for (let i = 1; i < P.length; i++) if (distSeg(x, y, P[i - 1][0], P[i - 1][1], P[i][0], P[i][1]) <= r) return true;
+  return false;
+}
+const PEN_COLORS = ['#d32f2f', '#1565c0', '#111111', '#2e7d32'], HL_COLORS = ['#ffe14d', '#8be38f', '#ff9ec4', '#7fd0ff'];
+const PEN_W = 0.004, HL_W = 0.022;   // Strichbreite in Seitenbreiten
+const r5 = v => Math.round(v * 1e5) / 1e5;
+const Viewer = {
+  el:null, song:null, meta:null, doc:null, img:null, imgUrl:null, ready:false, pages:1, page:1, zoom:1, fit:'width', tool:'view',
+  colors:{ pen:PEN_COLORS[0], hl:HL_COLORS[0] }, ann:cleanAnn(null), pageCv:null, seq:0, openId:0, task:null, stage:false,
+  undo:[], live:null, erased:null, pid:null, penDown:false, raf:0, saveT:null, unsaved:false,
+  q(sel) { return this.el ? this.el.querySelector(sel) : null; },
+  async open(song, meta, opts = {}) {
+    this.close();
+    const stage = !!opts.stage, el = document.createElement('div'), oid = ++this.openId;
+    el.id = 'viewer'; el.className = stage ? 'vembed' : 'viewer';
+    if (!stage) { el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Notenblatt ' + meta.name); }
+    el.innerHTML = `<div class="vbar">
+        ${stage ? '' : '<button class="icon ghost" data-act="vClose" aria-label="Notenblatt schliessen" title="Schliessen (Esc)">✕</button>'}
+        <b class="vname" id="vName">${esc(meta.name)}</b>
+        <button data-act="vPage" data-d="-1" id="vPrev" aria-label="Vorherige Seite">‹</button><span class="vpos" id="vPos">–</span><button data-act="vPage" data-d="1" id="vNext" aria-label="Nächste Seite">›</button>
+        <button data-act="vZoom" data-d="-1" aria-label="Verkleinern">−</button><button data-act="vZoom" data-d="1" aria-label="Vergrössern">+</button>
+        <button data-act="vFit" id="vFit" title="Zwischen Seitenbreite und ganzer Seite wechseln"></button>
+        ${stage ? '' : `<div class="vtools" role="group" aria-label="Werkzeuge">
+          <button data-act="vTool" data-tool="view" title="Lesen: Finger/Maus scrollt und blättert">Lesen</button><button data-act="vTool" data-tool="pen">Stift</button><button data-act="vTool" data-tool="hl">Marker</button><button data-act="vTool" data-tool="eraser" title="Radierer: löscht ganze Striche">Radierer</button>
+          <span class="vtools" id="vCols"></span>
+          <button data-act="vUndo" id="vUndo" aria-label="Rückgängig" title="Rückgängig">↶</button></div>`}
+      </div>
+      <div class="vwrap" id="vWrap"><div class="vstack" id="vStack"><canvas id="vBase"></canvas><canvas id="vInk"></canvas></div><div class="vmsg" id="vMsg" role="status">Lade Notenblatt …</div></div>`;
+    (opts.host || document.body).append(el);
+    Object.assign(this, { el, song, meta, stage, ready:false, pages:1, page:1, zoom:1, tool:'view', undo:[], live:null, erased:null, pid:null, pageCv:null, ann:cleanAnn(null), unsaved:false });
+    const f = LS.get(stage ? 'fitStage' : 'fit'); this.fit = f === 'page' || f === 'width' ? f : (stage ? 'page' : 'width');
+    const stack = this.q('#vStack'), wrap = this.q('#vWrap');
+    stack.addEventListener('pointerdown', e => this.down(e));
+    stack.addEventListener('pointermove', e => this.move(e));
+    stack.addEventListener('pointerup', e => this.up(e));
+    stack.addEventListener('pointercancel', e => this.up(e));
+    stack.addEventListener('contextmenu', e => { if (this.tool !== 'view') e.preventDefault(); });
+    if (!stage) {   // Wischen blättert (im Auftrittsmodus übernimmt das die Bühne: letzte Seite → nächster Song)
+      let x0 = null, y0 = 0;
+      wrap.addEventListener('touchstart', e => { if (e.touches.length === 1 && this.tool === 'view') { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; } else x0 = null; }, { passive:true });
+      wrap.addEventListener('touchend', e => {
+        if (x0 == null) return; const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
+        if (Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy) && !this.scrollableX()) this.go(dx < 0 ? 1 : -1);
+      }, { passive:true });
+    }
+    this.bar();
+    try {
+      const rec = await Sheets.rec(song, meta), ann = await Sheets.loadAnn(song, meta.id);
+      if (this.openId !== oid) return;
+      if (Sheets.isPdf(rec)) {
+        const lib = await getPdfjs(), task = lib.getDocument(Object.assign({ data:await rec.blob.arrayBuffer() }, PDF_OPTS)), doc = await task.promise;
+        if (this.openId !== oid) { try { task.destroy(); } catch (e) {} return; }
+        doc._task = task; this.doc = doc; this.pages = doc.numPages;
+      } else {
+        const url = URL.createObjectURL(rec.blob);
+        const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Das Bild kann von diesem Browser nicht angezeigt werden (Format ' + (rec.type || 'unbekannt') + ').')); i.src = url; }).catch(e => { URL.revokeObjectURL(url); throw e; });
+        if (this.openId !== oid) { URL.revokeObjectURL(url); return; }
+        this.img = img; this.imgUrl = url; this.pages = 1;
+      }
+      this.ann = ann; if (opts.page === 'last') this.page = this.pages;
+      this.ready = true; this.q('#vMsg').textContent = ''; this.bar();
+      await this.render();
+    } catch (e) {
+      console.error(e);
+      if (this.openId === oid && this.el) this.q('#vMsg').textContent = 'Notenblatt kann nicht angezeigt werden: ' + explainError(e);
+    }
+  },
+  close() {
+    if (!this.el) return;
+    this.commit(); this.flush();
+    this.openId++; this.seq++; cancelAnimationFrame(this.raf);
+    try { if (this.task) this.task.cancel(); } catch (e) {} this.task = null;
+    try { if (this.doc) (this.doc._task || this.doc).destroy(); } catch (e) {} this.doc = null;
+    if (this.imgUrl) URL.revokeObjectURL(this.imgUrl); this.img = null; this.imgUrl = null;
+    if (this.pageCv) { this.pageCv.width = this.pageCv.height = 0; this.pageCv = null; }
+    this.el.remove(); this.el = null; this.ready = false; this.song = null; this.meta = null;
+  },
+  alive() {   // Blatt gibt es noch (und es ist im Auftrittsmodus weiterhin gewählt)?
+    const s = this.song && Store.get(this.song.id), m = s && liveSheets(s).find(x => x.id === this.meta.id);
+    return !!m && (!this.stage || s.stageSheet === m.id);
+  },
+  bar() {
+    if (!this.el) return;
+    this.q('#vPos').textContent = this.ready ? this.page + ' / ' + this.pages : '–';
+    this.q('#vPrev').disabled = !this.ready || this.page <= 1; this.q('#vNext').disabled = !this.ready || this.page >= this.pages;
+    const fb = this.q('#vFit'); fb.textContent = this.fit === 'page' ? 'Ganze Seite' : 'Seitenbreite'; fb.setAttribute('aria-label', 'Anzeige: ' + fb.textContent + ' – antippen zum Wechseln');
+    this.q('#vStack').classList.toggle('draw', this.tool !== 'view');
+    if (this.stage) return;
+    this.el.querySelectorAll('[data-act=vTool]').forEach(b => { const on = b.dataset.tool === this.tool; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+    const pal = this.tool === 'pen' ? PEN_COLORS : this.tool === 'hl' ? HL_COLORS : [];
+    setHtml(this.q('#vCols'), pal.map(c => `<button class="col ${this.colors[this.tool] === c ? 'on' : ''}" data-act="vColor" data-c="${c}" style="background:${c}" aria-label="Farbe ${c}" aria-pressed="${this.colors[this.tool] === c}"></button>`).join(''));
+    this.q('#vUndo').disabled = !this.undo.length;
+  },
+  scrollableX() { const w = this.q('#vWrap'); return !!w && w.scrollWidth > w.clientWidth + 4; },
+  cssWidth(aspect) {
+    const wrap = this.q('#vWrap'), cw = Math.max(120, wrap.clientWidth), ch = Math.max(120, wrap.clientHeight);
+    let w = cw; if (this.fit === 'page') w = Math.min(w, ch / aspect);
+    return Math.max(120, Math.round(w * this.zoom));
+  },
+  pixelWidth(cssW, aspect) {   // Speicherbudget wie in der Gesangs-App: auf Handy/Tablet deutlich kleiner
+    const mobile = window.matchMedia && matchMedia('(pointer:coarse)').matches;
+    let px = Math.min(Math.round(cssW * Math.min(window.devicePixelRatio || 1, mobile ? 2 : 3)), mobile ? 2600 : 4096), maxArea = mobile ? 6e6 : 16e6;
+    if (mobile && navigator.deviceMemory && navigator.deviceMemory <= 4) maxArea = 3.5e6;
+    if (px * px * aspect > maxArea) px = Math.floor(Math.sqrt(maxArea / aspect));
+    return Math.max(px, 100);
+  },
+  async render() {
+    if (!this.el || !this.ready) return;
+    const seq = ++this.seq;
+    try { if (this.task) this.task.cancel(); } catch (e) {} this.task = null;
+    try {
+      let aspect, pg = null, vp1 = null;
+      if (this.doc) { pg = await this.doc.getPage(this.page); if (seq !== this.seq) return; vp1 = pg.getViewport({ scale:1 }); aspect = vp1.height / vp1.width; }
+      else aspect = this.img.naturalHeight / this.img.naturalWidth;
+      const cssW = this.cssWidth(aspect), px = this.pixelWidth(cssW, aspect);
+      const off = document.createElement('canvas'); off.width = px; off.height = Math.max(1, Math.round(px * aspect));
+      const g = off.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, off.width, off.height);
+      if (pg) { const task = pg.render({ canvasContext:g, viewport:pg.getViewport({ scale:px / vp1.width }) }); this.task = task; await task.promise; if (this.task === task) this.task = null; }
+      else g.drawImage(this.img, 0, 0, off.width, off.height);
+      if (seq !== this.seq || !this.el) { off.width = off.height = 0; return; }
+      if (this.pageCv) this.pageCv.width = this.pageCv.height = 0;
+      this.pageCv = off;
+      const stack = this.q('#vStack'); stack.style.width = cssW + 'px'; stack.style.height = Math.round(cssW * aspect) + 'px';
+      for (const id of ['#vBase', '#vInk']) { const c = this.q(id); c.width = off.width; c.height = off.height; }
+      this.paint(); this.el.dataset.page = String(this.page);
+    } catch (e) {
+      if (seq !== this.seq || (e && e.name === 'RenderingCancelledException')) return;
+      console.error(e); if (this.el) this.q('#vMsg').textContent = 'Seite kann nicht dargestellt werden: ' + (e && e.message || e);
+    }
+  },
+  objs(create) { const k = String(this.page); return this.ann.pages[k] || (create ? (this.ann.pages[k] = []) : []); },
+  paint() {   // Blatt + Marker (per «multiply» ins Blatt gerechnet) auf die untere, Stiftstriche auf die obere Ebene
+    if (!this.el || !this.pageCv) return;
+    const base = this.q('#vBase'), ink = this.q('#vInk'), W = base.width, H = base.height, b = base.getContext('2d'), i = ink.getContext('2d');
+    const objs = this.objs(false), hls = objs.filter(o => o.hl), liveHl = !!(this.live && this.live.hl);
+    b.globalCompositeOperation = 'source-over'; b.clearRect(0, 0, W, H); b.drawImage(this.pageCv, 0, 0);
+    if (hls.length || liveHl) { b.globalCompositeOperation = 'multiply'; hls.forEach(o => drawStroke(b, o, W)); if (liveHl) drawStroke(b, this.live, W); b.globalCompositeOperation = 'source-over'; }
+    i.clearRect(0, 0, W, H); objs.forEach(o => { if (!o.hl) drawStroke(i, o, W); }); if (this.live && !liveHl) drawStroke(i, this.live, W);
+  },
+  requestPaint() { cancelAnimationFrame(this.raf); this.raf = requestAnimationFrame(() => this.paint()); },
+  pt(e) { const r = this.q('#vInk').getBoundingClientRect(), w = r.width || 1; return [r5((e.clientX - r.left) / w), r5((e.clientY - r.top) / w)]; },
+  down(e) {
+    if (this.tool === 'view' || !this.pageCv || this.pid != null) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    this.pid = e.pointerId; this.penDown = e.pointerType === 'pen';
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (er) {}
+    e.preventDefault();
+    const p = this.pt(e);
+    if (this.tool === 'eraser') { this.erased = []; this.eraseAt(p); }
+    else { const hl = this.tool === 'hl'; this.live = { id:uid(), p:[p], c:this.colors[this.tool], w:hl ? HL_W : PEN_W }; if (hl) this.live.hl = 1; this.requestPaint(); }
+  },
+  move(e) {
+    if (e.pointerId !== this.pid) return;
+    const p = this.pt(e);
+    if (this.erased) this.eraseAt(p);
+    else if (this.live) { const l = this.live.p[this.live.p.length - 1]; if (Math.hypot(p[0] - l[0], p[1] - l[1]) > 0.0015) { this.live.p.push(p); this.requestPaint(); } }
+  },
+  up(e) { if (e.pointerId !== this.pid) return; this.commit(); },
+  commit() {   // laufenden Strich bzw. Radiervorgang abschliessen
+    this.pid = null; this.penDown = false;
+    if (this.live) { this.objs(true).push(this.live); this.undo.push({ t:'add', page:this.page, id:this.live.id }); this.live = null; this.changed(); }
+    else if (this.erased) { if (this.erased.length) { this.undo.push({ t:'del', page:this.page, items:this.erased }); this.changed(); } }
+    this.erased = null;
+  },
+  eraseAt(p) {
+    const tol = 10 / (this.q('#vInk').getBoundingClientRect().width || 900), arr = this.objs(false); let hit = false;
+    for (let i = arr.length - 1; i >= 0; i--) if (hitStroke(arr[i], p[0], p[1], tol)) { this.erased.push({ o:arr[i], idx:i }); arr.splice(i, 1); hit = true; }
+    if (hit) this.requestPaint();
+  },
+  undoLast() {
+    const a = this.undo.pop(); if (!a) return;
+    const k = String(a.page), arr = this.ann.pages[k] || (this.ann.pages[k] = []);
+    if (a.t === 'add') { const i = arr.findIndex(o => o.id === a.id); if (i >= 0) arr.splice(i, 1); }
+    else [...a.items].reverse().forEach(it => arr.splice(Math.min(it.idx, arr.length), 0, it.o));
+    if (a.page !== this.page) { this.page = a.page; this.render(); }
+    this.changed();
+  },
+  changed() {
+    for (const k of Object.keys(this.ann.pages)) if (!this.ann.pages[k].length) delete this.ann.pages[k];
+    this.ann.u = Date.now(); this.unsaved = true; this.paint(); this.bar();
+    clearTimeout(this.saveT); this.saveT = setTimeout(() => this.flush(), 400);
+  },
+  flush() {
+    clearTimeout(this.saveT); if (!this.unsaved || !this.song) return;
+    this.unsaved = false;
+    Sheets.saveAnn(this.song.id, this.meta.id, { pages:JSON.parse(JSON.stringify(this.ann.pages)), u:this.ann.u }).catch(e => { console.error(e); toast('Notizen konnten nicht gespeichert werden (Speicherplatz?).'); });
+  },
+  annChanged(songId, id) {   // neuerer Stand von einem anderen Gerät
+    if (!this.el || !this.song || this.song.id !== songId || this.meta.id !== id || this.live || this.erased || this.unsaved) return;
+    Sheets.loadAnn(this.song, id).then(a => { if (this.el && this.meta && this.meta.id === id) { this.ann = a; this.undo = []; this.paint(); this.bar(); } });
+  },
+  go(d) {
+    const n = this.page + d; if (!this.el || !this.ready || n < 1 || n > this.pages) return false;
+    this.commit(); this.page = n; this.bar(); this.q('#vWrap').scrollTop = 0; this.render(); return true;
+  },
+  setZoom(d) { this.zoom = Math.min(4, Math.max(0.5, +(this.zoom * (d > 0 ? 1.25 : 0.8)).toFixed(3))); this.render(); },
+  toggleFit() { this.fit = this.fit === 'page' ? 'width' : 'page'; this.zoom = 1; LS.set(this.stage ? 'fitStage' : 'fit', this.fit); this.bar(); this.render(); },
+  setTool(t) { if (!['view', 'pen', 'hl', 'eraser'].includes(t)) return; this.commit(); this.tool = t; this.bar(); },
+  setColor(c) { if (this.tool === 'pen' || this.tool === 'hl') { this.colors[this.tool] = c; this.bar(); } }
+};
+
 /* ---------- YouTube & Suchlinks ---------- */
 function ytId(url) {
   try {
@@ -1018,6 +1453,18 @@ function ytId(url) {
   } catch { return null; }
 }
 const ytEmbed = id => '<div class="yt"><iframe src="https://www.youtube-nocookie.com/embed/' + id + '?playsinline=1&rel=0" title="YouTube-Video" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"></iframe></div>';
+/* Quellen für Akkorde und Noten: generierte SUCH-Links. Für Hooktheory, Musicnotes und Sheet Music Direct bewusst eine
+   Google-Suche mit «site:» – deren eigene Such-Adressen sind nicht verlässlich dokumentiert, die Google-Form funktioniert immer. */
+function sourceLinks(song) {
+  const q = (song.title + ' ' + song.artist).trim(), e = encodeURIComponent;
+  const g = site => 'https://www.google.com/search?q=' + e('site:' + site + ' ' + q);
+  return [
+    ['Hooktheory TheoryTab: Akkorde und Analyse', g('hooktheory.com/theorytab')],
+    ['Musicnotes: offizielle Noten (kostenpflichtig)', g('musicnotes.com')],
+    ['Sheet Music Direct: offizielle Noten (kostenpflichtig)', g('sheetmusicdirect.com')],
+    ['Ultimate Guitar: Akkorde', 'https://www.ultimate-guitar.com/search.php?search_type=title&value=' + e(q)]
+  ];
+}
 function searchLinks(song) {   // generierte SUCH-Links – keine fest hinterlegten Videos
   const q = (song.title + ' ' + song.artist).trim(), e = encodeURIComponent;
   const yt = s => 'https://www.youtube.com/results?search_query=' + e(q + ' ' + s);
@@ -1027,7 +1474,7 @@ function searchLinks(song) {   // generierte SUCH-Links – keine fest hinterleg
     ['YouTube: Bass-Tutorial', yt('bass tutorial')],
     ['YouTube: Bass-Cover', yt('bass cover')],
     ['YouTube: isolierter Bass', yt('isolated bass')],
-    ['Ultimate Guitar: Akkorde', 'https://www.ultimate-guitar.com/search.php?search_type=title&value=' + e(q)],
+    ...sourceLinks(song),
     ['Songsterr: Bass-Tabs', 'https://www.songsterr.com/?pattern=' + e(q)]
   ];
 }
@@ -1096,16 +1543,54 @@ const trBar = (text, st, flats) => text.split(/(\s+)/).map(t => /\s/.test(t) || 
 function useFlats(song, st) {   // Schreibweise: fest gewählt oder passend zur Zieltonart (F, B♭, E♭, A♭, D♭ bzw. deren Mollparallelen → ♭)
   if (song.flats === true || song.flats === false) return song.flats;
   let ref = (song.key || '').trim().split(/\s+/)[0].match(CHORD_RE);
-  if (!ref || !QUALITY_RE.test(ref[2])) { ref = null; for (const tok of song.chords.replace(/\|/g, ' ').split(/\s+/)) { const m = tok.match(CHORD_RE); if (m && QUALITY_RE.test(m[2]) && tok.length < 12) { ref = m; break; } } }
+  if (!ref || !QUALITY_RE.test(ref[2])) { ref = null; for (const tok of parseChords(song.chords).flatMap(r => r.t === 'bars' ? r.bars : []).join(' ').split(/\s+/)) { const m = tok.match(CHORD_RE); if (m && QUALITY_RE.test(m[2]) && tok.length < 12) { ref = m; break; } } }
   if (!ref) return false;
   const minor = /^m(?!aj)/.test(ref[2]), ix = ((noteIx(ref[1]) + st) % 12 + 12) % 12;
   return (minor ? [2, 7, 0, 5, 10, 3] : [5, 10, 3, 8, 1]).includes(ix);
 }
+/* Akkordtext in Zeilen zerlegen:
+     [Intro]                    → Abschnitt (auch eine Zeile ohne «|», z. B. «Strophe»)
+     | Bm A | E | Bm A | E |    → Takte, ein Feld pro Takt
+     | Bm A | E |  (x4)         → Takte mit Wiederholungs-Hinweis (auch «x4», «4x», «(×4)») */
+const REP_RE = /^\(?\s*(?:[x×]\s*(\d{1,2})|(\d{1,2})\s*[x×])\s*\)?$/i, REP_TAIL = /\s*\(\s*(?:[x×]\s*(\d{1,2})|(\d{1,2})\s*[x×])\s*\)\s*$/i;
+function parseChords(text) {
+  const out = [];
+  for (let l of String(text || '').split('\n')) {
+    l = l.trim(); if (!l) continue;
+    const h = l.match(/^\[([^\]]*)\]\s*(.*)$/);
+    if (h) { if (h[1].trim()) out.push({ t:'sect', text:h[1].trim() }); l = h[2]; if (!l) continue; }
+    if (!l.includes('|')) { out.push({ t:'sect', text:l }); continue; }
+    const cells = l.split('|').map(c => c.trim()); let rep = '', m = cells[cells.length - 1].match(REP_RE);
+    if (m) { rep = m[1] || m[2]; cells.pop(); }
+    const bars = cells.filter(Boolean), last = bars.length - 1;
+    if (!rep && last >= 0 && (m = bars[last].match(REP_TAIL))) { rep = m[1] || m[2]; bars[last] = bars[last].replace(REP_TAIL, '').trim(); if (!bars[last]) bars.pop(); }
+    if (bars.length || rep) out.push({ t:'bars', bars, rep });
+  }
+  return out;
+}
 function chordsHtml(s) {
   const st = s.transpose || 0, fl = st ? useFlats(s, st) : false;
-  return s.chords.split('\n').map(l => l.trim()).filter(Boolean).map(l => l.includes('|')
-    ? '<div class="bars">' + l.split('|').map(c => c.trim()).filter(Boolean).map(c => '<div class="bar">' + esc(st ? trBar(c, st, fl) : c) + '</div>').join('') + '</div>'
-    : '<div class="sect">' + esc(l) + '</div>').join('');
+  return parseChords(s.chords).map(r => r.t === 'sect' ? '<div class="sect">' + esc(r.text) + '</div>'
+    : '<div class="barrow"><div class="bars">' + r.bars.map(c => '<div class="bar">' + esc(st ? trBar(c, st, fl) : c) + '</div>').join('') + '</div>'
+      + (r.rep ? '<div class="rep" title="' + esc(r.rep) + '-mal spielen">×' + esc(r.rep) + '</div>' : '') + '</div>').join('');
+}
+function chordBadge(s) {   // Status der Akkorde als Badge (nur wenn Akkorde eingetragen sind; das Demo ist ein eigenes Beispiel)
+  if (s.isDemo || !s.chords.trim()) return '';
+  return s.chordStatus === 'checked' ? '<span class="badge cs-ok">Akkorde geprüft</span>' : '<span class="badge cs-un">Akkorde ungeprüft</span>';
+}
+function hostOf(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } }
+/* Unscharfer Vergleich für den Akkord-Import: Gross/Klein, Akzente, Satzzeichen, Klammerzusätze, «The», «&»/«n»/«and», «-in'»/«-ing». */
+function normName(t) {
+  const base = String(t || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '');
+  const f = x => x.replace(/['’`´]/g, '').replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ').replace(/\bn\b/g, 'and').replace(/ing\b/g, 'in').trim().replace(/^the\s+/, '').replace(/\s+/g, ' ');
+  return f(base.replace(/\([^)]*\)|\[[^\]]*\]/g, ' ')) || f(base);
+}
+function artistMatch(a, b) {   // true = passt, null = eine Seite ohne Angabe, false = verschieden
+  const x = normName(a), y = normName(b); if (!x || !y) return null;
+  if (x === y) return true;
+  const ini = v => v.split(' ').map(w => w[0]).join(''), sq = v => v.replace(/ /g, '');
+  if (Math.min(x.length, y.length) >= 4 && (x.includes(y) || y.includes(x))) return true;
+  return (ini(x).length >= 2 && ini(x) === sq(y)) || (ini(y).length >= 2 && ini(y) === sq(x));   // z. B. «CCR» = Creedence Clearwater Revival
 }
 function keyLabel(s) { if (!s.key) return ''; const st = s.transpose || 0; return st ? s.key + ' → ' + trBar(s.key, st, useFlats(s, st)) : s.key; }
 const trLabel = st => st ? (st > 0 ? '+' : '−') + Math.abs(st) + ' HT' : 'Original';
@@ -1127,6 +1612,9 @@ const App = {
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && this.wakeWanted) this.setWake(true); });
     let lastW = window.innerWidth;
     window.addEventListener('resize', debounce(() => { if (window.innerWidth === lastW) return; lastW = window.innerWidth; const s = this.current(); if (s && !this.stage && !Bass.playing) Bass.render(s); }, 300));
+    window.addEventListener('resize', debounce(() => Viewer.render(), 200));   // Notenblatt an neue Fenstergrösse/Drehung anpassen
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Viewer.flush(); });
+    window.addEventListener('pagehide', () => Viewer.flush());
     this.route();
   },
   current() { return this.songId ? Store.get(this.songId) : null; },
@@ -1134,7 +1622,7 @@ const App = {
   route() {
     const m = location.hash.match(/^#\/(song|stage)\/(.+)$/); const id = m ? decodeURIComponent(m[2]) : null;
     const wasStage = this.stage;
-    Bass.stop(); Metro.stop();
+    Viewer.close(); Bass.stop(); Metro.stop();
     this.stage = !!(m && m[1] === 'stage' && id && Store.get(id));
     document.body.classList.toggle('stage-on', this.stage);
     if (this.stage) { Player.unload(); this.songId = id; UI.stage(); this.setWake(true); }
@@ -1149,9 +1637,10 @@ const App = {
   refresh() {
     this.applyTheme();
     if (this.songId && !Store.get(this.songId)) { location.hash = '#/'; toast('Dieser Song wurde auf einem anderen Gerät gelöscht.'); return; }
-    if (this.stage) { UI.stage(); return; }
+    if (this.stage) { if (!(Viewer.el && Viewer.alive())) UI.stage(); return; }   // ein offenes Notenblatt bleibt auf seiner Seite stehen
     const s = this.current(); if (!s) { UI.listItems(); UI.counts(); return; }
-    UI.header(); UI.chords(); UI.links(); UI.suggest(); UI.info(); UI.stems(); UI.loop();
+    if (Viewer.el && !Viewer.alive()) { Viewer.close(); toast('Dieses Blatt wurde auf einem anderen Gerät entfernt.'); }
+    UI.header(); UI.chords(); UI.links(); UI.suggest(); UI.info(); UI.stems(); UI.loop(); UI.sheets();
     for (const [id, v] of [['chordsIn', s.chords], ['abcIn', s.bassAbc], ['notesIn', s.notes], ['ytUrl', s.youtubeUrl]]) { const el = $('#' + id); if (el && document.activeElement !== el && el.value !== v) { el.value = v; if (id === 'abcIn' && !Bass.playing) Bass.render(s); } }
   },
   async setWake(on) {
@@ -1171,17 +1660,28 @@ const App = {
     try { const el = document.documentElement; if (el.requestFullscreen && !document.fullscreenElement) el.requestFullscreen().catch(() => {}); } catch (e) {}
     location.hash = '#/stage/' + encodeURIComponent(s.id);
   },
-  stageGo(d) {
+  stageGo(d, last) {
     const l = this.stageList(), i = l.findIndex(s => s.id === this.songId), n = l[i + d];
     if (!n) { toast(d > 0 ? 'Ende der Setlist.' : 'Anfang der Setlist.'); return; }
-    history.replaceState(null, '', '#/stage/' + encodeURIComponent(n.id)); this.route();
+    this.stageLast = !!last;   // beim Zurückblättern auf der letzten Seite des vorherigen Blatts landen
+    history.replaceState(null, '', '#/stage/' + encodeURIComponent(n.id)); this.route(); this.stageLast = false;
   },
+  // Weiter/zurück per Wischen, Taste oder Pedal: erst durch die Seiten des Notenblatts, dann zum nächsten Song
+  stageStep(d) { if (Viewer.el && Viewer.stage && Viewer.go(d)) return; this.stageGo(d, d < 0); },
   stageExit() { location.hash = this.stageFrom === 'list' ? '#/' : '#/song/' + encodeURIComponent(this.songId); },
   onKey(e) {
-    if (!this.stage || $('#dlg').open) return;
-    if ((e.key === ' ' || e.key === 'Enter') && e.target.closest && e.target.closest('button')) return;   // Knopf behält seine eigene Funktion
-    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); this.stageGo(1); }
-    else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); this.stageGo(-1); }
+    if ($('#dlg').open) return;
+    if (!this.stage) {   // geöffnetes Notenblatt: Pfeiltasten/Bild↑↓ blättern, Esc schliesst
+      if (!Viewer.el) return;
+      if (['ArrowRight', 'PageDown'].includes(e.key)) { e.preventDefault(); Viewer.go(1); }
+      else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); Viewer.go(-1); }
+      else if (e.key === 'Escape') { e.preventDefault(); Viewer.close(); }
+      return;
+    }
+    if ((e.key === ' ' || e.key === 'Enter') && e.target.closest && e.target.closest('button,select')) return;   // Knopf behält seine eigene Funktion
+    if (e.target.closest && e.target.closest('select') && /^Arrow|^Page/.test(e.key)) return;
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); this.stageStep(1); }
+    else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); this.stageStep(-1); }
     else if (e.key === 'Escape') { e.preventDefault(); this.stageExit(); }
   },
   /* ----- Setlist-Reihenfolge per Ziehen (Griff) ----- */
@@ -1220,6 +1720,24 @@ const App = {
       case 'stage': this.stageFrom = song ? 'song' : 'list'; this.stageOpen(song ? song.id : null); break;
       case 'stagePrev': this.stageGo(-1); break;
       case 'stageNext': this.stageGo(1); break;
+      // Notenblätter
+      case 'sheetPick': $('#sheetFile').click(); break;
+      case 'sheetOpen': { const m = liveSheets(song).find(x => x.id === el.dataset.id); if (m) Viewer.open(song, m); break; }
+      case 'sheetEdit': Dialogs.sheet(song, el.dataset.id); break;
+      case 'sheetDel': {
+        const m = liveSheets(song).find(x => x.id === el.dataset.id); if (!m) break;
+        if (!confirm('«' + m.name + '» samt Freihand-Notizen entfernen?' + (m.driveId ? ' Die Kopie in Drive wird ebenfalls entfernt.' : ''))) break;
+        Sheets.remove(song, m.id); $('#dlg').close(); UI.sheets(); toast('Blatt entfernt.'); break;
+      }
+      case 'vClose': Viewer.close(); break;
+      case 'vPage': Viewer.go(Number(el.dataset.d)); break;
+      case 'vZoom': Viewer.setZoom(Number(el.dataset.d)); break;
+      case 'vFit': Viewer.toggleFit(); break;
+      case 'vTool': Viewer.setTool(el.dataset.tool); break;
+      case 'vColor': Viewer.setColor(el.dataset.c); break;
+      case 'vUndo': Viewer.undoLast(); break;
+      case 'chordImport': $('#chordFile').click(); break;
+      case 'impApply': IO.chordApply(); break;
       case 'stageExit': this.stageExit(); break;
       case 'stageZoom': { const st = Store.data.settings; st.stageSize = Math.min(2.4, Math.max(0.6, +(st.stageSize + Number(el.dataset.d)).toFixed(2))); Store.saveSettings(); UI.stage(); break; }
       case 'add': Dialogs.song(null); break;
@@ -1227,10 +1745,11 @@ const App = {
       case 'menu': Dialogs.menu(); break;
       case 'close': $('#dlg').close(); break;
       case 'theme': Store.data.settings.theme = Store.data.settings.theme === 'light' ? 'dark' : 'light'; Store.saveSettings(); this.applyTheme(); break;
-      case 'tab': this.tab = el.dataset.tab; UI.tabs(); if (this.tab === 'noten' && song) Bass.render(song); if (this.tab === 'videos' && song) Suggest.run(song, false); break;
+      case 'tab': this.tab = el.dataset.tab; UI.tabs(); if (this.tab === 'noten' && song) Bass.render(song); if (this.tab === 'blaetter' && song) Sheets.scan(song); if (this.tab === 'videos' && song) Suggest.run(song, false); break;
       case 'delete':
-        if (confirm('«' + song.title + '» wirklich löschen? Die Audiodateien dieses Songs werden ebenfalls entfernt (auch in Drive gesicherte).')) {
+        if (confirm('«' + song.title + '» wirklich löschen? Die Audiodateien dieses Songs werden ebenfalls entfernt (auch in Drive gesicherte), ebenso die Notenblätter.')) {
           SLOTS.forEach(s => { IDB.del(stemKey(song.id, s.id)).catch(() => {}); const m = song.stems[s.id]; if (m && m.driveId) Cloud.queueTrash(m.driveId); });
+          liveSheets(song).forEach(m => Sheets.remove(song, m.id));
           Store.remove(song.id); $('#dlg').close(); location.hash = '#/'; toast('Song gelöscht.');
         } break;
       case 'export': IO.exportJson(); break;
@@ -1332,11 +1851,33 @@ const App = {
   onChange(e) {
     const t = e.target, song = this.current();
     if (t.id === 'importFile') { IO.importJson(t.files[0]); t.value = ''; return; }
+    if (t.id === 'chordFile') { IO.chordFile(t.files[0]); t.value = ''; return; }
+    if (t.closest && t.closest('#impList')) { Dialogs.impCount(); return; }
+    if (t.id === 'stageView' && song && this.stage) {   // Auftrittsmodus: Akkordraster oder Notenblatt (pro Song gemerkt)
+      song.stageSheet = liveSheets(song).some(x => x.id === t.value) ? t.value : ''; Store.touch(song); Viewer.close(); UI.stage(); return;
+    }
     if (!song || this.stage) return;
-    if (t.id === 'seek') { Player.seek(Number(t.value)); Player.seeking = false; }
+    if (t.id === 'sheetFile') { this.addSheets(song, [...t.files]); t.value = ''; }
+    else if (t.id === 'chordStatus') { song.chordStatus = t.value === 'checked' ? 'checked' : 'unchecked'; Store.touch(song); UI.chords(); }
+    else if (t.id === 'chordSrc') {
+      const v = t.value.trim(), u = v ? safeUrl(v) : '';
+      if (v && !u) { toast('Bitte eine gültige URL (https://…) einfügen.'); return; }
+      song.chordSource = u; Store.touch(song); UI.chords();
+    }
+    else if (t.id === 'seek') { Player.seek(Number(t.value)); Player.seeking = false; }
     else if (t.id === 'countIn') { Store.data.settings.countIn = t.checked; Store.saveSettings(); }
     else if (t.id === 'bassLoop') { Bass.loop = t.checked; }
     else if (t.type === 'file' && t.dataset.slot) { this.addStem(song, t.dataset.slot, t.files[0]); t.value = ''; }
+  },
+  async addSheets(song, files) {
+    if (!files.length) return;
+    const kind = $('#shKind').value, label = $('#shLabel').value.trim(); let n = 0;
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    for (const [i, f] of files.entries()) {
+      try { await Sheets.add(song, f, kind, label ? (files.length > 1 ? label + ' ' + (i + 1) : label) : ''); n++; }
+      catch (e) { console.warn(e); toast(e.message || 'Datei konnte nicht gespeichert werden.'); }
+    }
+    if (n) { if ($('#shLabel')) $('#shLabel').value = ''; UI.sheets(); toast(n === 1 ? 'Blatt gespeichert.' : n + ' Blätter gespeichert.'); }
   },
   async addStem(song, slot, file) {
     if (!file) return;
@@ -1374,7 +1915,8 @@ const UI = {
       <div class="chips" role="group" aria-label="Filter" id="chipBox"></div>
       <ul class="songs" id="songList"></ul>
       <button class="fab primary" data-act="add">+ Song</button>
-      <input type="file" id="importFile" accept="application/json,.json" class="hidden">`;
+      <input type="file" id="importFile" accept="application/json,.json" class="hidden">
+      <input type="file" id="chordFile" accept="application/json,.json" class="hidden">`;
     this.counts(); this.listItems(); this.sync();
   },
   counts() {
@@ -1409,7 +1951,7 @@ const UI = {
         <div class="m">
           ${s.bpm ? `<span class="badge">${esc(s.bpm)} BPM</span>` : ''}${s.key ? `<span class="badge">Tonart ${esc(keyLabel(s))}</span>` : ''}
           ${s.uncertain ? '<span class="badge warn">Angabe prüfen</span>' : ''}
-          ${hasAudio(s) ? '<span class="badge">Audio</span>' : ''}${s.chords.trim() ? '<span class="badge">Akkorde</span>' : ''}${s.bassAbc.trim() ? '<span class="badge">Bassline</span>' : ''}
+          ${hasAudio(s) ? '<span class="badge">Audio</span>' : ''}${chordBadge(s) || (s.chords.trim() ? '<span class="badge">Akkorde</span>' : '')}${s.bassAbc.trim() ? '<span class="badge">Bassline</span>' : ''}${liveSheets(s).length ? `<span class="badge">${liveSheets(s).length === 1 ? '1 Blatt' : liveSheets(s).length + ' Blätter'}</span>` : ''}
         </div></div></button></li>`).join('')
       : '<li class="empty">Keine Songs gefunden.</li>';
   },
@@ -1425,7 +1967,7 @@ const UI = {
       </header>
       <div id="sNotice"></div>
       <nav class="tabs" role="tablist">
-        ${[['noten','Noten'],['audio','Audio'],['videos','Videos'],['info','Info']].map(([t,l]) => `<button role="tab" data-act="tab" data-tab="${t}">${l}</button>`).join('')}
+        ${[['noten','Noten'],['blaetter','Blätter'],['audio','Audio'],['videos','Videos'],['info','Info']].map(([t,l]) => `<button role="tab" data-act="tab" data-tab="${t}">${l}</button>`).join('')}
       </nav>
 
       <section data-pane="noten">
@@ -1443,9 +1985,14 @@ const UI = {
             <button data-act="trReset" id="bTrReset" class="ghost">Original</button>
           </div>
           <div class="chordview" id="chordOut"></div>
+          <div class="small muted" id="chordMeta"></div>
           <details><summary>Akkorde bearbeiten</summary>
-            <textarea id="chordsIn" class="mono" spellcheck="false" placeholder="Strophe&#10;| A7 | D7 | A7 | A7 |">${esc(s.chords)}</textarea>
-            <p class="small muted" style="margin-top:6px">Ein Takt pro Feld, getrennt mit <code>|</code>. Zeilen ohne <code>|</code> werden als Abschnittstitel angezeigt (z.B. «Strophe», «Refrain»). Akkorde in der Originaltonart eintragen (Schreibweise C, F#, Bb, Am7, D/F#) – transponiert wird nur die Anzeige. Bitte nur Akkorde, keine Songtexte.</p>
+            <textarea id="chordsIn" class="mono" spellcheck="false" placeholder="[Intro]&#10;| A7 | D7 | A7 | A7 |&#10;[Strophe]&#10;| A7 | D7 |  (x4)">${esc(s.chords)}</textarea>
+            <p class="small muted" style="margin-top:6px">Ein Takt pro Feld, getrennt mit <code>|</code>. Abschnitte in eckigen Klammern auf einer eigenen Zeile: <code>[Intro]</code>, <code>[Strophe]</code>, <code>[Refrain]</code> (Zeilen ohne <code>|</code> gelten ebenfalls als Abschnitt). Wiederholungen hinter der Zeile: <code>| Bm A | E |  (x4)</code>. Akkorde in der Originaltonart eintragen (Schreibweise C, F#, Bb, Am7, D/F#) – transponiert wird nur die Anzeige. Bitte nur Akkorde, keine Songtexte.</p>
+            <div class="grid2" style="margin-top:8px">
+              <label class="f"><span>Akkord-Quelle (URL)</span><input type="url" id="chordSrc" inputmode="url" placeholder="https://…" value="${esc(s.chordSource)}" autocomplete="off"></label>
+              <label class="f"><span>Status der Akkorde</span><select id="chordStatus"><option value="unchecked">ungeprüft</option><option value="checked" ${s.chordStatus === 'checked' ? 'selected' : ''}>geprüft</option></select></label>
+            </div>
           </details>
         </div>
         <div class="card">
@@ -1474,6 +2021,27 @@ const UI = {
               <p class="small muted" style="margin-top:8px">Tipp: Im Demo-Song siehst du ein vollständiges Beispiel. Beim Transponieren werden Notenbild und Wiedergabe mit verschoben.</p>
             </details>
           </details>
+        </div>
+      </section>
+
+      <section data-pane="blaetter">
+        <div class="card">
+          <h3>Notenblätter</h3>
+          <div id="sheetList"></div>
+          <details id="sheetAdd"><summary>Blatt hinzufügen (PDF, Scan oder Foto)</summary>
+            <div class="grid2">
+              <label class="f"><span>Bezeichnung (leer = Dateiname)</span><input type="text" id="shLabel" placeholder="z.B. Leadsheet Band-Version" autocomplete="off"></label>
+              <label class="f"><span>Typ</span><select id="shKind">${Object.entries(SHEET_KINDS).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
+            </div>
+            <button class="primary" data-act="sheetPick">Datei wählen oder fotografieren</button>
+            <input type="file" id="sheetFile" accept="application/pdf,image/*,.pdf" multiple class="hidden">
+            <p class="small muted" style="margin-top:8px">Mehrere Dateien auf einmal sind möglich. Auf dem Handy bietet die Auswahl auch die Kamera an – jede Aufnahme wird ein eigenes Blatt.</p>
+          </details>
+          <p class="small muted" style="margin-top:10px">Songtexte und Melodien sind urheberrechtlich geschützt. Hinterlege hier gekaufte oder selbst gedruckte Blätter als PDF oder Scan – nur für den eigenen Gebrauch, nicht weitergeben. Die Dateien liegen auf diesem Gerät und, mit verbundenem Google Drive, in deinem privaten Drive (Unterordner «Notenblätter»).</p>
+        </div>
+        <div class="card">
+          <h3>Quellen für Noten und Akkorde</h3>
+          <div id="srcBox"></div>
         </div>
       </section>
 
@@ -1549,7 +2117,8 @@ const UI = {
           </div>
         </div>
       </div>`;
-    this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.suggest(); this.info(); this.transport();
+    this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.suggest(); this.info(); this.transport(); this.sheets();
+    if (liveSheets(s).length) Sheets.scan(s);
     const bw = $('#bWake'); if (bw) bw.classList.toggle('on', !!App.wake);
     if (App.tab === 'videos') Suggest.run(s, false);
   },
@@ -1568,6 +2137,27 @@ const UI = {
     const st = s.transpose || 0;
     $('#trOut').textContent = trLabel(st); $('#bTrReset').disabled = !st && s.flats == null;
     $('#bFlats').disabled = !st; $('#bFlats').textContent = st ? (useFlats(s, st) ? '♭' : '♯') : '♯/♭';
+    const src = s.chordSource && safeUrl(s.chordSource);
+    setHtml($('#chordMeta'), chordBadge(s) + (src ? `<span>Quelle: <a href="${esc(src)}" target="_blank" rel="noopener noreferrer">${esc(hostOf(src) || src)}</a></span>` : ''));
+    const cs = $('#chordSrc'), sel = $('#chordStatus');
+    if (cs && document.activeElement !== cs && cs.value !== s.chordSource) cs.value = s.chordSource;
+    if (sel && document.activeElement !== sel) sel.value = s.chordStatus === 'checked' ? 'checked' : 'unchecked';
+  },
+  sheets() {
+    const s = App.current(), box = $('#sheetList'); if (!s || !box) return;
+    const list = liveSheets(s), cloud = Cloud.hadLogin(), mb = n => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+    setHtml(box, list.length ? list.map(m => {
+      const local = Sheets.have.has(sheetKey(s.id, m.id));
+      const state = local ? (m.driveId ? '✓ in Drive' : cloud ? 'wird beim nächsten Abgleich in Drive gesichert' : 'nur auf diesem Gerät')
+        : (m.driveId ? 'in Drive – wird beim Öffnen geladen' : 'liegt nur auf einem anderen Gerät');
+      return `<div class="link sheet" data-sheet="${esc(m.id)}">
+        <div class="grow"><div><b>${esc(m.name)}</b> <span class="badge">${esc(SHEET_KINDS[m.kind] || '')}</span>${s.stageSheet === m.id ? ' <span class="badge setlist">Auftritt</span>' : ''}</div>
+          <div class="small muted">${Sheets.isPdf(m) ? 'PDF' : 'Bild'} · ${mb(m.size)} · ${state}</div></div>
+        <button class="primary" data-act="sheetOpen" data-id="${esc(m.id)}">Öffnen</button>
+        <button class="icon" data-act="sheetEdit" data-id="${esc(m.id)}" aria-label="«${esc(m.name)}» bearbeiten" title="Bezeichnung, Typ, Auftritt, Entfernen">✎</button></div>`; }).join('')
+      : '<p class="small muted">Noch keine Blätter. Lade ein PDF hoch oder fotografiere ein gedrucktes Blatt – du kannst mehrere Blätter pro Song ablegen (z.B. Leadsheet, Klaviernoten, Bassnoten).</p>');
+    setHtml($('#srcBox'), s.isDemo ? '<p class="small muted">Für den Demo-Song gibt es keine Suchlinks.</p>'
+      : '<div class="searchgrid">' + sourceLinks(s).map(([l, u]) => `<a class="btn" href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(l)}</a>`).join('') + '</div><p class="small muted" style="margin-top:10px">Automatisch erzeugte Suchanfragen, keine geprüften Empfehlungen. Musicnotes und Sheet Music Direct verkaufen lizenzierte Noten; Akkorde aus dem Netz sind oft fehlerhaft – mit der Aufnahme und der Band abgleichen und erst dann als «geprüft» markieren.</p>');
   },
   stems() {
     const s = App.current(), box = $('#stemBox'); if (!s || !box) return;
@@ -1657,18 +2247,21 @@ const UI = {
   /* ----- Auftrittsmodus: Akkordraster im Vollbild, Wischen/Tasten zum nächsten Song ----- */
   stage() {
     const s = App.current(), l = App.stageList(), i = l.indexOf(s), prev = l[i - 1], next = l[i + 1];
+    const shs = liveSheets(s), sh = shs.find(x => x.id === s.stageSheet) || null, unchecked = !s.isDemo && s.chords.trim() && s.chordStatus !== 'checked';
     document.title = s.title + ' – Auftritt';
-    $('#app').innerHTML = `<div class="stage" id="stage">
+    Viewer.close();
+    $('#app').innerHTML = `<div class="stage ${sh ? 'has-sheet' : ''}" id="stage">
       <div class="shead">
         <button class="icon ghost" data-act="stageExit" aria-label="Auftrittsmodus beenden">✕</button>
         <div class="grow"><h1>${esc(s.title)}</h1></div>
         <span class="spos" id="stagePos">${i + 1} / ${l.length}</span>
-        <button data-act="stageZoom" data-d="-0.15" aria-label="Akkorde kleiner">A−</button><button data-act="stageZoom" data-d="0.15" aria-label="Akkorde grösser">A+</button>
+        ${shs.length ? `<select id="stageView" aria-label="Anzeige: Akkordraster oder Notenblatt"><option value="">Akkordraster</option>${shs.map(m => `<option value="${esc(m.id)}" ${sh === m ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select>` : ''}
+        ${sh ? '' : '<button data-act="stageZoom" data-d="-0.15" aria-label="Akkorde kleiner">A−</button><button data-act="stageZoom" data-d="0.15" aria-label="Akkorde grösser">A+</button>'}
       </div>
-      <div class="ssub">${esc([s.artist, s.bpm ? s.bpm + ' BPM' : '', s.key ? 'Tonart ' + keyLabel(s) : '', s.transpose ? trLabel(s.transpose) : ''].filter(Boolean).join(' · '))}</div>
-      <div class="sbody">
+      <div class="ssub">${esc([s.artist, s.bpm ? s.bpm + ' BPM' : '', s.key ? 'Tonart ' + keyLabel(s) : '', s.transpose ? trLabel(s.transpose) : '', unchecked && !sh ? 'Akkorde ungeprüft' : ''].filter(Boolean).join(' · '))}</div>
+      <div class="sbody">${sh ? '<div class="vembed" id="stageSheet"></div>' : `
         <div class="chordview" id="stageChords" style="--cs:${Number(Store.data.settings.stageSize) || 1}">${chordsHtml(s) || '<div class="muted small" style="font-family:system-ui,sans-serif">Für diesen Song sind noch keine Akkorde eingetragen.</div>'}</div>
-        ${s.notes.trim() ? `<div class="snotes">${esc(s.notes)}</div>` : ''}
+        ${s.notes.trim() ? `<div class="snotes">${esc(s.notes)}</div>` : ''}`}
       </div>
       <div class="snav">
         <button data-act="stagePrev" ${prev ? '' : 'disabled'} aria-label="Vorheriger Song">‹ ${prev ? esc(prev.title) : 'Anfang'}</button>
@@ -1678,8 +2271,9 @@ const UI = {
     el.addEventListener('touchstart', e => { if (e.touches.length === 1) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; } else x0 = null; }, { passive:true });
     el.addEventListener('touchend', e => {
       if (x0 == null) return; const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
-      if (Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy)) App.stageGo(dx < 0 ? 1 : -1);
+      if (Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy) && !(Viewer.el && Viewer.scrollableX())) App.stageStep(dx < 0 ? 1 : -1);
     }, { passive:true });
+    if (sh) Viewer.open(s, sh, { host:$('#stageSheet'), stage:true, page:App.stageLast ? 'last' : 1 });
   }
 };
 function statusBadge(s) {
@@ -1719,6 +2313,45 @@ const Dialogs = {
     });
     this.taps = []; if (!d.open) d.showModal();
   },
+  sheet(song, id) {   // Notenblatt: Bezeichnung, Typ, Anzeige im Auftrittsmodus, Entfernen
+    const m = liveSheets(song).find(x => x.id === id), d = $('#dlg'); if (!m) return;
+    d.innerHTML = `<form id="sheetForm" novalidate>
+      <h2>Notenblatt</h2>
+      <label class="f"><span>Bezeichnung</span><input type="text" name="name" value="${esc(m.name)}" autocomplete="off"></label>
+      <label class="f"><span>Typ</span><select name="kind">${Object.entries(SHEET_KINDS).map(([k,v]) => `<option value="${k}" ${m.kind === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+      <label class="chk"><input type="checkbox" name="stage" ${song.stageSheet === m.id ? 'checked' : ''}> Im Auftrittsmodus dieses Blatt statt des Akkordrasters zeigen</label>
+      <p class="small muted">Datei: ${esc(m.file || '–')}</p>
+      <div class="actions">
+        <button type="button" class="danger ghost" data-act="sheetDel" data-id="${esc(m.id)}" style="margin-right:auto">Entfernen</button>
+        <button type="button" data-act="close">Abbrechen</button><button type="submit" class="primary">Speichern</button>
+      </div></form>`;
+    $('#sheetForm').addEventListener('submit', e => {
+      e.preventDefault(); const f = new FormData(e.target), cur = liveSheets(song).find(x => x.id === id); if (!cur) { d.close(); return; }
+      const name = String(f.get('name')).trim().slice(0, 200) || cur.name, kind = hasOwn(SHEET_KINDS, f.get('kind')) ? f.get('kind') : cur.kind;
+      if (name !== cur.name || kind !== cur.kind) { cur.name = name; cur.kind = kind; cur.u = Date.now(); }
+      if (f.get('stage')) song.stageSheet = id; else if (song.stageSheet === id) song.stageSheet = '';
+      Store.touch(song); d.close(); UI.sheets();
+    });
+    if (!d.open) d.showModal();
+  },
+  /* Akkord-Import: Vorschau mit Zuordnung; übernommen wird nur, was angehakt ist. */
+  chordImport(rows) {
+    const d = $('#dlg'); this.plan = rows;
+    const hit = rows.filter(r => r.songId).length, howTxt = { exact:'', title:' – Interpret weicht ab, bitte prüfen', multi:'mehrere passende Songs – nicht eindeutig', none:'kein passender Song in der Liste' };
+    d.innerHTML = `<h2>Akkorde importieren</h2>
+      <p class="small muted" id="impInfo">${rows.length} ${rows.length === 1 ? 'Eintrag' : 'Einträge'} in der Datei, ${hit} zugeordnet. Überschrieben werden nur Tonart, Akkorde, Akkord-Quelle und Status der angehakten Songs – alles andere bleibt unverändert.</p>
+      <div class="scroll" id="impList">${rows.map((r, i) => `<label class="imp">
+        <input type="checkbox" data-i="${i}" ${r.on ? 'checked' : ''} ${r.songId && r.changes.length ? '' : 'disabled'} aria-label="«${esc(r.title)}» übernehmen">
+        <div class="grow"><div><b>${esc(r.title)}</b>${r.artist ? ' – ' + esc(r.artist) : ''}</div>
+          ${r.songId ? `<div class="small">→ ${esc(r.songLabel)}${r.how === 'title' ? `<span class="badge cs-un">${esc(howTxt.title.slice(3))}</span>` : ''}</div>
+            <div class="small muted">${r.changes.length ? r.changes.map(esc).join(' · ') : 'bereits auf diesem Stand – nichts zu tun'}</div>`
+            : `<div class="small muted">${esc(howTxt[r.how] || howTxt.none)}</div>`}
+        </div></label>`).join('')}</div>
+      <div class="actions"><button data-act="close">Abbrechen</button><button class="primary" data-act="impApply" id="impApply"></button></div>`;
+    this.impCount();
+    if (!d.open) d.showModal();
+  },
+  impCount() { const b = $('#impApply'); if (!b) return; const n = $$('#impList input:checked').length; b.textContent = 'Übernehmen (' + n + ')'; b.disabled = !n; },
   tap() {
     const now = performance.now(); if (this.taps.length && now - this.taps[this.taps.length - 1] > 2000) this.taps = [];
     this.taps.push(now); if (this.taps.length > 8) this.taps.shift();
@@ -1738,14 +2371,14 @@ const Dialogs = {
           ${had && ok ? '<button class="primary" data-act="sync">Jetzt abgleichen</button><button data-act="backups">Sicherungen</button><button class="ghost" data-act="signOut">Abmelden</button>'
             : `<button class="primary" data-act="signIn">${had ? 'Wieder anmelden' : 'Mit Google Drive verbinden'}</button>${had ? '<button class="ghost" data-act="signOut">Trennen</button>' : ''}`}
         </div>
-        <p class="small muted">Die App legt in deinem Drive den Ordner «${esc(CONFIG.FOLDER_NAME)}» an (Songs und Einstellungen in <code>library.json</code>, Unterordner «Stems» und «Backups») und sieht nur Dateien, die sie selbst erstellt hat. Ohne Anmeldung bleibt alles lokal nutzbar. ${had ? '<button class="ghost" data-act="folderInfo" style="min-height:32px;padding:0 8px">Hinweis zum Ordner</button>' : ''}</p>
+        <p class="small muted">Die App legt in deinem Drive den Ordner «${esc(CONFIG.FOLDER_NAME)}» an (Songs und Einstellungen in <code>library.json</code>, Unterordner «Stems», «Notenblätter» und «Backups») und sieht nur Dateien, die sie selbst erstellt hat. Ohne Anmeldung bleibt alles lokal nutzbar. ${had ? '<button class="ghost" data-act="folderInfo" style="min-height:32px;padding:0 8px">Hinweis zum Ordner</button>' : ''}</p>
       </div>
       <h3 style="margin-top:14px">Sichern & Übertragen</h3>
-      <div class="row" style="margin-bottom:8px"><button data-act="export">Export (JSON)</button><button data-act="import">Import (JSON)</button></div>
-      <p class="small muted">Export enthält Songs, Akkorde, Basslines, Links und Notizen – keine Audiodateien. Import führt zusammen: bei gleichem Song gewinnt der neuere Stand.</p>
+      <div class="row" style="margin-bottom:8px"><button data-act="export">Export (JSON)</button><button data-act="import">Import (JSON)</button><button data-act="chordImport">Akkorde importieren (JSON)</button></div>
+      <p class="small muted">Export enthält Songs, Akkorde, Basslines, Links und Notizen – keine Audiodateien und keine Notenblätter. Import führt zusammen: bei gleichem Song gewinnt der neuere Stand. «Akkorde importieren» liest eine Datei <code>{"songs":[{"title","artist","key","chords","chordSource","chordStatus"}]}</code>, ordnet sie über Titel und Interpret den vorhandenen Songs zu und zeigt vor dem Übernehmen eine Vorschau.</p>
       <h3 style="margin-top:14px">Hinweise</h3>
       <p class="small muted">Keine Songtexte oder vollständigen Transkriptionen Dritter veröffentlichen. Eigene Notizen für den Proberaum sind in Ordnung; Audiodateien bleiben auf dem Gerät bzw. in deinem privaten Drive.</p>
-      <p class="small muted" id="verLine">Version ${APP_VERSION} · abcjs ${ABCJS_VERSION} · Offline-Speicher ${sw}${usage ? ' · ' + usage : ''}</p>
+      <p class="small muted" id="verLine">Version ${APP_VERSION} · abcjs ${ABCJS_VERSION} · pdf.js ${PDFJS_VERSION} · Offline-Speicher ${sw}${usage ? ' · ' + usage : ''}</p>
       <p class="small muted">Läuft auf ${esc(location.origin)} · Client-ID ${esc(id.length > 24 ? id.slice(0, 12) + '…' + id.slice(-27) : id)}</p>
       <div class="actions"><button data-act="reload">Neu laden / Update suchen</button><button data-act="close" class="primary">Schliessen</button></div>`;
     if (!d.open) d.showModal();
@@ -1753,7 +2386,7 @@ const Dialogs = {
   folderHint() {
     const d = $('#dlg');
     d.innerHTML = `<h2>Ordner in Google Drive</h2>
-      <p>Die App hat in deinem Drive den Ordner <b>«${esc(CONFIG.FOLDER_NAME)}»</b> eingerichtet. Darin liegen <code>library.json</code> (Songs und Einstellungen) sowie die Unterordner «Stems» und «Backups» (tägliche Sicherung, die letzten ${BK_KEEP} bleiben).</p>
+      <p>Die App hat in deinem Drive den Ordner <b>«${esc(CONFIG.FOLDER_NAME)}»</b> eingerichtet. Darin liegen <code>library.json</code> (Songs und Einstellungen) sowie die Unterordner «Stems», «Backups» (tägliche Sicherung, die letzten ${BK_KEEP} bleiben) und – sobald du Notenblätter ablegst – «Notenblätter».</p>
       <p>Du darfst den Ordner in Drive verschieben, zum Beispiel nach <b>«04_Band»</b> – die App findet ihn weiterhin, weil sie ihn selbst erstellt hat und sich seine Kennung nicht ändert. Bitte nicht umbenennen und die Dateien darin nicht von Hand bearbeiten.</p>
       <div class="actions"><button data-act="close" class="primary">Verstanden</button></div>`;
     if (!d.open) d.showModal();
@@ -1789,10 +2422,62 @@ const IO = {
     try {
       const data = JSON.parse(await file.text());
       if (!data || !Array.isArray(data.songs)) throw new Error('Keine Songliste gefunden.');
+      // Akkord-Datei (Einträge ohne ID, aber mit Akkorden/Tonart) im falschen Menüpunkt gewählt → zur Akkord-Vorschau
+      if (data.app !== 'band-trainer' && data.songs.length && !data.songs.some(x => x && typeof x.id === 'string')) { Dialogs.chordImport(this.chordPlan(data)); return; }
       const inc = cleanData(data); inc.settingsAt = 0;   // Einstellungen dieses Geräts bleiben
       const r = this.merge(inc);
       $('#dlg').close(); App.route(); toast('Import: ' + r.added + ' neu, ' + r.updated + ' aktualisiert.');
     } catch (e) { toast('Import fehlgeschlagen: ' + e.message); }
+  },
+  /* Akkord-Import: Datei {songs:[{title, artist, key, chords, chordSource, chordStatus}]} den vorhandenen Songs zuordnen.
+     Zuordnung über Titel + Interpret (unscharf, siehe normName/artistMatch). Gibt die Vorschau-Zeilen zurück; geändert wird noch nichts. */
+  chordPlan(data) {
+    if (!data || !Array.isArray(data.songs)) throw new Error('Keine Songliste gefunden (erwartet: {"songs":[…]}).');
+    const str = (v, max) => typeof v === 'string' ? v.slice(0, max).trim() : '';
+    const songs = Store.data.songs.filter(s => !s.isDemo);
+    return data.songs.slice(0, 500).filter(e => e && typeof e === 'object' && typeof e.title === 'string' && e.title.trim()).map(e => {
+      const title = str(e.title, 300), artist = str(e.artist, 300), tk = normName(title);
+      const cand = tk ? songs.filter(s => normName(s.title) === tk) : [], strong = cand.filter(s => artistMatch(s.artist, artist) !== false);
+      let song = null, how = 'none';
+      if (strong.length === 1) { song = strong[0]; how = 'exact'; }
+      else if (strong.length > 1 || cand.length > 1) how = 'multi';
+      else if (cand.length === 1) { song = cand[0]; how = 'title'; }
+      const f = {}, key = str(e.key, 20), src = typeof e.chordSource === 'string' && e.chordSource.length <= 1000 ? safeUrl(e.chordSource) : null;
+      const chords = (Array.isArray(e.chords) ? e.chords.filter(x => typeof x === 'string').join('\n') : typeof e.chords === 'string' ? e.chords : '').replace(/\r\n?/g, '\n').slice(0, 20000).trim();
+      if (key) f.key = key;
+      if (chords) f.chords = chords;
+      if (src) f.chordSource = src;
+      if (e.chordStatus != null && e.chordStatus !== '') f.chordStatus = e.chordStatus === true || /^(checked|gepr(ü|ue)ft|verified|ok)$/i.test(String(e.chordStatus).trim()) ? 'checked' : 'unchecked';
+      else if (chords) f.chordStatus = 'unchecked';   // neue Akkorde ohne Angabe gelten als ungeprüft
+      const changes = []; let replaces = false;
+      if (song) {
+        if (f.key && f.key !== song.key) changes.push('Tonart: ' + (song.key ? song.key + ' → ' : '') + f.key);
+        if (f.chords && f.chords !== song.chords.trim()) {
+          const p = parseChords(f.chords), bars = p.reduce((n, r) => n + (r.t === 'bars' ? r.bars.length : 0), 0), sect = p.filter(r => r.t === 'sect').length;
+          replaces = !!song.chords.trim();
+          changes.push('Akkorde: ' + bars + ' Takte' + (sect ? ', ' + sect + ' Abschnitte' : '') + (replaces ? ' (ersetzt die vorhandenen)' : ''));
+        }
+        if (f.chordSource && f.chordSource !== song.chordSource) changes.push('Quelle: ' + (hostOf(f.chordSource) || f.chordSource));
+        if (f.chordStatus && f.chordStatus !== song.chordStatus && (f.chords || song.chords.trim())) changes.push('Status: ' + (f.chordStatus === 'checked' ? 'geprüft' : 'ungeprüft'));
+      }
+      return { title, artist, how, songId:song ? song.id : null, songLabel:song ? song.title + (song.artist ? ' (' + song.artist + ')' : '') : '', f, changes, replaces, on:how === 'exact' && changes.length > 0 };
+    });
+  },
+  async chordFile(file) {
+    if (!file) return;
+    try { Dialogs.chordImport(this.chordPlan(JSON.parse(await file.text()))); }
+    catch (e) { toast('Akkord-Import fehlgeschlagen: ' + (e instanceof SyntaxError ? 'Die Datei ist kein gültiges JSON.' : e.message)); }
+  },
+  chordApply() {   // angehakte Zeilen der Vorschau übernehmen: nur Tonart, Akkorde, Quelle, Status
+    const rows = Dialogs.plan || [], now = Date.now(); let n = 0;
+    for (const cb of $$('#impList input:checked')) {
+      const r = rows[Number(cb.dataset.i)], song = r && r.songId && Store.get(r.songId); if (!song) continue;
+      for (const k of ['key', 'chords', 'chordSource', 'chordStatus']) if (hasOwn(r.f, k)) song[k] = r.f[k];
+      song.updatedAt = now; n++;
+    }
+    Dialogs.plan = null; $('#dlg').close();
+    if (n) { Store.save(); App.route(); }
+    toast(n ? 'Akkorde für ' + n + (n === 1 ? ' Song' : ' Songs') + ' übernommen.' : 'Nichts übernommen.');
   },
   async restoreBackup(id, name) {
     if (!confirm('Stand aus «' + name + '» zurückholen? Die Songs der Sicherung ersetzen den heutigen Stand; Songs, die es nur jetzt gibt, bleiben.')) return;
@@ -1800,7 +2485,7 @@ const IO = {
       const inc = cleanData(await Cloud.readJson(id)), now = Date.now();
       if (!inc.songs.length) throw new Error('Die Sicherung enthält keine Songs.');
       const cur = new Map(Store.data.songs.map(s => [s.id, s]));
-      for (const s of inc.songs) { const c = cur.get(s.id); s.stems = c ? c.stems : s.stems; if (!c || canon(Object.assign({}, c, { updatedAt:0 })) !== canon(Object.assign({}, s, { updatedAt:0 }))) s.updatedAt = now; else s.updatedAt = c.updatedAt; delete Store.data.deleted[s.id]; }
+      for (const s of inc.songs) { const c = cur.get(s.id); s.stems = c ? c.stems : s.stems; if (c) { s.sheets = c.sheets; s.stageSheet = c.stageSheet; } if (!c || canon(Object.assign({}, c, { updatedAt:0 })) !== canon(Object.assign({}, s, { updatedAt:0 }))) s.updatedAt = now; else s.updatedAt = c.updatedAt; delete Store.data.deleted[s.id]; }
       inc.deleted = {}; inc.settingsAt = 0;
       const r = this.merge(inc);
       $('#dlg').close(); App.route(); toast('Wiederhergestellt: ' + (r.added + r.updated) + ' Songs zurückgeholt.');

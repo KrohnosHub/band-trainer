@@ -19,7 +19,7 @@ module.exports = async () => {
   });
   await test('CSP streng: kein unsafe-inline/eval für Skripte, nur die vorgesehenen Hosts', () => {
     const dir = n => (csp.split(';').map(x => x.trim()).find(x => x.startsWith(n + ' ')) || '');
-    ok(!/unsafe-inline|unsafe-eval/.test(dir('script-src')), 'script-src zu offen');
+    ok(!/'unsafe-inline'|'unsafe-eval'/.test(dir('script-src')), 'script-src zu offen');   // 'wasm-unsafe-eval' (nur WebAssembly für die Bild-Decoder von pdf.js) ist erlaubt, JS-eval nicht
     ok(/default-src 'self'/.test(csp) && /object-src 'none'/.test(csp) && /base-uri 'self'/.test(csp), 'Grundregeln fehlen');
     const hosts = [...csp.matchAll(/https:\/\/[^\s;]+/g)].map(m => m[0]);
     const allowed = ['https://accounts.google.com', 'https://apis.google.com', 'https://www.googleapis.com', 'https://www.youtube.com', 'https://www.youtube-nocookie.com', 'https://i.ytimg.com', 'https://paulrosen.github.io'];
@@ -41,7 +41,7 @@ module.exports = async () => {
     eq((sw.match(/VENDOR_CACHE\s*=\s*'band-trainer-vendor-([^']+)'/) || [])[1], h.digest('hex').slice(0, 8), 'VENDOR_CACHE');
   });
   await test('Pflichtdateien vorhanden, Manifest gültig', () => {
-    ['manifest.webmanifest', 'sw.js', 'README.md', 'CLAUDE.md', 'vendor/abcjs-basic-min.js', 'vendor/abcjs-LICENSE.md', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'tools/finalize.py', 'tools/check-version.py'].forEach(f => ok(fs.existsSync(path.join(root, f)), f + ' fehlt'));
+    ['manifest.webmanifest', 'sw.js', 'README.md', 'CLAUDE.md', 'vendor/abcjs-basic-min.js', 'vendor/abcjs-LICENSE.md', 'vendor/pdf.min.mjs', 'vendor/pdf.worker.min.mjs', 'vendor/pdfjs-LICENSE.md', 'vendor/wasm/openjpeg.wasm', 'vendor/standard_fonts/LiberationSans-Regular.ttf', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'tools/finalize.py', 'tools/check-version.py'].forEach(f => ok(fs.existsSync(path.join(root, f)), f + ' fehlt'));
     const m = JSON.parse(fs.readFileSync(path.join(root, 'manifest.webmanifest'), 'utf8'));
     eq([m.start_url, m.scope, m.display], ['./', './', 'standalone']); m.icons.forEach(i => ok(fs.existsSync(path.join(root, i.src)), i.src));
   });
