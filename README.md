@@ -112,6 +112,9 @@ Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): e
 
 ## Änderungslog
 
+### v1.3.1 – Favoriten-Stern korrigiert
+- Ein Favorit zeigte einen farbigen Kasten statt des Sterns (allgemeiner «aktiv»-Knopfstil griff). Jetzt nur noch ein gelber, ausgefüllter Stern ★ – in der Übersicht und in der Song-Ansicht, hell und dunkel.
+
 ### v1.3.0 – Eigene Listen, Favoriten, kompakte Übersicht
 - **Listen:** Statt der festen Status «Setlist»/«To Do» gibt es frei anlegbare Listen («+ Liste»). Pro Liste: Songs wählen (Häkchen-Auswahl mit Filter), Reihenfolge (Ziehen, ▲/▼, ✕ zum Entfernen), Umbenennen, Liste löschen (Songs bleiben). Ein Song kann in mehreren Listen stehen; im Song-Dialog per Häkchen. Der Auftrittsmodus spielt die gewählte Liste (sonst die erste). Bisherige Daten werden automatisch zu den Listen «Setlist» und «To Do» (gleiche Reihenfolge).
 - **Favoriten:** Stern ☆/★ in der Übersicht und in der Song-Ansicht, Filter «★ Favoriten» (wie in der Gesangs-App).

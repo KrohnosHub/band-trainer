@@ -107,6 +107,7 @@ module.exports = async () => {
       await pg.click('[data-act=filter][data-f=all]'); await pg.click('#songList [data-act=fav][data-id=seed-01]');
       await pg.click('[data-act=filter][data-f=fav]'); eq(await count(pg), 2);
       ok(await pg.locator('#songList li[data-id=seed-01] .favb.on').isVisible());
+      eq(await pg.evaluate(() => { const c = getComputedStyle(document.querySelector('#songList li[data-id=seed-01] .favb.on')); return [c.backgroundColor, c.color !== c.backgroundColor]; }), ['rgba(0, 0, 0, 0)', true], 'nur Stern, kein farbiger Kasten');
       // Zwei Zeilen pro Titel, keine Indikatoren
       eq(await pg.evaluate(() => [document.querySelectorAll('#songList .m').length, document.querySelectorAll('#songList .song .badge').length]), [0, 0]);
       // Liste löschen (Songs bleiben); Löschmarke gesetzt; nach Neuladen weg
