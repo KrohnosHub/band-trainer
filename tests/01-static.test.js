@@ -22,7 +22,7 @@ module.exports = async () => {
     ok(!/'unsafe-inline'|'unsafe-eval'/.test(dir('script-src')), 'script-src zu offen');   // 'wasm-unsafe-eval' (nur WebAssembly für die Bild-Decoder von pdf.js) ist erlaubt, JS-eval nicht
     ok(/default-src 'self'/.test(csp) && /object-src 'none'/.test(csp) && /base-uri 'self'/.test(csp), 'Grundregeln fehlen');
     const hosts = [...csp.matchAll(/https:\/\/[^\s;]+/g)].map(m => m[0]);
-    const allowed = ['https://accounts.google.com', 'https://apis.google.com', 'https://www.googleapis.com', 'https://www.youtube.com', 'https://www.youtube-nocookie.com', 'https://i.ytimg.com', 'https://paulrosen.github.io'];
+    const allowed = ['https://accounts.google.com', 'https://apis.google.com', 'https://www.googleapis.com', 'https://www.youtube.com', 'https://www.youtube-nocookie.com', 'https://i.ytimg.com', 'https://paulrosen.github.io', 'https://accounts.spotify.com', 'https://api.spotify.com', 'https://open.spotify.com'];
     hosts.forEach(h => ok(allowed.includes(h), 'unerwarteter Host in der CSP: ' + h));
     ['https://paulrosen.github.io', 'https://www.googleapis.com'].forEach(h => ok(dir('connect-src').includes(h), h + ' fehlt in connect-src'));
   });

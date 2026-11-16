@@ -17,7 +17,7 @@ Aufbau und Abläufe sind bewusst gleich wie bei der Gesangs-App. Ausführliches 
 
 ## Inhalte
 - Keine urheberrechtlich geschützten Inhalte ins Repo: keine Songtexte, kein Audio, keine Transkriptionen.
-- Nichts erfinden: keine Akkorde, Tonarten, BPM, Basslines oder Video-IDs zu echten Songs aus dem Gedächtnis vorbefüllen. Einzige Ausnahme ist das eigene Demo-Beispiel (generischer 12-Takt-Blues). Video-Vorschläge stammen ausschliesslich aus echten API-Treffern.
+- Nichts erfinden: keine Akkorde, Tonarten, BPM, Basslines oder Video-IDs zu echten Songs aus dem Gedächtnis vorbefüllen. Ausnahmen: das eigene Demo-Beispiel (generischer 12-Takt-Blues) und `SEED_CHORDS` (ab v1.2.0: im Web recherchierte Akkordfolgen mit Quellenangabe, ohne Texte, Status «ungeprüft»). Video-Vorschläge stammen ausschliesslich aus echten API-Treffern.
 - Die vorbefüllte Songliste (`SEED`) hat feste IDs (`seed-01` …) und `updatedAt: 0` – IDs nie ändern oder neu vergeben (Sync-Schlüssel).
 
 ## Daten und Sync
@@ -27,8 +27,8 @@ Aufbau und Abläufe sind bewusst gleich wie bei der Gesangs-App. Ausführliches 
 
 ## Sicherheit
 - Strenge CSP im `<meta>`-Tag: keine Inline-Event-Handler (`onclick="…"`), kein `eval`, neue externe Hosts nur bewusst in der CSP ergänzen (Test `01-static` führt eine Liste der erlaubten Hosts).
-- Text aus fremden Quellen (Drive, Import, YouTube-API) nie ungefiltert per `innerHTML` einsetzen; `esc()` bzw. `textContent` nutzen, Links nur über `safeUrl()`.
-- Keine Client-Secrets oder Tokens ins Repo. Der YouTube-API-Schlüssel im `CONFIG`-Block ist ein öffentlicher Browser-Schlüssel (wie in der Gesangs-App) und muss in der Google Cloud Console auf den Ursprung beschränkt sein.
+- Text aus fremden Quellen (Drive, Import, YouTube-/Spotify-API) nie ungefiltert per `innerHTML` einsetzen; `esc()` bzw. `textContent` nutzen, Links nur über `safeUrl()`.
+- Keine Client-Secrets oder Tokens ins Repo (Spotify-Secret nur lokal pro Gerät). Der YouTube-API-Schlüssel im `CONFIG`-Block ist ein öffentlicher Browser-Schlüssel (wie in der Gesangs-App) und muss in der Google Cloud Console auf den Ursprung beschränkt sein.
 
 ## Commits / PRs
 - Commit-Titel mit Version, z. B. `v1.0.1: Kurzbeschreibung`.

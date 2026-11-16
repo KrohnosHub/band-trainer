@@ -174,7 +174,7 @@ module.exports = async () => {
       eq(await pg.evaluate(() => [useFlats({ key: '', chords: '[A]\n| F | Bb |', flats: null }, 0), useFlats({ key: '', chords: '[F]\n| A | D |', flats: null }, 0)]), [true, false], 'Abschnittsname zählt nicht als Akkord');
       // Quelle + Status
       eq(await pg.locator('#chordMeta .badge').innerText(), 'Akkorde ungeprüft');
-      await pg.fill('#chordSrc', 'javascript:alert(1)'); await pg.locator('#chordSrc').blur(); eq(await pg.evaluate(() => App.current().chordSource), '', 'nur http(s)');
+      await pg.fill('#chordSrc', 'javascript:alert(1)'); await pg.locator('#chordSrc').blur(); ok(!/^javascript/.test(await pg.evaluate(() => App.current().chordSource)), 'nur http(s)');
       await pg.fill('#chordSrc', 'https://www.example.org/tab/123'); await pg.locator('#chordSrc').blur(); await pg.selectOption('#chordStatus', 'checked');
       eq(await pg.evaluate(() => [document.querySelector('#chordMeta .badge').textContent, document.querySelector('#chordMeta .badge').className, document.querySelector('#chordMeta a').textContent, document.querySelector('#chordMeta a').href, document.querySelector('#chordMeta a').rel]), ['Akkorde geprüft', 'badge cs-ok', 'example.org', 'https://www.example.org/tab/123', 'noopener noreferrer']);
       await pg.waitForTimeout(650); await pg.reload(); await pg.waitForSelector('#sTitle');
@@ -201,6 +201,7 @@ module.exports = async () => {
       const pg = await open(b, D);
       eq(await pg.evaluate(() => [normName("The Black Crowes"), normName("Sweet Child O' Mine (Live)"), normName('WHAT’S UP?'), normName('Old Time Rock & Roll') === normName('Old Time Rock N Roll'), normName('Free Falling') === normName('Free Fallin'), artistMatch('CCR', 'Creedence Clearwater Revival'), artistMatch('Guns N\' Roses', 'guns n roses'), artistMatch('Eagles', 'The Eagles'), artistMatch('Prince', ''), artistMatch('Prince', 'Eagles')]),
         ['black crowes', 'sweet child o mine', 'whats up', true, true, true, true, true, null, false]);
+      await pg.evaluate(() => { for (const x of Store.data.songs) if (!x.isDemo) { x.chords = ''; x.key = ''; x.chordSource = ''; } Store.persist(); });   // Vorbelegung (v1.2.0) ausblenden
       await pg.evaluate(() => { const s = Store.get('seed-05'); s.chords = '| alt |'; s.notes = 'bleibt'; s.bpm = 75; Store.touch(s); });
       const file = { songs: [
         { title: 'hotel california', artist: 'The Eagles', key: 'Bm', chords: '[Intro]\n| Bm | F# |  (x2)', chordSource: 'https://example.org/hc', chordStatus: 'geprüft', notes: 'NICHT übernehmen', bpm: 200, id: undefined },

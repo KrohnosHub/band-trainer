@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-ysbSSgPNLHl7WTosSm8j7CcJIEMPX5fgTlZZv7pHwLg=' 'sha256-XmE+cd2W+TfKUXKbYdvERm3kxYxfQgizJ6rMZ4voI1I='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-QSphmpbPcfR9bs7PGVy3JCboUzNeLo/gwd5InEMfjxA=' 'sha256-hZvzXyp4Wj32+zE5VnBuorObvwV4ecAKl3uFqxibar0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -28,8 +28,18 @@
     SCOPE: 'https://www.googleapis.com/auth/drive.file',
     // YouTube Data API v3 (gleiches Cloud-Projekt wie CLIENT_ID) – für die automatischen Guide-Video-Vorschläge.
     // Leer lassen = nur Suchlinks.
-    YOUTUBE_API_KEY: 'AIzaSyDVKIU06mW-j999tc-94y18TXSlvlgQ4No'
+    YOUTUBE_API_KEY: 'AIzaSyDVKIU06mW-j999tc-94y18TXSlvlgQ4No',
+    // Spotify (ab v1.2.0): automatische Verknüpfung jedes Songs mit dem Spotify-Titel. Client-Credentials-Ablauf wie in der
+    // Gesangs-App. Das Secret steht bewusst NICHT im Quellcode (öffentliche Seite), sondern wird pro Gerät lokal gespeichert.
+    // Gleicher Ursprung wie die Gesangs-App → deren lokal gespeicherte Zugangsdaten (sp_id/sp_secret) werden mitbenutzt.
+    SPOTIFY_CLIENT_ID: 'cba857fdd8fc4118bed7aad8e470ea5d',
+    SPOTIFY_CLIENT_SECRET: ''
   };
+  try {
+    const own = k => localStorage.getItem('bt_' + k), ga = k => localStorage.getItem(k);
+    const id = own('sp_id') || ga('sp_id'), sec = own('sp_secret') || ga('sp_secret');
+    if (id) CONFIG.SPOTIFY_CLIENT_ID = id; if (sec) CONFIG.SPOTIFY_CLIENT_SECRET = sec;
+  } catch (e) {}
   // Für automatisierte Tests: einzelne Werte ohne Codeänderung überschreiben.
   if (window.__TEST_CFG) Object.assign(CONFIG, window.__TEST_CFG);
 </script>
@@ -237,6 +247,9 @@ body.stage-on #app{max-width:none;padding:0}
 .chordview .barrow .bars{flex:1;min-width:0;margin-bottom:0}
 .chordview .rep{flex:none;font-size:.72em;font-weight:700;color:var(--accent);min-width:2.2em;text-align:center;white-space:nowrap}
 .stage .chordview .sect{font-size:.74em;margin-top:.9em}
+.spf iframe{width:100%;height:152px;border:0;border-radius:12px;display:block}
+.addtop{min-height:36px;padding:0 12px;font-weight:700}
+.badge.sp{color:#1db954;border-color:#1db954}
 .badge.cs-ok{color:var(--ok);border-color:var(--ok)}
 .badge.cs-un{color:var(--warn);border-color:var(--warn)}
 #chordMeta{margin:8px 0 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -286,7 +299,7 @@ for (const C of [Map, WeakMap]) {
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const SCHEMA = 3;
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
@@ -331,6 +344,16 @@ const SEED = [
   ['Valerie','The Zutons',null,'todo'],
   ['Wanted Dead or Alive','Bon Jovi',null,'todo']
 ];
+/* Ab v1.2.0: recherchierte Akkordfolgen (nur Abschnitte und Akkorde, keine Texte) für die vorbefüllten Songs – Stand 16.11.2026,
+   aus mehreren Quellen zusammengetragen und auf die klingende Tonart der Aufnahme umgerechnet. Status immer «ungeprüft»:
+   nach Gehör prüfen und in der App auf «geprüft» setzen. Songs ohne verlässliche Quelle fehlen hier bewusst. */
+const SEED_CHORDS = {"seed-02": {"key": "F", "chords": "[Intro]\nF – Bb – F – C  (x2)\n[Verse]\nF – Bb – F – C  (x4)\n[Chorus]\nF – Bb – F – C  (x4)\n[Solo]\nF – Bb – F – C  (x4)\n[Outro]\nF – Bb – F – C  (wiederholen)", "chordSource": "https://richterguitar.com/free-fallin-tom-petty/"}, "seed-03": {"key": "B", "chords": "[Intro]\nB (Riff)\n[Verse]\nBm7 – E/B  (Riff, wiederholen)\n[Chorus]\nF# – F# – B\nD5 – E5 – E5 – D5 – B5  (Riff nach Chorus)\n[Solo]\nüber Verse-Riff", "chordSource": "https://hooktheory.com/theorytab/view/the-black-crowes/hard-to-handle"}, "seed-04": {"key": "A", "chords": "[Intro]\nA – D/F# G – D/F# G – D/F# G – D/F# A\n[Verse]\nA – D/F# G – D/F# G – D/F# A  (x2)\n[Chorus]\nA – D/A G  (x3)\nD/F# A – D/A G\n[Solo]\nüber Verse-Folge\n[Outro]\nA – D/A G  (wiederholen)", "chordSource": "https://www.guitartabsexplorer.com/ac-dc/highway-to-hell-crd"}, "seed-05": {"key": "Bm", "chords": "[Intro]\n| Bm | F# | A | E | G | D | Em | F# |  (x2)\n[Verse]\n| Bm | F# | A | E | G | D | Em | F# |  (x2)\n[Chorus]\n| G | D | F# | Bm | G | D | Em | F# |\n[Solo]\n| Bm | F# | A | E | G | D | Em | F# |  (wiederholen)\n[Outro]\n| Bm | F# | A | E | G | D | Em | F# |  (wiederholen, Fade)", "chordSource": "https://ukulele-tabs.com/uke-songs/the-eagles/hotel-california-uke-tab-51164.html"}, "seed-08": {"key": "D", "chords": "[Intro]\nA – G – D – D/G  (x2)\n[Verse]\nA – G – D  (wiederholen)\n[Chorus]\nA – G – D – E5 D5 G5  (x2)\nA – G – D\n[Bridge]\nA  (x4)\n[Outro]\nA – G – D  (wiederholen)", "chordSource": "https://www.guitartabsexplorer.com/goodbye-june/three-chords-chords"}, "seed-09": {"key": "B", "chords": "", "chordSource": "https://paidtabs.com/search/waiting_on_the_thunder_chords_tabs_sheet_music"}, "seed-10": {"key": "G", "chords": "[Verse]\n\n[Chorus]\n| G D C | G D C | Fmaj7 | C Fmaj7 | C |\n[Bridge]\n| G5 D5 C5 | G5 D5 C5 |\n| Fmaj7 C | Fmaj7 C |", "chordSource": "https://www.guitartabsexplorer.com/tesla/what-you-give-tab"}, "seed-11": {"key": "A", "chords": "[Intro]\n| A | Bm | D | A |  (x2)\n[Verse]\n| A | Bm | D | A |  (wiederholen)\n[Pre-Chorus]\n| A | Bm | D | A |\n[Chorus]\n| A | Bm | D | A |  (wiederholen)\n[Bridge]\n| A | Bm | D | A |\n[Outro]\n| A | Bm | D | A |", "chordSource": "https://hooktheory.com/theorytab/view/4-non-blondes/whats-up"}, "seed-12": {"key": "Bm", "chords": "[Intro]\n| Bm | A | E | E |  (wiederholen)\n[Verse]\n| Bm | A | E | E |\n[Chorus]\n| Bm | A | E | E |\n[Solo]\n| Bm | A | E | E |\n[Outro]\n| Bm | A | E | E |", "chordSource": "https://www.hooktheory.com/theorytab/view/chris-isaak/wicked-game"}, "seed-13": {"key": "C", "chords": "[Intro]\nAm – F – C – G – C\n[Verse]\nC – G – C  (x2)\n[Chorus]\nF – G – C – C/B – Am – Am/G\nF – G – C – C/B – Am – Am/G\nF – G – C\n[Outro]\nC – G – C", "chordSource": "https://www.guitartabs.cc/tabs/c/creedence_clearwater_revival/have_you_ever_seen_the_rain_crd_ver_4.html"}, "seed-14": {"key": "D", "chords": "[Intro]\nD – G  (wiederholen)\n[Verse]\nD – G  (x2)\nC – D\nAm7 – Em – D\nC – G – D\n[Bridge]\nD – G  (x4)\nC – D\nAm7 – Em – D\nC – G – D\n[Outro]\nD – G  (wiederholen)", "chordSource": "https://guitartabs.cc/tabs/d/david_bowie/heroes_crd_ver_3.html"}, "seed-15": {"key": "C", "chords": "[Intro]\nC – Cmaj7 – F  (x2)\n[Verse]\nC – Cmaj7 – F  (x4)\n[Pre-Chorus]\nF – Am – Dm – F\nG – C – G7\n[Chorus]\nF – G – C – E – E7  (x3)\nF – G – C", "chordSource": "https://www.guitartabs.cc/tabs/j/john_lennon/imagine_crd_ver_7.html"}, "seed-16": {"key": "G", "chords": "[Intro]\n\n[Verse]\nG – D – G  (x2)\nC – G  (x2)\nC – G – D\n[Chorus]\nG – C – G  (x3)\nG – C – G – F – D7\n[Solo]\nG – D – G  (x2)", "chordSource": "https://guitartabs.cc/tabs/m/monkees/im_a_believer_crd.html"}, "seed-17": {"key": "F#", "chords": "[Intro]\nF# – C# – F#\n[Verse]\nF# – B – C#7 – F#  (wiederholen)\n[Chorus]\nF# – B – F# – B – C# – F#", "chordSource": "https://www.hooktheory.com/theorytab/view/bob-seger/old-time-rock-and-roll"}, "seed-18": {"key": "Bb", "chords": "[Intro]\n| Bb | Gm | F | Eb |  (x2)\n[Verse]\n| Bb | Gm | F | Eb |\n| Bb | Gm | F | Bb |\n[Chorus]\nEb – Bb – Gm – F – Bb\n[Solo]\n| Bb | Gm | F | Eb |  (wiederholen)\n[Outro]\n| Bb | Gm | F | Eb |  (wiederholen)", "chordSource": "https://ukutabs.com/p/prince/purple-rain/"}, "seed-19": {"key": "Db", "chords": "[Intro]\n| Db | B | Gb | Db |  (x2)\n[Verse]\n| Db | B | Gb | Db |  (x2)\n[Chorus]\n| Ab | B | Db |  (x2)\n[Solo]\n| Db | B | Gb | Db |\n[Bridge]\n| Ebm | B | Bbm7 | Abm |  (x4)\n| Ebm | Gb | Ab | B |  (x4)\n[Outro]\nEbm – Gb – Ab – B – Db  (wiederholen)", "chordSource": "https://www.guitartabsexplorer.com/guns-n-roses/sweet-child-o-mine-chords"}, "seed-20": {"key": "D", "chords": "[Intro]\nD  (8 Takte)\nD – C – Bm  (7/4-Riff, x3)\n[Verse]\nD – Am – C – Em – D  (x2)\n[Chorus]\nC – Em – D  (x4)\n[Solo]\nD  (x4)\n[Outro]\nC – Em – D  (Chorus, jeder Akkord 1x angeschlagen)", "chordSource": "https://heartwoodguitar.com/chords/foo-fighters-times-like-these/?print=1"}, "seed-21": {"key": "A", "chords": "[Intro]\n| A | E | F#m | D | A | E | D | D |\n[Verse]\n| A | E | F#m | D | A | E | D | D |  (wiederholen)\n[Chorus]\n| A | G | D | D | A | E | D | D |\n[Solo]\n| A | E | F#m | D | A | E | D | D |", "chordSource": "https://www.jonmaclennan.com/blog/tuesday's-gone-guitar-lesson"}, "seed-22": {"key": "Eb", "chords": "[Intro]\nEb\n[Verse]\n| Eb | Fm |  (wiederholen)\n[Chorus]\nAb – Gm – Ab – Gm – Ab – Gm – Bb\nEb – Fm\n[Outro]\nEb", "chordSource": "https://www.chordie.com/chord.pere/www.guitartabs.cc/tabs/z/zutons/valerie_crd_ver_6.html"}, "seed-23": {"key": "D", "chords": "[Intro]\nRiff über Dm – F/C, dann D\n[Verse]\nD – C – G\nC – G – F – D  (x2)\n[Chorus]\nC – G – F – D  (x3)\n[Solo]\nC – G – F – D\nC – F – D\nD – C – G\nC – G – F – D  (x2)\n[Outro]\nC – G – F – D  (x4)\nC – G – C – G – F – D  (wiederholen)", "chordSource": "https://guitartabs.cc/tabs/b/bon_jovi/wanted_dead_or_alive_crd_ver_3.html"}};
+function applySeedChords(song, at) {
+  const c = SEED_CHORDS[song.id]; if (!c || (song.chords || '').trim()) return false;
+  song.chords = c.chords || ''; if (!song.key && c.key) song.key = c.key;
+  if (!song.chordSource && c.chordSource) song.chordSource = c.chordSource;
+  song.chordStatus = 'unchecked'; song.updatedAt = at; return true;
+}
 
 /* Eigenes, generisches Demo-Beispiel (kein echter Song): Standard-Blues-Schema, Bass Grundton–Quinte. */
 const DEMO_CHORDS = 'Demo – 12-Takt-Blues\n| A7 | A7 | A7 | A7 |\n| D7 | D7 | A7 | A7 |\n| E7 | D7 | A7 | E7 |';
@@ -382,6 +405,8 @@ function newSong(p = {}) {
     transpose:0, flats:null, // Anzeige transponieren (Halbtöne); Schreibweise ♯/♭ (null = automatisch)
     order:null,              // Position in der Setlist
     youtubeUrl:'',           // Referenzvideo (von dir eingefügt)
+    spotify:null,            // Spotify-Titel {id,name,artists,auto} – auto = automatisch gefundener Vorschlag
+    spTried:0,               // Zeitpunkt der letzten automatischen Spotify-Suche (0 = noch nie)
     links:[],                // [{id,label,url,kind}]
     suggest:null,            // YouTube-Vorschläge {at, items:[{vid,title,channel,thumb,kind}], dismissed:[vid]}
     stems:{},                // Metadaten {slot:{name,size,type,u,driveId?}|{deleted,u}}; Audiodaten liegen in IndexedDB
@@ -436,6 +461,8 @@ function cleanSong(r) {
     sheets, stageSheet: sheets.some(x => x.id === r.stageSheet && !x.deleted) ? r.stageSheet : '',
     transpose: tr != null ? Math.max(-11, Math.min(11, Math.round(tr))) : 0, flats: r.flats === true || r.flats === false ? r.flats : null,
     order: num(r.order), youtubeUrl:str(r.youtubeUrl, 500),
+    spotify: r.spotify && /^[A-Za-z0-9]{22}$/.test(r.spotify.id) ? { id:r.spotify.id, name:str(r.spotify.name, 300), artists:str(r.spotify.artists, 300), auto:!!r.spotify.auto } : null,
+    spTried: num(r.spTried) || 0,
     links: (Array.isArray(r.links) ? r.links : []).filter(l => l && safeUrl(l.url)).slice(0, 100).map(l => ({ id:str(l.id, 40) || uid(), label:str(l.label, 300), url:safeUrl(l.url), kind:hasOwn(LINK_KINDS, l.kind) ? l.kind : 'other' })),
     suggest, stems, mix,
     loop: { a: r.loop && num(r.loop.a), b: r.loop && num(r.loop.b) },
@@ -479,6 +506,7 @@ function seedData() {
   // updatedAt 0: vorbefüllte Einträge sind auf jedem Gerät gleich alt – jede echte Änderung gewinnt beim Abgleich.
   let n = 0;
   const songs = SEED.map((s, i) => newSong({ id:'seed-' + String(i+1).padStart(2,'0'), title:s[0], artist:s[1], bpm:s[2], status:s[3], order:s[3] === 'setlist' ? n++ : null, updatedAt:0 }));
+  songs.forEach(x => applySeedChords(x, 0));
   songs.push(newSong({ id:'demo-blues', title:'Demo: 12-Takt-Blues in A', artist:'Eigenes Übungsbeispiel (kein echter Song)', bpm:100, key:'A', status:'demo', isDemo:true, updatedAt:0,
     notes:'Generisches Beispiel, um Akkord- und Bassanzeige zu zeigen. Links: Grundton–Quinte in Halben. Rechts: Dominantseptakkorde.',
     chords:DEMO_CHORDS, bassAbc:DEMO_ABC }));
@@ -547,7 +575,9 @@ const Store = {
     for (const s of d.songs) if ((s.id === 'seed-09' || s.id === 'seed-13') && /in der PDF-Liste abgeschnitten/.test(s.uncertain)) s.uncertain = '';
     this.data = { schema:SCHEMA, songs:d.songs, deleted:d.deleted, settings:d.settings, settingsAt:d.settingsAt };
     this.fixOrder(false);
-    if ((raw.schema || 1) < SCHEMA) this.persist();
+    let chg = false;
+    if (!LS.get('chordSeed1')) { const now = Date.now(); for (const x of this.data.songs) if (applySeedChords(x, now)) chg = true; LS.set('chordSeed1', '1'); }
+    if (chg || (raw.schema || 1) < SCHEMA) this.persist();
   },
   persist() { try { localStorage.setItem(LS_KEY, JSON.stringify(this.data)); } catch (e) { toast('Speichern fehlgeschlagen (Speicher voll?)'); } },
   save() { this.persist(); Cloud.markDirty(); },
@@ -1528,6 +1558,75 @@ const Suggest = {
   }
 };
 
+/* ---------- Spotify: Titel pro Song automatisch verknüpfen (ab v1.2.0) ----------
+   Client-Credentials-Token (kein Nutzer-Login), Suche nach Titel + Interpret. Verknüpft wird nur, wenn Interpret UND Titel
+   passen – sonst bleibt der Song ohne Link (Suchlink und manuelles Einfügen gehen immer). Automatische Treffer sind «Vorschlag». */
+const SP_ALIAS = { ccr:'creedenceclearwaterrevival', gnr:'gunsnroses', acdc:'acdc' };
+const spNorm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/&/g, 'and').replace(/\b(the|and|n)\b/g, '').replace(/[^a-z0-9]/g, '');
+const spTitle = t => spNorm(String(t || '').replace(/\s+-\s+.*$/, '').replace(/\(.*?\)|\[.*?\]/g, '').replace(/\brock\s*'?n'?\s*roll\b/ig, 'rock and roll'));
+const spId = u => { const m = String(u || '').match(/(?:open\.spotify\.com\/(?:intl-[a-z]+\/)?track\/|spotify:track:)([A-Za-z0-9]{22})/); return m ? m[1] : null; };
+const Spotify = {
+  token:null, exp:0, busy:new Set(), err:{}, queue:false,
+  available() { return !!(CONFIG.SPOTIFY_CLIENT_ID && CONFIG.SPOTIFY_CLIENT_SECRET); },
+  async getToken() {
+    if (this.token && Date.now() < this.exp - 5000) return this.token;
+    let res;
+    try { res = await fetch('https://accounts.spotify.com/api/token', { method:'POST', headers:{ 'Content-Type':'application/x-www-form-urlencoded', Authorization:'Basic ' + btoa(CONFIG.SPOTIFY_CLIENT_ID + ':' + CONFIG.SPOTIFY_CLIENT_SECRET) }, body:'grant_type=client_credentials' }); }
+    catch (e) { throw new Error('Spotify nicht erreichbar (offline?)'); }
+    if (!res.ok) throw new Error('Spotify-Anmeldung fehlgeschlagen (' + res.status + ') – Client-ID/Secret in «Daten & Einstellungen» prüfen.');
+    const d = await res.json(); this.token = d.access_token; this.exp = Date.now() + (d.expires_in || 3600) * 1000; return this.token;
+  },
+  async search(q) {
+    const tok = await this.getToken(); let res;
+    try { res = await fetch('https://api.spotify.com/v1/search?type=track&limit=10&q=' + encodeURIComponent(q), { headers:{ Authorization:'Bearer ' + tok } }); }
+    catch (e) { throw new Error('Spotify nicht erreichbar (offline?)'); }
+    if (res.status === 401) { this.token = null; throw new Error('Spotify-Sitzung abgelaufen – bitte erneut versuchen.'); }
+    if (!res.ok) throw new Error('Spotify-Fehler ' + res.status);
+    const d = await res.json();
+    return ((d.tracks && d.tracks.items) || []).filter(t => t && /^[A-Za-z0-9]{22}$/.test(t.id)).map(t => ({ id:t.id, name:String(t.name || ''), artists:(t.artists || []).map(a => String(a.name || '')), pop:t.popularity || 0 }));
+  },
+  // Bester Treffer: Interpret muss passen (auch Abkürzungen wie CCR), Titel gleich oder mit gleichem Anfang; bei Gleichstand der populärere.
+  best(song, items) {
+    const a = spNorm(song.artist), want = SP_ALIAS[a] || a, ti = spTitle(song.title);
+    let top = null, topScore = 0;
+    for (const it of items) {
+      const arts = it.artists.map(spNorm); if (!arts.some(x => x && want && (x === want || x.includes(want) || want.includes(x)))) continue;
+      const n = spTitle(it.name); const sc = n === ti ? 3 : (n.startsWith(ti) || ti.startsWith(n)) && Math.min(n.length, ti.length) >= 4 ? 2 : 0;
+      if (!sc) continue; const score = sc * 1000 + it.pop;
+      if (score > topScore) { top = it; topScore = score; }
+    }
+    return top;
+  },
+  async run(song, force) {
+    if (!this.available() || song.isDemo || this.busy.has(song.id)) return;
+    if (!force && (song.spotify || song.spTried)) return;
+    if (!isOnline()) { if (force) toast('Offline – Spotify-Suche erst mit Internet.'); return; }
+    this.busy.add(song.id); delete this.err[song.id]; UI.spotify();
+    try {
+      const t = song.title.replace(/["]/g, ''), ar = song.artist.replace(/["]/g, ''), full = SP_ALIAS[spNorm(ar)] ? '' : ar;
+      let hit = this.best(song, await this.search('track:"' + t + '"' + (full ? ' artist:"' + full + '"' : '')));
+      if (!hit) hit = this.best(song, await this.search(t + ' ' + ar));
+      song.spTried = Date.now();
+      if (hit && !(song.spotify && !song.spotify.auto && !force)) song.spotify = { id:hit.id, name:hit.name, artists:hit.artists.join(', '), auto:true };
+      else if (!hit && force) toast('Kein sicherer Treffer gefunden – Link bitte von Hand einfügen.');
+      Store.touch(song);
+    } catch (e) { this.err[song.id] = e.message; }
+    finally { this.busy.delete(song.id); UI.spotify(); UI.listItems(); }
+  },
+  // Alle Songs ohne Spotify-Link nacheinander suchen (einmalig je Song, im Hintergrund)
+  async autoAll() {
+    if (this.queue || !this.available() || !isOnline()) return; this.queue = true;
+    try { for (const s of Store.data.songs.slice()) { if (s.spotify || s.spTried || s.isDemo) continue; await this.run(s, false); if (this.err[s.id]) break; await new Promise(r => setTimeout(r, 250)); } }
+    finally { this.queue = false; }
+  },
+  setManual(song, url) {
+    const id = spId(url); if (!id) { if (url.trim()) toast('Kein Spotify-Titel-Link erkannt (open.spotify.com/track/…).'); return false; }
+    song.spotify = { id, name:'', artists:'', auto:false }; song.spTried = song.spTried || Date.now(); Store.touch(song); return true;
+  }
+};
+const spEmbed = id => '<div class="spf"><iframe src="https://open.spotify.com/embed/track/' + id + '?utm_source=generator" title="Spotify-Player" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe></div>';
+const spSearchUrl = s => 'https://open.spotify.com/search/' + encodeURIComponent((s.title + ' ' + s.artist).trim());
+
 /* ---------- Transponieren der Akkordanzeige ---------- */
 const NOTES_SHARP = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'], NOTES_FLAT = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
 const NOTE_IX = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
@@ -1616,6 +1715,8 @@ const App = {
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Viewer.flush(); });
     window.addEventListener('pagehide', () => Viewer.flush());
     this.route();
+    setTimeout(() => Spotify.autoAll(), 2500);   // fehlende Spotify-Links im Hintergrund ergänzen
+    window.addEventListener('online', () => Spotify.autoAll());
   },
   current() { return this.songId ? Store.get(this.songId) : null; },
   applyTheme() { document.documentElement.dataset.theme = Store.data.settings.theme; const m = $('meta[name=theme-color]'); if (m) m.content = Store.data.settings.theme === 'light' ? '#f4f2ec' : '#121416'; },
@@ -1741,6 +1842,16 @@ const App = {
       case 'stageExit': this.stageExit(); break;
       case 'stageZoom': { const st = Store.data.settings; st.stageSize = Math.min(2.4, Math.max(0.6, +(st.stageSize + Number(el.dataset.d)).toFixed(2))); Store.saveSettings(); UI.stage(); break; }
       case 'add': Dialogs.song(null); break;
+      case 'spRun': Spotify.run(song, true); break;
+      case 'spAccept': if (song.spotify) { song.spotify.auto = false; Store.touch(song); UI.spotify(); UI.listItems(); } break;
+      case 'spDel': song.spotify = null; song.spTried = Date.now(); Store.touch(song); UI.spotify(); UI.listItems(); break;
+      case 'spSave': {
+        const id = ($('#spIdIn').value || '').trim(), sec = ($('#spSecIn').value || '').trim();
+        LS.set('sp_id', id); LS.set('sp_secret', sec); if (!id) LS.del('sp_id'); if (!sec) LS.del('sp_secret');
+        CONFIG.SPOTIFY_CLIENT_ID = id || 'cba857fdd8fc4118bed7aad8e470ea5d'; CONFIG.SPOTIFY_CLIENT_SECRET = sec; Spotify.token = null;
+        toast(sec ? 'Spotify-Zugangsdaten gespeichert – Suche läuft.' : 'Spotify-Zugangsdaten entfernt.'); if (sec) { for (const x of Store.data.songs) if (!x.spotify) x.spTried = 0; Spotify.autoAll(); }
+        Dialogs.menu(); break;
+      }
       case 'edit': Dialogs.song(song); break;
       case 'menu': Dialogs.menu(); break;
       case 'close': $('#dlg').close(); break;
@@ -1858,6 +1969,7 @@ const App = {
     }
     if (!song || this.stage) return;
     if (t.id === 'sheetFile') { this.addSheets(song, [...t.files]); t.value = ''; }
+    else if (t.id === 'spUrl') { if (Spotify.setManual(song, t.value)) { t.value = ''; UI.spotify(); UI.listItems(); } }
     else if (t.id === 'chordStatus') { song.chordStatus = t.value === 'checked' ? 'checked' : 'unchecked'; Store.touch(song); UI.chords(); }
     else if (t.id === 'chordSrc') {
       const v = t.value.trim(), u = v ? safeUrl(v) : '';
@@ -1907,6 +2019,7 @@ const UI = {
     $('#app').innerHTML = `
       <header class="top">
         <div class="grow"><h1>Band-Trainer</h1><div class="sub">Keyboard · Akkorde rechts, Bass links</div></div>
+        <button class="primary addtop" data-act="add" aria-label="Neuen Song hinzufügen">+ Song</button>
         <button class="syncchip" id="syncState" data-act="sync" aria-label="Abgleich mit Google Drive"></button>
         <button class="icon ghost" data-act="theme" aria-label="Hell/Dunkel umschalten" title="Hell/Dunkel">${ICON.theme}</button>
         <button class="icon ghost" data-act="menu" aria-label="Menü" title="Menü">${ICON.menu}</button>
@@ -1914,7 +2027,7 @@ const UI = {
       <input type="search" id="q" placeholder="Song oder Interpret suchen" value="${esc(App.query)}" aria-label="Suche" autocomplete="off">
       <div class="chips" role="group" aria-label="Filter" id="chipBox"></div>
       <ul class="songs" id="songList"></ul>
-      <button class="fab primary" data-act="add">+ Song</button>
+      <button class="fab primary" data-act="add" aria-label="Neuen Song hinzufügen">+ Neuer Song</button>
       <input type="file" id="importFile" accept="application/json,.json" class="hidden">
       <input type="file" id="chordFile" accept="application/json,.json" class="hidden">`;
     this.counts(); this.listItems(); this.sync();
@@ -1951,7 +2064,7 @@ const UI = {
         <div class="m">
           ${s.bpm ? `<span class="badge">${esc(s.bpm)} BPM</span>` : ''}${s.key ? `<span class="badge">Tonart ${esc(keyLabel(s))}</span>` : ''}
           ${s.uncertain ? '<span class="badge warn">Angabe prüfen</span>' : ''}
-          ${hasAudio(s) ? '<span class="badge">Audio</span>' : ''}${chordBadge(s) || (s.chords.trim() ? '<span class="badge">Akkorde</span>' : '')}${s.bassAbc.trim() ? '<span class="badge">Bassline</span>' : ''}${liveSheets(s).length ? `<span class="badge">${liveSheets(s).length === 1 ? '1 Blatt' : liveSheets(s).length + ' Blätter'}</span>` : ''}
+          ${hasAudio(s) ? '<span class="badge">Audio</span>' : ''}${chordBadge(s) || (s.chords.trim() ? '<span class="badge">Akkorde</span>' : '')}${s.bassAbc.trim() ? '<span class="badge">Bassline</span>' : ''}${s.spotify ? '<span class="badge sp">Spotify</span>' : ''}${liveSheets(s).length ? `<span class="badge">${liveSheets(s).length === 1 ? '1 Blatt' : liveSheets(s).length + ' Blätter'}</span>` : ''}
         </div></div></button></li>`).join('')
       : '<li class="empty">Keine Songs gefunden.</li>';
   },
@@ -2061,6 +2174,13 @@ const UI = {
 
       <section data-pane="videos">
         <div class="card">
+          <h3>Spotify</h3>
+          <div id="spBox"></div>
+          <details><summary>Spotify-Link selbst einfügen</summary>
+            <input type="url" id="spUrl" inputmode="url" placeholder="https://open.spotify.com/track/…" aria-label="Spotify-Link">
+          </details>
+        </div>
+        <div class="card">
           <h3>Referenzvideo</h3>
           <input type="url" id="ytUrl" inputmode="url" placeholder="YouTube-Link einfügen (https://…)" value="${esc(s.youtubeUrl)}" aria-label="YouTube-Link des Referenzvideos">
           <div id="ytBox"></div>
@@ -2117,7 +2237,7 @@ const UI = {
           </div>
         </div>
       </div>`;
-    this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.suggest(); this.info(); this.transport(); this.sheets();
+    this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.spotify(); this.suggest(); this.info(); this.transport(); this.sheets();
     if (liveSheets(s).length) Sheets.scan(s);
     const bw = $('#bWake'); if (bw) bw.classList.toggle('on', !!App.wake);
     if (App.tab === 'videos') Suggest.run(s, false);
@@ -2184,6 +2304,23 @@ const UI = {
         <div class="ctl"><button class="${m.on ? 'on' : ''}" data-act="stemOn" data-slot="${sl.id}" aria-pressed="${m.on}" ${has ? '' : 'disabled'}>${m.on ? 'An' : 'Aus'}</button>
           <input type="range" min="0" max="100" value="${Math.round(m.vol * 100)}" data-vol="${sl.id}" aria-label="Lautstärke ${sl.label}" ${has ? '' : 'disabled'}></div>
       </div>`; }).join('');
+  },
+  spotify() {
+    const s = App.current(), box = $('#spBox'); if (!s || !box) return;
+    if (s.isDemo) { setHtml(box, '<p class="small muted">Für den Demo-Song gibt es keinen Spotify-Link.</p>'); return; }
+    const sp = s.spotify, busy = Spotify.busy.has(s.id), err = Spotify.err[s.id];
+    let h = '';
+    if (sp) h += spEmbed(sp.id) + `<div class="row" style="margin-top:8px">${sp.auto ? '<span class="badge sug">Vorschlag</span>' : '<span class="badge setlist">übernommen</span>'}
+      <span class="small muted grow">${esc([sp.name, sp.artists].filter(Boolean).join(' – '))}</span></div>
+      <div class="row" style="margin-top:8px">${sp.auto ? '<button class="primary" data-act="spAccept">Passt – übernehmen</button>' : ''}
+      <a class="btn" href="https://open.spotify.com/track/${esc(sp.id)}" target="_blank" rel="noopener noreferrer">In Spotify öffnen</a>
+      ${Spotify.available() ? `<button data-act="spRun" ${busy ? 'disabled' : ''}>${busy ? 'Suche …' : 'Neu suchen'}</button>` : ''}
+      <button class="ghost danger" data-act="spDel">Entfernen</button></div>`;
+    else h += `<p class="small muted">${busy ? 'Suche auf Spotify …' : Spotify.available() ? (s.spTried ? 'Kein sicherer Treffer gefunden.' : 'Noch nicht gesucht.') : 'Automatische Suche aus: Spotify-Zugangsdaten fehlen auf diesem Gerät (siehe «Daten & Einstellungen»).'}</p>
+      <div class="row">${Spotify.available() ? `<button class="primary" data-act="spRun" ${busy ? 'disabled' : ''}>Auf Spotify suchen</button>` : ''}
+      <a class="btn" href="${esc(spSearchUrl(s))}" target="_blank" rel="noopener noreferrer">In Spotify suchen (extern)</a></div>`;
+    if (err) h += `<p class="small" style="color:var(--danger);margin-top:8px">${esc(err)}</p>`;
+    setHtml(box, h);
   },
   links() {
     const s = App.current(); if (!s || !$('#ytBox')) return;
@@ -2304,11 +2441,14 @@ const Dialogs = {
     $('#songForm').addEventListener('submit', e => {
       e.preventDefault(); const f = new FormData(e.target), title = String(f.get('title')).trim();
       if (!title) { toast('Bitte einen Titel eingeben.'); return; }
+      const oldKey = s.title + '|' + s.artist;
       const bpm = parseInt(f.get('bpm'), 10), status = ['setlist', 'todo', 'demo'].includes(f.get('status')) ? f.get('status') : 'todo';
       Object.assign(s, { title, artist:String(f.get('artist')).trim(), bpm:bpm >= 30 && bpm <= 260 ? bpm : null, key:String(f.get('key')).trim(), status, uncertain:String(f.get('uncertain')).trim() });
       if (status !== 'setlist') s.order = null;
       if (isNew) Store.data.songs.push(s);
+      if (oldKey !== s.title + '|' + s.artist && (!s.spotify || s.spotify.auto)) { s.spotify = null; s.spTried = 0; }
       Store.fixOrder(true); Store.touch(s); d.close();
+      Spotify.run(s, false);   // neuer oder umbenannter Song: Spotify-Link gleich suchen
       if (isNew) location.hash = '#/song/' + encodeURIComponent(s.id); else { UI.header(); UI.info(); UI.links(); UI.suggest(); UI.rate(); UI.chords(); }
     });
     this.taps = []; if (!d.open) d.showModal();
@@ -2376,6 +2516,11 @@ const Dialogs = {
       <h3 style="margin-top:14px">Sichern & Übertragen</h3>
       <div class="row" style="margin-bottom:8px"><button data-act="export">Export (JSON)</button><button data-act="import">Import (JSON)</button><button data-act="chordImport">Akkorde importieren (JSON)</button></div>
       <p class="small muted">Export enthält Songs, Akkorde, Basslines, Links und Notizen – keine Audiodateien und keine Notenblätter. Import führt zusammen: bei gleichem Song gewinnt der neuere Stand. «Akkorde importieren» liest eine Datei <code>{"songs":[{"title","artist","key","chords","chordSource","chordStatus"}]}</code>, ordnet sie über Titel und Interpret den vorhandenen Songs zu und zeigt vor dem Übernehmen eine Vorschau.</p>
+      <h3 style="margin-top:14px">Spotify</h3>
+      <p class="small muted">Für die automatische Spotify-Verknüpfung. ${Spotify.available() ? 'Zugangsdaten vorhanden' + (LS.get('sp_secret') ? ' (hier gespeichert).' : ' (aus der Gesangs-App übernommen).') : 'Keine Zugangsdaten auf diesem Gerät.'} Werden nur lokal in diesem Browser gespeichert – nicht im Code, nicht in Drive. Anlegen unter developer.spotify.com → Dashboard → App.</p>
+      <div class="grid2"><label class="f"><span>Client-ID</span><input type="text" id="spIdIn" autocomplete="off" value="${esc(LS.get('sp_id') || '')}" placeholder="leer = Standard"></label>
+        <label class="f"><span>Client-Secret</span><input type="password" id="spSecIn" autocomplete="off" value="${esc(LS.get('sp_secret') || '')}" placeholder="${Spotify.available() && !LS.get('sp_secret') ? 'aus Gesangs-App' : ''}"></label></div>
+      <div class="row" style="margin-bottom:8px"><button data-act="spSave">Spotify-Zugangsdaten speichern</button></div>
       <h3 style="margin-top:14px">Hinweise</h3>
       <p class="small muted">Keine Songtexte oder vollständigen Transkriptionen Dritter veröffentlichen. Eigene Notizen für den Proberaum sind in Ordnung; Audiodateien bleiben auf dem Gerät bzw. in deinem privaten Drive.</p>
       <p class="small muted" id="verLine">Version ${APP_VERSION} · abcjs ${ABCJS_VERSION} · pdf.js ${PDFJS_VERSION} · Offline-Speicher ${sw}${usage ? ' · ' + usage : ''}</p>

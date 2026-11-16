@@ -13,7 +13,7 @@ module.exports = async () => {
       eq(await pg.locator('.badge.warn').count(), 0, 'kein Prüfhinweis');
       eq(await pg.evaluate(() => Store.data.songs.filter(s => s.uncertain).length), 0);
       // nichts Erfundenes vorbefüllt: nur das Demo hat Tonart/Akkorde/Bassline/Video
-      eq(await pg.evaluate(() => Store.data.songs.filter(s => !s.isDemo && (s.key || s.chords || s.bassAbc || s.youtubeUrl || s.links.length)).length), 0);
+      eq(await pg.evaluate(() => Store.data.songs.filter(s => !s.isDemo && (s.bassAbc || s.youtubeUrl || s.links.length || (s.chords && (!SEED_CHORDS[s.id] || s.chords !== SEED_CHORDS[s.id].chords || s.chordStatus !== 'unchecked')))).length), 0, 'nur recherchierte, ungeprüfte Akkorde vorbelegt');
       await pg.fill('#q', 'hotel'); eq(await count(pg), 1);
       await pg.fill('#q', '');
       await pg.click('[data-act=filter][data-f=setlist]'); eq(await count(pg), 12);

@@ -65,12 +65,17 @@ class FakeDrive {
 }
 
 // opts: drive (FakeDrive), yt (Funktion query → items | {status}), cfg (CONFIG-Überschreibung), sw (Service Worker zulassen), init, hash
-async function open(b, vp, { drive, yt, cfg, sw = false, init, hash = '', logs = true, storage } = {}) {
+async function open(b, vp, { drive, yt, sp, cfg, sw = false, init, hash = '', logs = true, storage } = {}) {
   const ctx = await b.newContext({ viewport: vp, serviceWorkers: sw ? 'allow' : 'block', hasTouch: vp.width < 600, isMobile: vp.width < 600, storageState: storage });
-  const pg = await ctx.newPage(); pg.errs = []; pg.csp = []; pg.ytQueries = [];
+  const pg = await ctx.newPage(); pg.errs = []; pg.csp = []; pg.ytQueries = []; pg.spQueries = [];
   pg.on('pageerror', e => { pg.errs.push(e.message); if (logs) console.log('PAGEERROR', e.message); });
   pg.on('console', msg => { if (/Content Security Policy/i.test(msg.text())) { pg.csp.push(msg.text()); if (logs) console.log('CSP', msg.text()); } });
-  await ctx.route(/accounts\.google\.com|apis\.google|googleapis|youtube|ytimg|paulrosen/, r => r.abort());
+  await ctx.route(/accounts\.google\.com|apis\.google|googleapis|youtube|ytimg|paulrosen|spotify\.com/, r => r.abort());
+  if (sp) {   // Spotify-Attrappe: Token + Suche (sp = Funktion query → tracks)
+    const headers = { 'content-type': 'application/json', 'access-control-allow-origin': '*' };
+    await ctx.route(/^https:\/\/accounts\.spotify\.com\/api\/token/, r => r.fulfill({ status: 200, headers, body: JSON.stringify({ access_token: 'sptok', expires_in: 3600 }) }));
+    await ctx.route(/^https:\/\/api\.spotify\.com\/v1\/search/, r => { const q = new URL(r.request().url()).searchParams.get('q'); pg.spQueries.push(q); return r.fulfill({ status: 200, headers, body: JSON.stringify({ tracks: { items: sp(q) } }) }); });
+  }
   if (drive) await ctx.route(/^https:\/\/www\.googleapis\.com\/(drive|upload)\//, r => drive.handle(r));
   if (yt) await ctx.route(/^https:\/\/www\.googleapis\.com\/youtube\/v3\/search/, r => {
     const q = new URL(r.request().url()).searchParams.get('q'); pg.ytQueries.push(q); const out = yt(q);
@@ -78,7 +83,7 @@ async function open(b, vp, { drive, yt, cfg, sw = false, init, hash = '', logs =
     return out && out.status ? r.fulfill({ status: out.status, headers, body: JSON.stringify({ error: { message: 'quotaExceeded' } }) }) : r.fulfill({ status: 200, headers, body: JSON.stringify({ items: out }) });
   });
   await pg.addInitScript((c) => {
-    window.__TEST_CFG = Object.assign({ YOUTUBE_API_KEY: '' }, c || {});
+    window.__TEST_CFG = Object.assign({ YOUTUBE_API_KEY: '', SPOTIFY_CLIENT_SECRET: '' }, c || {});
     // Google Identity Services: Attrappe des Token-Clients (kein echtes Google in den Tests)
     window.__auth = { calls: [], mode: 'ok', n: 0 };
     window.google = { accounts: { oauth2: {

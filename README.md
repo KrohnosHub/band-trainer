@@ -112,6 +112,12 @@ Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): e
 
 ## Änderungslog
 
+### v1.2.0 – Spotify pro Song, Akkorde vorbelegt, «+ Song» gut sichtbar
+- **Spotify:** Jeder Song (auch neu angelegte oder umbenannte) wird automatisch mit dem passenden Spotify-Titel verknüpft – nur wenn Interpret und Titel passen (Abkürzungen wie «CCR», Zusätze wie «Remaster» werden erkannt), sonst bleibt der Song ohne Link. Automatische Treffer sind «Vorschlag» und lassen sich übernehmen, neu suchen oder entfernen. Spotify-Player im Tab «Videos», Badge «Spotify» in der Liste, Link auch von Hand einfügbar.
+- **Zugangsdaten:** Client-Credentials wie in der Gesangs-App. Auf demselben Gerät/Browser werden die dort gespeicherten Spotify-Zugangsdaten mitbenutzt (gleicher Ursprung `krohnoshub.github.io`); sonst unter «Daten & Einstellungen → Spotify» eintragen (nur lokal gespeichert, nie im Code oder in Drive).
+- **Akkorde vorbelegt:** Für 19 der 23 Songs sind recherchierte Akkordfolgen pro Abschnitt hinterlegt (keine Texte, auf klingende Tonart umgerechnet, Quelle verlinkt, Status «ungeprüft»). Bestehende Geräte erhalten sie einmalig für Songs mit leerem Akkordfeld; vorhandene eigene Akkorde bleiben unverändert.
+- **«+ Song»** zusätzlich oben in der Kopfzeile der Songliste; der Knopf unten rechts heisst jetzt «+ Neuer Song».
+
 ### v1.1.0 – Notenblätter (PDF/Scan), Abschnitte in Akkorden, Quellen-Links, Akkord-Import (16.11.2026)
 - Neu: Tab «Blätter» – mehrere PDFs oder Bilder (Scan/Foto) pro Song mit Bezeichnung und Typ; Anzeige über pdf.js (lokal in `vendor/`, offline), Blättern per Wischen/Tasten, Zoom, Seitenbreite/ganze Seite. Viewer und Zeichnen aus der Gesangs-App übernommen und reduziert.
 - Neu: Freihand-Notizen auf den Blättern (Stift, Marker, Radierer, Rückgängig), pro Seite gespeichert.
