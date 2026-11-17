@@ -23,12 +23,12 @@ module.exports = async () => {
       const pg = await open(b, D, { hash: '#/song/seed-05' }); await pg.waitForSelector('#sTitle');
       await pg.evaluate(() => { const s = App.current(); s.chords = '[Intro]\n| A | D/F# | E7 | A |\nA – Bm – Cxyz'; s.transpose = 0; Store.touch(s); UI.chords(); });
       await pg.click('#vDet summary'); await pg.waitForSelector('#voiceOut .vn');
-      eq(await pg.evaluate(() => [...document.querySelectorAll('#voiceOut .vn')].map(e => e.textContent)), ['A', 'D/F#', 'E7', 'Bm']);
+      eq(await pg.evaluate(() => [...document.querySelectorAll('#voiceOut .vn span')].map(e => e.textContent)), ['A', 'D/F#', 'E7', 'Bm']);
       ok(/L:\s*F#2/.test(await pg.locator('#voiceOut .vc:nth-child(2) .vt').innerText()), 'Slash-Bass links');
       ok(/Cxyz/.test(await pg.locator('#voiceOut').innerText()), 'unbekannter Zusatz genannt');
       eq(await pg.locator('#voiceOut .vc:first-child .kbd .k.on').count(), 3);
       await pg.evaluate(() => { const s = App.current(); s.transpose = 2; Store.touch(s); UI.chords(); }); await pg.waitForTimeout(50);
-      eq(await pg.evaluate(() => [...document.querySelectorAll('#voiceOut .vn')].map(e => e.textContent)), ['B', 'E/G#', 'F#7', 'C#m']);
+      eq(await pg.evaluate(() => [...document.querySelectorAll('#voiceOut .vn span')].map(e => e.textContent)), ['B', 'E/G#', 'F#7', 'C#m']);
       eq(pg.errs, []); eq(pg.csp, []); await pg.context().close();
     });
     await test('Sound-Setup: speichern, Registerzüge nur 0–8, Zusammenfassung, im Auftrittsmodus sichtbar', async () => {

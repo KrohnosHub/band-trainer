@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-NJ3/VIK/uaM6qT/a6rDm48aTromuKVA5SyNg46TwJGE='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-p9mvdXmRfRZ7JBedqvEUCc7DHk4Bp+xviSpjJjetEe8='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -250,6 +250,10 @@ table.lex{width:100%;border-collapse:collapse}
 table.lex th{text-align:left;font-size:.78rem;color:var(--muted);font-weight:600;padding:4px 6px}
 table.lex td{padding:7px 6px;border-top:1px solid var(--border);vertical-align:top}
 table.lex tr[data-act]{cursor:pointer}
+table.lex td.pl{width:44px;text-align:right;padding:2px 0}
+table.lex td.pl button{min-height:36px;width:40px;font-size:1rem}
+.vn{display:flex;align-items:center;justify-content:space-between}
+.vplay{min-height:28px!important;width:32px;padding:0!important;font-size:.85rem}
 table.lex .ln{font-weight:700;font-size:1.05rem;white-space:nowrap}
 table.lex tr.lexk{display:none} table.lex tr.open+tr.lexk{display:table-row}
 table.lex tr.lexk td{border-top:0;padding-top:0}
@@ -396,7 +400,7 @@ for (const C of [Map, WeakMap]) {
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.8.0';
 const SCHEMA = 4;   // 4 (v1.3.0): eigene Listen (lists) + Favoriten (fav) statt fester Status Setlist/To Do
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
@@ -1440,7 +1444,7 @@ function voicingsHtml(s) {
     const ch = parseChord(t); if (!ch) { if (CHORD_RE.test(t) && !seen.has(t)) miss.push(t); seen.add(t); continue; }
     seen.add(t); const v = voicing(ch, prev); if (!v) continue; prev = v;
     const bassN = 36 + ((ch.bass - 0 + 12) % 12) + (ch.bass < 4 ? 12 : 0);   // linke Hand: Basston E2–D#3
-    out.push(`<div class="vc"><div class="vn">${esc(t)}</div>${kbdSvg(53, 84, v)}<div class="vt small"><b>R:</b> ${v.map(n => noteLabel(n, fl)).join(' ')} · <b>L:</b> ${noteLabel(bassN, fl)}</div></div>`);
+    out.push(`<div class="vc"><div class="vn"><span>${esc(t)}</span><button class="icon ghost vplay" data-act="playCh" data-m="${[bassN, ...v].join(',')}" aria-label="${esc(t)} anhören" title="Anhören">▶</button></div>${kbdSvg(53, 84, v)}<div class="vt small"><b>R:</b> ${v.map(n => noteLabel(n, fl)).join(' ')} · <b>L:</b> ${noteLabel(bassN, fl)}</div></div>`);
   }
   if (!out.length) return '<p class="small muted">Keine erkennbaren Akkorde – sobald Akkorde eingetragen sind, erscheinen hier die Griffe.</p>';
   return '<div class="vgrid">' + out.join('') + '</div>' + (miss.length ? `<p class="small muted">Ohne Griffbild (Zusatz nicht erkannt): ${esc(miss.join(', '))}</p>` : '')
@@ -1496,6 +1500,83 @@ function bassSuggest(song, style) {
   return ['X:1', 'T:' + song.title.replace(/[\r\n]/g, ' ') + ' – Bass (Vorschlag)', 'M:4/4', 'L:1/8', 'Q:1/4=' + (song.bpm || 100), 'K:C clef=bass',
     '% Generiert aus den Akkorden, Stil: ' + BASS_STYLES[style] + (style === 'shuffle' ? ' (Achtel ternär spielen)' : '') + ' – Vorschlag, bitte nach Gehör anpassen.', ...lines].join('\n');
 }
+
+/* ---------- Akkorde anhören (v1.8.0): Klavier, klassische Orgel (leise), Gitarre, Hammond ----------
+   Klavier: Samples «Salamander Grand Piano V3» (CC BY 3.0, samples/piano/LICENSE.txt) – wie Gesangs-App.
+   Orgel (leise): Pfeifenorgel-Aufnahme VSCO 2 CE (CC0, samples/organ/LICENSE.txt) – wie Notator «Orgel – sanft».
+   Gitarre: Karplus-Strong-Synthese (gezupfte Saite) – wie Gesangs-App. Hammond: additive Synthese nach Registerzügen
+   (16′ … 1′), Perkussion, Tastenklick und leichtes Chorus-Vibrato. Samples werden erst bei Bedarf geladen und danach
+   vom Service Worker zwischengespeichert (offline verfügbar). */
+const SND_INST = { piano:'Klavier', organ:'Orgel (leise)', guitar:'Gitarre', hammond:'Hammond' };
+const midiHz = m => 440 * Math.pow(2, (m - 69) / 12);
+const Sound = {
+  ctx:null, smp:{ piano:new Map(), organ:new Map() }, loading:new Map(), voices:[],
+  inst() { const v = LS.get('instr'); return SND_INST[v] ? v : 'piano'; },
+  setInst(v) { if (SND_INST[v]) LS.set('instr', v); },
+  ac() { if (!this.ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; this.ctx = new C(); } if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {}); return this.ctx; },
+  bus() {   // gemeinsamer Ausgang mit etwas Raum (wie Gesangs-App)
+    const c = this.ac(); if (this._bus && this._bus.context === c) return this._bus;
+    const inp = c.createGain(), wet = c.createGain(), conv = c.createConvolver(), len = Math.floor(c.sampleRate * 1.2), ir = c.createBuffer(2, len, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); let seed = 777 + ch * 31; for (let i = 0; i < len; i++) { seed = (seed * 1664525 + 1013904223) >>> 0; d[i] = (seed / 4294967296 * 2 - 1) * Math.pow(1 - i / len, 3.2); } }
+    conv.buffer = ir; wet.gain.value = 0.2; inp.connect(c.destination); inp.connect(conv); conv.connect(wet); wet.connect(c.destination);
+    this._bus = inp; return inp;
+  },
+  // Sample-Datei je Instrument: Klavier im Terzraster C2–C7 (Ds/Fs-Namen), Orgel je Halbton A1–Eb6 (Be-Namen)
+  smpFile(inst, m) {
+    if (inst === 'piano') { const grid = []; for (let o = 2; o <= 6; o++) [['C', 0], ['Ds', 3], ['Fs', 6], ['A', 9]].forEach(([n, pc]) => grid.push([n + o, 12 * (o + 1) + pc])); grid.push(['C7', 96]);
+      let best = grid[0]; for (const g of grid) if (Math.abs(g[1] - m) < Math.abs(best[1] - m)) best = g; return { url:'samples/piano/' + best[0] + '.mp3', base:best[1] }; }
+    const mm = Math.max(33, Math.min(87, m)); return { url:'samples/organ/' + NOTE_NAMES_B[mm % 12] + (Math.floor(mm / 12) - 1) + '.mp3', base:mm };
+  },
+  async buf(inst, m) {
+    const f = this.smpFile(inst, m), map = this.smp[inst]; if (map.has(f.url)) return { b:map.get(f.url), base:f.base };
+    if (!this.loading.has(f.url)) this.loading.set(f.url, fetch(f.url).then(r => { if (!r.ok) throw new Error(f.url); return r.arrayBuffer(); }).then(ab => this.ac().decodeAudioData(ab)).then(b => { map.set(f.url, b); return b; }).finally(() => this.loading.delete(f.url)));
+    return { b:await this.loading.get(f.url), base:f.base };
+  },
+  stop() { const c = this.ctx; if (!c) return; const t = c.currentTime; for (const g of this.voices) { try { g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0, t, 0.03); } catch (e) {} } this.voices = []; },
+  async note(inst, m, t0, dur, vol) {
+    const c = this.ac(), g = c.createGain(), end = t0 + dur; g.connect(this.bus()); this.voices.push(g);
+    if (inst === 'piano' || inst === 'organ') {
+      let x; try { x = await this.buf(inst, m); } catch (e) { return this.note('hammond', m, t0, dur, vol * 0.8); }
+      const src = c.createBufferSource(); src.buffer = x.b; src.playbackRate.value = Math.pow(2, (m - x.base) / 12);
+      const st = Math.max(t0, c.currentTime);
+      if (inst === 'piano') { g.gain.setValueAtTime(vol * 1.6, st); g.gain.setTargetAtTime(0, end, 0.25); }
+      else { g.gain.setValueAtTime(0, st); g.gain.linearRampToValueAtTime(vol * 1.5, st + 0.06); g.gain.setValueAtTime(vol * 1.5, end); g.gain.setTargetAtTime(0, end, 0.12); }
+      src.connect(g); src.start(st); src.stop(end + 1.5); return;
+    }
+    if (inst === 'guitar') {   // Karplus-Strong
+      const sr = c.sampleRate, f = midiHz(m), N = Math.max(2, Math.round(sr / f)), len = Math.floor(sr * Math.min(4, dur + 1.2)), d = new Float32Array(len);
+      let seed = 12345 + m * 7919, prev = 0;
+      for (let i = 0; i < N; i++) { seed = (seed * 1664525 + 1013904223) >>> 0; const r = seed / 4294967296 * 2 - 1; prev = prev * 0.55 + r * 0.45; d[i] = prev; }
+      const damp = 0.9975 - Math.min(0.004, f / 400000);
+      for (let i = N; i < len; i++) d[i] = damp * 0.5 * (d[i - N] + d[Math.max(0, i - N - 1)]);
+      let pk = 1e-6; for (let i = 0; i < len; i++) pk = Math.max(pk, Math.abs(d[i])); for (let i = 0; i < len; i++) d[i] /= pk;
+      const b = c.createBuffer(1, len, sr); b.copyToChannel(d, 0); const src = c.createBufferSource(); src.buffer = b;
+      g.gain.setValueAtTime(vol * 1.4, t0); g.gain.setTargetAtTime(0, end, 0.08); src.connect(g); src.start(t0); src.stop(end + 0.6); return;
+    }
+    // Hammond: Registerzüge als Teiltöne über f/2 (16′=1, 5⅓′=3, 8′=2, 4′=4, 2⅔′=6, 2′=8, 1⅗′=10, 1⅓′=12, 1′=16), 3 dB je Stufe
+    const draw = /^[0-8]{9}$/.test(this.drawbars || '') ? this.drawbars : '888000000', H = [1, 3, 2, 4, 6, 8, 10, 12, 16], amps = new Array(17).fill(0);
+    [...draw].forEach((v, i) => { if (+v) amps[H[i]] += Math.pow(10, (+v - 8) * 3 / 20); });
+    const key = 'hm' + draw; this._pw = this._pw || {}; if (!this._pw[key] || this._pwCtx !== c) { this._pwCtx = c; this._pw = {}; this._pw[key] = c.createPeriodicWave(new Float32Array(17), new Float32Array(amps), { disableNormalization:false }); }
+    const o = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(); o.setPeriodicWave(this._pw[key]); o.frequency.value = midiHz(m) / 2;
+    lfo.frequency.value = 6.8; lg.gain.value = 0.0035 * midiHz(m); lfo.connect(lg); lg.connect(o.frequency);   // Chorus-Vibrato (C3-ähnlich)
+    const pc = c.createOscillator(), pg = c.createGain(); pc.type = 'sine'; pc.frequency.value = midiHz(m) * 2;   // Perkussion 4′, schnell abklingend
+    pg.gain.setValueAtTime(vol * 0.5, t0); pg.gain.setTargetAtTime(0, t0, 0.18);
+    const nz = c.createBufferSource(), nb = c.createBuffer(1, Math.floor(c.sampleRate * 0.01), c.sampleRate), nd = nb.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1) * (1 - i / nd.length);
+    nz.buffer = nb; const ng = c.createGain(); ng.gain.value = vol * 0.25; nz.connect(ng); ng.connect(g);   // Tastenklick
+    g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol * 0.9, t0 + 0.008); g.gain.setValueAtTime(vol * 0.9, end); g.gain.setTargetAtTime(0, end, 0.02);
+    o.connect(g); pc.connect(pg); pg.connect(g);
+    [o, lfo, pc].forEach(x => { x.start(t0); x.stop(end + 0.3); }); nz.start(t0);
+  },
+  // Akkord abspielen: zuerst zusammen, danach (optional) einzeln aufsteigend, damit man die Töne hört
+  async chord(midis, opt) {
+    const o = Object.assign({ inst:this.inst(), arp:true }, opt || {}), c = this.ac(); if (!c || !midis.length) return;
+    this.stop(); const ms = [...midis].sort((a, b) => a - b), vol = 0.32 / Math.sqrt(ms.length);
+    if (o.inst === 'piano' || o.inst === 'organ') await Promise.all(ms.map(m => this.buf(o.inst, m).catch(() => null)));   // erst laden, dann gleichzeitig starten
+    const t = c.currentTime + 0.05, strum = o.inst === 'guitar' ? 0.03 : 0;
+    ms.forEach((m, i) => this.note(o.inst, m, t + i * strum, 1.6, vol));
+    if (o.arp) ms.forEach((m, i) => this.note(o.inst, m, t + 1.9 + i * 0.42, 0.5, 0.3));
+  }
+};
 
 /* ---------- Bassline: ABC-Rendering und Wiedergabe ---------- */
 const Bass = {
@@ -2282,6 +2363,9 @@ const App = {
     const chd = e.target.closest('[data-ch]') || one, pop = $('#chordPop');   // ganze Kachel antippbar, wenn sie genau einen Akkord enthält
     if (chd) { UI.chordPop(chd); return; }
     if (pop && !e.target.closest('#chordPop')) pop.remove();
+    if (e.target.closest('[data-act=playCh]')) { const b = e.target.closest('[data-act=playCh]'); e.stopPropagation();
+      const cur = this.current(); Sound.drawbars = cur && cur.sound && cur.sound.drawbars;
+      Sound.chord(b.dataset.m.split(',').map(Number).filter(n => n > 0 && n < 128), { arp:LS.get('arp') !== '0' }); return; }
     const el = e.target.closest('[data-act]'); if (!el) return;
     const act = el.dataset.act, song = this.current();
     switch (act) {
@@ -2289,6 +2373,7 @@ const App = {
       case 'back': location.hash = this.lexFrom || '#/'; this.lexFrom = null; break;
       case 'lexicon': this.lexFrom = location.hash && location.hash !== '#/akkorde' ? location.hash : '#/'; location.hash = '#/akkorde'; break;
       case 'lexRoot': this.lexRoot = el.dataset.r; UI.lexicon(); break;
+      case 'inst': Sound.setInst(el.dataset.i); $$('[data-act=inst]').forEach(b => b.classList.toggle('on', b.dataset.i === el.dataset.i)); Sound.chord([60, 64, 67], { arp:false }); break;
       case 'lexRow': { const r = el.closest('tr'); r.classList.toggle('open'); break; }
       case 'filter': this.filter = el.dataset.f; this.reorder = false; UI.list(); break;
       case 'fav': { const x = Store.get(el.dataset.id) || song; if (!x) break; x.fav = !x.fav; Store.touch(x); if ($('#songList')) { UI.counts(); UI.listItems(); } else UI.header(); break; }
@@ -2467,6 +2552,7 @@ const App = {
   },
   onInput(e) {
     const t = e.target, song = this.current();
+    if (t.id === 'arpIn') { LS.set('arp', t.checked ? '1' : '0'); return; }
     if (t.id === 'q') {   // Browser-Autofill (z. B. gespeicherte Zugangsdaten) ignorieren: nur Eingaben im fokussierten Feld zählen
       if (document.activeElement !== t) { t.value = this.query; return; }
       this.query = t.value; UI.listItems(); return;
@@ -2943,11 +3029,13 @@ const UI = {
     document.title = 'Akkord-Lexikon – Band-Trainer';
     $('#app').innerHTML = `<header class="top"><button class="icon ghost" data-act="back" aria-label="Zurück">${ICON.back}</button>
         <div class="grow"><h1>Akkord-Lexikon</h1><div class="sub">Welche Töne stecken in welchem Akkord?</div></div></header>
-      <div class="card"><h3>Grundton</h3><div class="lexroots">${roots.map(x => `<button class="${x === r ? 'on' : ''}" data-act="lexRoot" data-r="${x}">${disp(x)}</button>`).join('')}</div></div>
-      <div class="card"><table class="lex"><thead><tr><th>Akkord</th><th>Töne</th><th class="hidesm">Aufbau</th></tr></thead><tbody>
+      <div class="card"><h3>Grundton</h3><div class="lexroots">${roots.map(x => `<button class="${x === r ? 'on' : ''}" data-act="lexRoot" data-r="${x}">${disp(x)}</button>`).join('')}</div>
+        <h3 style="margin-top:12px">Klang</h3><div class="lexroots">${Object.entries(SND_INST).map(([k, v]) => `<button class="${k === Sound.inst() ? 'on' : ''}" data-act="inst" data-i="${k}">${v}</button>`).join('')}</div>
+        <label class="chk" style="margin-top:8px"><input type="checkbox" id="arpIn" ${LS.get('arp') === '0' ? '' : 'checked'}> danach einzeln (Arpeggio)</label></div>
+      <div class="card"><table class="lex"><thead><tr><th>Akkord</th><th>Töne</th><th class="hidesm">Aufbau</th><th></th></tr></thead><tbody>
       ${CHORD_TYPES.map(t => { const sym = r + t.q, notes = spellChord(r, t), base = 60 + noteIx(r) - (noteIx(r) > 7 ? 12 : 0);
-        return `<tr data-act="lexRow"><td><b class="chd" data-ch="${esc(sym)}">${esc(disp(r) + t.q)}</b><div class="small muted">${esc(t.name)}</div></td><td class="ln">${notes.join(' ')}</td><td class="hidesm small">${esc(t.f)}</td></tr>
-          <tr class="lexk"><td colspan="3">${kbdSvg(48, 84, t.iv.map(x => base + x[0]))}<div class="small muted">${esc(t.f)} · Alternativen: ${esc([t.q || 'Dur', ...(t.al || [])].map(a => disp(r) + (a === 'Dur' ? '' : a)).join(', '))}</div></td></tr>`; }).join('')}
+        return `<tr data-act="lexRow"><td><b class="chd" data-ch="${esc(sym)}">${esc(disp(r) + t.q)}</b><div class="small muted">${esc(t.name)}</div></td><td class="ln">${notes.join(' ')}</td><td class="hidesm small">${esc(t.f)}</td><td class="pl"><button class="icon ghost" data-act="playCh" data-m="${t.iv.map(x => base + x[0]).join(',')}" aria-label="${esc(disp(r) + t.q)} anhören" title="Anhören">▶</button></td></tr>
+          <tr class="lexk"><td colspan="4">${kbdSvg(48, 84, t.iv.map(x => base + x[0]))}<div class="small muted">${esc(t.f)} · Alternativen: ${esc([t.q || 'Dur', ...(t.al || [])].map(a => disp(r) + (a === 'Dur' ? '' : a)).join(', '))}</div></td></tr>`; }).join('')}
       </tbody></table>
       <p class="small muted" style="margin-top:8px">Zeile antippen = Klaviatur. Schreibweise nach Stufen (z. B. C°7 enthält B𝄫 – klingt wie A). Bei 11- und 13-Akkorden lässt man meist einzelne Töne weg (in Klammern). Slash-Akkorde wie D/F♯: Akkord D, im Bass F♯.</p></div>`;
   },
@@ -2956,7 +3044,8 @@ const UI = {
     const i = chordInfo(el.dataset.ch); if (!i) return;
     const base = 60 + noteIx(i.root) - (noteIx(i.root) > 7 ? 12 : 0), keys = i.type.iv.map(x => base + x[0]);
     const pop = document.createElement('div'); pop.id = 'chordPop'; pop.dataset.for = el.dataset.ch; pop.setAttribute('role', 'dialog');
-    pop.innerHTML = `<div class="row" style="justify-content:space-between"><b>${esc(i.sym.replace(/#/g, '♯').replace(/(?<=[A-G])b/g, '♭'))}</b><span class="small muted">${esc(i.type.name)}</span></div>
+    const bassM = i.bass ? 48 + noteIx(i.bass.replace('♯', '#').replace('♭', 'b')) : null;
+    pop.innerHTML = `<div class="row" style="justify-content:space-between"><b>${esc(i.sym.replace(/#/g, '♯').replace(/(?<=[A-G])b/g, '♭'))}</b><span class="small muted">${esc(i.type.name)}</span><button class="icon ghost" data-act="playCh" data-m="${(bassM != null ? [bassM] : []).concat(keys).join(',')}" aria-label="Anhören" title="Anhören (${esc(SND_INST[Sound.inst()])})">▶</button></div>
       <div class="pn">${esc(i.notes.join(' – '))}${i.bass ? ` <span class="small muted">· Bass ${esc(i.bass)}</span>` : ''}</div>${kbdSvg(48, 84, keys)}<div class="small muted">${esc(i.type.f)}</div>`;
     document.body.appendChild(pop);
     const r = el.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;

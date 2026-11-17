@@ -112,6 +112,11 @@ Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): e
 
 ## Änderungslog
 
+### v1.8.0 – Akkorde anhören (Klavier, Orgel, Gitarre, Hammond)
+- **▶ im Akkord-Lexikon** (pro Zeile), im Antipp-Fenster eines Akkords und auf den Voicing-Karten: Der Akkord erklingt zuerst zusammen, danach die Töne einzeln aufsteigend (Arpeggio abschaltbar).
+- **Vier Klänge** (im Lexikon wählbar, gemerkt): **Klavier** – Samples «Salamander Grand Piano V3» (CC BY 3.0, wie in der Gesangs-App); **Orgel (leise)** – echte Pfeifenorgel, leise Registrierung (VSCO 2 CE, CC0, wie Notator «Orgel – sanft»); **Gitarre** – gezupfte Saite (Karplus-Strong, wie Gesangs-App); **Hammond** – Synthese nach Registerzügen (Standard 888000000, im Song die Registerzüge aus dem Sound-Setup), mit Perkussion, Tastenklick und Chorus-Vibrato.
+- Samples (`samples/piano`, `samples/organ`, je mit LICENSE.txt) werden erst beim ersten Anhören geladen und danach offline zwischengespeichert.
+
 ### v1.7.0 – Akkord-Lexikon, Töne direkt an den Akkorden
 - **Akkord-Lexikon** (Symbol ♫ in der Kopfzeile der Songliste, Link unter dem Akkordraster): alle gängigen Akkordtypen – Dur, Moll, Powerchord, vermindert, übermässig, sus2/sus4, 6, m6, 7, maj7, m7, m(maj7), halbvermindert (m7♭5), vermindert-sept (dim7), 7sus4, add9, 6/9, 9, m9, maj9, 7♭9, 7♯9, 11, m11, 13 – mit Tönen, Aufbau (1 ♭3 5 …), alternativen Schreibweisen und Klaviatur (Zeile antippen). Grundton frei wählbar (auch ♯/♭).
 - **Töne an den Akkord-Kacheln:** Mit der Maus auf einen Akkord zeigen = Tooltip mit den Tönen (z. B. «C: C E G»); antippen = kleines Fenster mit Tönen, Aufbau und Klaviatur (nochmals tippen oder daneben schliesst). Funktioniert auch transponiert und bei Folgen ohne Taktstriche.

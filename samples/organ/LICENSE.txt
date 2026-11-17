@@ -1,0 +1,20 @@
+Klangdateien für «Orgel – sanft» im Band-Trainer (übernommen aus Notator)
+==========================================
+
+*.mp3 (A1–Eb6) stammen aus einer echten Pfeifenorgel-Aufnahme:
+VSCO 2 Community Edition, Keys/Organ/Quiet (leise Registrierung, Manual III),
+aufgenommen von Simon Dalzell (Ivy Audio), Winter 2015/16; Weitergabe durch
+Versilian Studios LLC freigegeben (siehe QUELLE_Info.txt), VSCO 2 CE: CC0.
+Quelle: https://github.com/sgossner/VSCO-2-CE
+
+Aufbereitung mit erzeugen.py: je Halbton das nächste Original (Kleinterz-Raster)
+um höchstens einen Halbton umgestimmt, Anfangsstille entfernt, 6 s Länge,
+Lautheit leicht angeglichen. Der Ordnername «recorder» ergibt sich aus der
+Programmnummer 74, unter der abcjs den Klang lädt.
+
+---
+Organ sampled by Simon Dalzell of Ivy Audio, Winter 2015-16.
+
+Bearer is granted right to redistribute this sample set by Versilian Studios LLC.
+
+Credit to both original author and Versilian Studios is encouraged.
