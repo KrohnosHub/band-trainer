@@ -112,6 +112,9 @@ Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): e
 
 ## Änderungslog
 
+### v1.8.1 – Akkorde am Handy kompakter
+- In der Akkordansicht und im Auftrittsmodus sind Schrift, Kacheln, Abstände und Abschnittstitel unter 600 px Breite deutlich kleiner (Auftrittsmodus ca. ⅓ kleiner). Mit A−/A+ lässt sich weiter verkleinern (bis 50 %) oder vergrössern.
+
 ### v1.8.0 – Akkorde anhören (Klavier, Orgel, Gitarre, Hammond)
 - **▶ im Akkord-Lexikon** (pro Zeile), im Antipp-Fenster eines Akkords und auf den Voicing-Karten: Der Akkord erklingt zuerst zusammen, danach die Töne einzeln aufsteigend (Arpeggio abschaltbar).
 - **Vier Klänge** (im Lexikon wählbar, gemerkt): **Klavier** – Samples «Salamander Grand Piano V3» (CC BY 3.0, wie in der Gesangs-App); **Orgel (leise)** – echte Pfeifenorgel, leise Registrierung (VSCO 2 CE, CC0, wie Notator «Orgel – sanft»); **Gitarre** – gezupfte Saite (Karplus-Strong, wie Gesangs-App); **Hammond** – Synthese nach Registerzügen (Standard 888000000, im Song die Registerzüge aus dem Sound-Setup), mit Perkussion, Tastenklick und Chorus-Vibrato.
