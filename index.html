@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-sM3uHklJrA171ZUBNTWa3cLRmPFmfbOqAiQ+H5ktLxw='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-P7eGnKGELrOFGfEQ0cC4/uEj3CrnhrHp/gTJGGeLdno='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -418,7 +418,7 @@ for (const C of [Map, WeakMap]) {
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.9.0';
+const APP_VERSION = '1.9.1';
 const SCHEMA = 4;   // 4 (v1.3.0): eigene Listen (lists) + Favoriten (fav) statt fester Status Setlist/To Do
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
@@ -1765,7 +1765,7 @@ const Viewer = {
       <div class="vwrap" id="vWrap"><div class="vpages"><div class="vstack" id="vStack"><canvas id="vBase"></canvas><canvas id="vInk"></canvas></div><div class="vstack vstack2" id="vStack2" hidden><canvas id="vBase2"></canvas></div></div><div class="vmsg" id="vMsg" role="status">Lade Notenblatt …</div></div>`;
     (opts.host || document.body).append(el);
     Object.assign(this, { el, song, meta, stage, ready:false, pages:1, page:1, zoom:1, tool:'view', undo:[], live:null, erased:null, pid:null, pageCv:null, ann:cleanAnn(null), unsaved:false });
-    this.fit = stage ? 'page' : 'width'; this.spreadPref = LS.get('spread') === '1'; this.pageCv2 = null;   // v1.9.0: immer «Lesen» + Seitenbreite (Auftrittsmodus: ganze Seite, damit nichts gescrollt werden muss); 2-Seiten-Wunsch gemerkt
+    const ff = LS.get((stage ? 'fitS:' : 'fit:') + meta.id); this.fit = ff === 'page' || ff === 'width' ? ff : 'width'; this.spreadPref = LS.get('spread') === '1'; this.pageCv2 = null;   // v1.9.1: «Lesen» + Seitenbreite als Standard (auch im Auftritt); eine Umstellung wird pro Blatt gemerkt (Auftritt separat)
     const stack = this.q('#vStack'), wrap = this.q('#vWrap');
     stack.addEventListener('pointerdown', e => this.down(e));
     stack.addEventListener('pointermove', e => this.move(e));
@@ -1957,7 +1957,7 @@ const Viewer = {
     this.commit(); this.page = n; this.bar(); this.q('#vWrap').scrollTop = 0; this.render(); return true;
   },
   setZoom(d) { this.zoom = Math.min(4, Math.max(0.5, +(this.zoom * (d > 0 ? 1.25 : 0.8)).toFixed(3))); this.render(); },
-  toggleFit() { this.fit = this.fit === 'page' ? 'width' : 'page'; this.zoom = 1; this.bar(); this.render(); },
+  toggleFit() { this.fit = this.fit === 'page' ? 'width' : 'page'; this.zoom = 1; if (this.meta) LS.set((this.stage ? 'fitS:' : 'fit:') + this.meta.id, this.fit); this.bar(); this.render(); },
   setTool(t) { if (!['view', 'pen', 'hl', 'eraser'].includes(t)) return; const was = this.spreadOn(); this.commit(); this.tool = t; this.bar(); if (was !== this.spreadOn()) this.render(); },
   setColor(c) { if (this.tool === 'pen' || this.tool === 'hl') { this.colors[this.tool] = c; this.bar(); } }
 };

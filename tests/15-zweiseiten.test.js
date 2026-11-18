@@ -21,13 +21,20 @@ module.exports = async () => {
     await pg.waitForFunction(() => Viewer.ready && Viewer.pageCv);
   };
   try {
-    await test('Öffnet immer in «Lesen» + Seitenbreite, auch wenn zuletzt «Ganze Seite» gewählt war', async () => {
+    await test('Öffnet in «Lesen» + Seitenbreite (alte globale Einstellung ignoriert), Umstellung wird pro Blatt gemerkt', async () => {
       const pg = await open(b, { width: 1280, height: 800 }, { hash: '#/song/seed-05', init: () => localStorage.setItem('bt_fit', 'page') });
       await openSheet(pg);
       eq(await pg.evaluate(() => [Viewer.fit, Viewer.tool, document.querySelector('#vFit').textContent]), ['width', 'view', 'Seitenbreite']);
       ok(await pg.evaluate(() => Math.abs(document.querySelector('#vStack').offsetWidth - document.querySelector('#vWrap').clientWidth) < 30), 'volle Breite');
-      await pg.click('#vFit'); await pg.click('[data-act=vClose]'); await pg.click('#sheetList [data-act=sheetOpen]'); await pg.waitForFunction(() => Viewer.ready);
-      eq(await pg.evaluate(() => Viewer.fit), 'width', 'nicht gemerkt');
+      await pg.click('#vFit'); eq(await pg.evaluate(() => [Viewer.fit, document.querySelector('#vFit').textContent]), ['page', 'Ganze Seite']);
+      await pg.click('[data-act=vClose]'); await pg.click('#sheetList [data-act=sheetOpen]'); await pg.waitForFunction(() => Viewer.ready);
+      eq(await pg.evaluate(() => Viewer.fit), 'page', 'pro Blatt gemerkt');
+      await pg.click('#vFit'); await pg.click('[data-act=vClose]'); await pg.reload(); await pg.waitForSelector('#sTitle'); await pg.click('[data-act=tab][data-tab=blaetter]');
+      await pg.click('#sheetList [data-act=sheetOpen]'); await pg.waitForFunction(() => Viewer.ready); eq(await pg.evaluate(() => Viewer.fit), 'width', 'zurückgestellt bleibt gemerkt');
+      // anderes Blatt startet in Seitenbreite, auch wenn dieses auf «Ganze Seite» steht
+      await pg.click('#vFit'); await pg.click('[data-act=vClose]');
+      await pg.setInputFiles('#sheetFile', { name: 'zwei.pdf', mimeType: 'application/pdf', buffer: pdf3() }); await pg.waitForFunction(() => document.querySelectorAll('#sheetList [data-act=sheetOpen]').length === 2);
+      await pg.click('#sheetList [data-act=sheetOpen] >> nth=1'); await pg.waitForFunction(() => Viewer.ready); eq(await pg.evaluate(() => Viewer.fit), 'width', 'anderes Blatt');
       eq(pg.errs, []); await pg.context().close();
     });
     await test('Zwei Seiten: im Querformat Paare 1–2, 3; Blättern um zwei; beim Zeichnen einseitig; im Hochformat einseitig; gemerkt', async () => {

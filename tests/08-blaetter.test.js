@@ -243,7 +243,9 @@ module.exports = async () => {
       eq(await pg.evaluate(() => [!!document.querySelector('#stageChords'), document.querySelector('#stageView').value, [...document.querySelectorAll('#stageView option')].map(o => o.textContent)]), [true, '', ['Akkordraster', 'Blatt eins']]);
       await pg.selectOption('#stageView', sid); await rendered(pg, 1);
       eq(await pg.evaluate(() => [App.current().stageSheet === liveSheets(App.current())[0].id, !!document.querySelector('#stageChords'), Viewer.stage, document.querySelectorAll('#viewer [data-act=vTool]').length, document.querySelector('#stagePos').textContent]), [true, false, true, 0, '1 / 12']);
-      ok(await pg.evaluate(() => { const st = document.querySelector('#vStack').getBoundingClientRect(), nav = document.querySelector('.snav').getBoundingClientRect(); return st.height > 300 && st.bottom <= nav.top + 2 && document.documentElement.scrollHeight <= window.innerHeight + 2; }), 'ganze Seite zwischen Kopf und Knöpfen');
+      eq(await pg.evaluate(() => Viewer.fit), 'width', 'Standard Seitenbreite (v1.9.1)');
+      await pg.click('#vFit');
+      ok(await pg.waitForFunction(() => { const st = document.querySelector('#vStack').getBoundingClientRect(), nav = document.querySelector('.snav').getBoundingClientRect(); return st.height > 300 && st.bottom <= nav.top + 2 && document.documentElement.scrollHeight <= window.innerHeight + 2; }, null, { timeout: 8000 }), 'ganze Seite zwischen Kopf und Knöpfen');
       await pg.locator('#stageView').blur();
       await pg.keyboard.press('ArrowRight'); await rendered(pg, 2); eq(await pg.locator('#stagePos').innerText(), '1 / 12', 'erst Seite 2 des Blatts');
       await pg.keyboard.press('PageDown'); await pg.waitForFunction(i => App.songId === i, ids[1]); eq(await pg.evaluate(() => [document.querySelector('#stagePos').textContent, !!Viewer.el, !!document.querySelector('#stageChords'), !!document.querySelector('#stageView')]), ['2 / 12', false, true, false]);
