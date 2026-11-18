@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-Qlo0D6f95l6a8A/KjjD7IbHyhsGb19OwqyELAosvQ68='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-50jQObO8VWzCAKBBae/kl+WLHGtIvC61QMDLovLcIIE='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -70,11 +70,48 @@ body{margin:0;background:var(--bg);color:var(--fg);
   -webkit-tap-highlight-color:transparent}
 #app{max-width:980px;margin:0 auto;padding:0 14px calc(24px + env(safe-area-inset-bottom))}
 /* Seitenleiste (v1.10.0) */
-#side{display:flex;flex-direction:column}
-.sbfoot{display:flex;gap:6px;margin:14px 0 4px;flex-wrap:wrap}
+#side{display:flex;flex-direction:column;height:100vh;height:100dvh;position:sticky;top:0;box-sizing:border-box;overflow:hidden}
+#side > .sidetop{flex:none;position:static}
+#side .songs{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin:0 -4px;padding:2px 4px 8px}
+#side .songs[hidden]{display:none}
+.sbtabs{display:flex;border-bottom:1px solid var(--border);margin:0 -12px 8px;flex:none}
+.sbtabs button{flex:1;border:0;border-radius:0;background:none;min-height:40px;color:var(--muted);border-bottom:2px solid transparent;font-weight:600}
+.sbtabs button.on,.sbtabs button.on:hover{color:var(--fg);border-bottom-color:var(--accent);background:none}
+.sbsearch{flex:none;display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.sbsearch[hidden]{display:none}
+.sbsearch input{margin:0}
+.sbrow{display:flex;gap:6px}
+.sbrow select{flex:1 1 40%;min-width:0;min-height:34px;padding:4px 6px;font-size:.84rem}
+.sbrow .favf{flex:none;min-height:34px;width:40px;padding:0;font-size:1rem;color:var(--muted)}
+.sbrow .favf.on{color:var(--fav);border-color:var(--fav);background:transparent}
+.sblists{flex:none;display:flex;flex-direction:column;gap:6px}
+#side .sblists:has(.lcard){flex:1 1 auto;min-height:0;overflow-y:auto}
+.lcard{display:flex;align-items:center;gap:8px;text-align:left;min-height:48px;padding:8px 12px;border-radius:10px;background:var(--surface2);border:1px solid var(--border)}
+.lcard .ln{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lcard .lc{font-size:.8rem;color:var(--muted)}.lcard .chev{color:var(--muted);font-size:1.2rem}
+.lcard.new{justify-content:center;color:var(--accent);border-style:dashed;background:transparent}
+.lhead{display:flex;align-items:center;gap:8px;margin-bottom:6px}.lhead b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lback{min-height:32px;padding:0 8px;font-size:.86rem}
+.sbbar{flex:none;display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.sbbar:empty{display:none}
+.sbbar .chip{min-height:30px;padding:0 9px;font-size:.78rem}
+.sbbar .chip.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+/* kompakte Song-Einträge (wie Gesangs-App) */
+#side .songs li{margin:0 0 5px}
+#side .songrow{gap:0;background:var(--surface2);border:1px solid var(--border);border-left:3px solid transparent;border-radius:10px;align-items:center}
+#side .songrow:hover{border-color:var(--accent)}
+#side .songs li.cur .songrow{border-color:var(--accent);border-left-color:var(--accent);background:color-mix(in srgb, var(--accent) 14%, var(--surface2))}
+#side .songs li.cur .song{box-shadow:none;border:0}
+#side .song{min-height:0;padding:7px 4px 7px 10px;border:0;background:transparent;margin:0}
+#side .song .t{font-size:.9rem;font-weight:600}
+#side .song .a{font-size:.76rem;margin-top:0}
+#side .favb{min-width:36px;font-size:1.05rem;align-self:stretch}
+#side .favb:not(.on){opacity:.55}
+#side .song.re{background:var(--surface2);border:1px solid var(--border);padding:4px 6px}
+#side .song.re .icon{min-width:34px;min-height:34px;width:34px}
+.sbfoot{flex:none;display:flex;gap:6px;margin:0 -12px;padding:8px 12px 4px;border-top:1px solid var(--border);background:inherit}
 .sbfoot button{flex:1;min-height:38px;padding:0 10px;font-size:.88rem;white-space:nowrap}
 .sbfoot button[data-act=theme]{flex:0 0 auto}
-.verline{font-size:.74rem;color:var(--muted);text-align:center;padding:4px 0 10px}
+.verline{flex:none;font-size:.72rem;color:var(--muted);text-align:center;padding:2px 0 calc(8px + env(safe-area-inset-bottom))}
 .sideclose,.sidebtn{display:none}
 .sidetop h1{font-size:1.15rem;white-space:nowrap}
 #side .sidetop .sub{display:none}
@@ -85,22 +122,20 @@ body{margin:0;background:var(--bg);color:var(--fg);
 .emptymain .big{font-size:3rem;opacity:.4}
 .linkish{background:none;border:0;padding:0;min-height:0;color:var(--accent);text-decoration:underline;font:inherit;cursor:pointer}
 @media (min-width:900px){
-  #app{display:grid;grid-template-columns:330px minmax(0,1fr);max-width:none;padding:0;align-items:start}
-  #side{position:sticky;top:0;height:100vh;overflow-y:auto;border-right:1px solid var(--border);padding:0 12px;background:var(--surface);box-sizing:border-box;overscroll-behavior:contain}
-  #side .songs{flex:1}
+  #app{display:grid;grid-template-columns:360px minmax(0,1fr);max-width:none;padding:0;align-items:start}
+  #side{border-right:1px solid var(--border);padding:0 12px;background:var(--surface)}
   #main{min-width:0;padding:0 18px calc(24px + env(safe-area-inset-bottom));max-width:1000px;width:100%;margin:0 auto;box-sizing:border-box}
   .backbtn{display:none}
-  #side .fab{display:none}
-  #side .top{position:sticky;top:0;z-index:5;background:var(--surface)}
+  #side .top{background:var(--surface)}
 }
 @media (max-width:899.98px){
   body:not(.has-main) #main{display:none}
   body.has-main #side{display:none}
   body.has-main .sidebtn{display:inline-flex}
-  body.has-main.side-open #side{display:flex;position:fixed;top:0;bottom:0;left:0;width:min(88vw,360px);z-index:70;overflow-y:auto;background:var(--bg);padding:0 12px;box-shadow:4px 0 16px rgba(0,0,0,.35);box-sizing:border-box}
+  body.has-main.side-open #side{display:flex;position:fixed;top:0;bottom:0;left:0;width:min(88vw,380px);height:auto;z-index:70;background:var(--bg);padding:0 12px;box-shadow:4px 0 16px rgba(0,0,0,.35)}
+  body:not(.has-main) #app{padding-bottom:0}
   body.has-main.side-open #sideScrim{display:block;position:fixed;inset:0;z-index:65;background:rgba(0,0,0,.45)}
   body.has-main.side-open .sideclose{display:inline-flex}
-  body.has-main #side .fab{display:none}
 }
 body.stage-on #side,body.stage-on #sideScrim{display:none!important}
 body.stage-on #app{display:block}
@@ -454,7 +489,7 @@ for (const C of [Map, WeakMap]) {
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.10.0';
+const APP_VERSION = '1.11.0';
 const SCHEMA = 4;   // 4 (v1.3.0): eigene Listen (lists) + Favoriten (fav) statt fester Status Setlist/To Do
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
@@ -2349,6 +2384,7 @@ const App = {
     window.addEventListener('resize', debounce(() => { const t = $('#main .top'); if (t) document.documentElement.style.setProperty('--hh', t.offsetHeight + 'px'); }, 150));   // Notenblatt an neue Fenstergrösse/Drehung anpassen
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Viewer.flush(); });
     window.addEventListener('pagehide', () => Viewer.flush());
+    this.sort = ['title', 'artist', 'recent'].includes(LS.get('sort')) ? LS.get('sort') : 'title'; this.artist = '';
     this.route();
     setTimeout(() => Spotify.autoAll(), 2500);   // fehlende Spotify-Links im Hintergrund ergänzen
     window.addEventListener('online', () => Spotify.autoAll());
@@ -2466,7 +2502,8 @@ const App = {
       case 'lexRoot': this.lexRoot = el.dataset.r; UI.lexicon(); break;
       case 'inst': Sound.setInst(el.dataset.i); $$('[data-act=inst]').forEach(b => b.classList.toggle('on', b.dataset.i === el.dataset.i)); Sound.chord([60, 64, 67], { arp:false }); break;
       case 'lexRow': { const r = el.closest('tr'); r.classList.toggle('open'); break; }
-      case 'filter': this.filter = el.dataset.f; this.reorder = false; UI.list(); break;
+      case 'filter': this.filter = el.dataset.f; if (Store.list(this.filter)) this.lastList = this.filter; else if (this.filter === 'lists') this.lastList = null; this.reorder = false; UI.counts(); UI.listItems(); { const sl = $('#songList'); if (sl) sl.scrollTop = 0; } break;
+      case 'sbTab': this.filter = el.dataset.t === 'lists' ? (this.filter === 'lists' || Store.list(this.filter) ? 'lists' : this.lastList && Store.list(this.lastList) ? this.lastList : 'lists') : (this.filter === 'fav' ? 'fav' : 'all'); this.reorder = false; UI.counts(); UI.listItems(); break;
       case 'fav': { const x = Store.get(el.dataset.id) || song; if (!x) break; x.fav = !x.fav; Store.touch(x); UI.counts(); UI.listItems(); if (App.current() === x && $('#sFav')) UI.header(); break; }
       case 'sideOpen': document.body.classList.add('side-open'); { const q = $('#songList .cur'); if (q) q.scrollIntoView({ block:'center' }); } break;
       case 'sideClose': document.body.classList.remove('side-open'); break;
@@ -2475,7 +2512,7 @@ const App = {
       case 'listPick': { const l = Store.list(this.filter); if (l) Dialogs.listPick(l); break; }
       case 'listDel': { const l = Store.list(this.filter); if (!l) break;
         if (!confirm('Liste «' + l.name + '» löschen? Die Songs selbst bleiben erhalten.')) break;
-        Store.removeList(l.id); this.filter = 'all'; this.reorder = false; UI.list(); toast('Liste gelöscht.'); break; }
+        Store.removeList(l.id); this.filter = 'lists'; this.lastList = null; this.reorder = false; UI.counts(); UI.listItems(); toast('Liste gelöscht.'); break; }
       case 'listOut': { const l = Store.list(this.filter); if (l) { Store.inList(l, el.dataset.id, false); UI.counts(); UI.listItems(); } break; }
       case 'reorder': this.reorder = !this.reorder; UI.list(); break;
       case 'up': this.moveBy(el.dataset.id, -1); break;
@@ -2647,6 +2684,8 @@ const App = {
   onInput(e) {
     const t = e.target, song = this.current();
     if (t.id === 'arpIn') { LS.set('arp', t.checked ? '1' : '0'); return; }
+    if (t.id === 'sortSel') { this.sort = t.value; LS.set('sort', t.value); UI.listItems(); return; }
+    if (t.id === 'artistSel') { this.artist = t.value; UI.listItems(); return; }
     if (t.id === 'q') {   // Browser-Autofill (z. B. gespeicherte Zugangsdaten) ignorieren: nur Eingaben im fokussierten Feld zählen
       if (document.activeElement !== t) { t.value = this.query; return; }
       this.query = t.value; UI.listItems(); return;
@@ -2731,8 +2770,12 @@ const UI = {
         <button class="syncchip" id="syncState" data-act="sync" aria-label="Abgleich mit Google Drive"></button>
         <button class="icon ghost sideclose" data-act="sideClose" aria-label="Seitenleiste schliessen">✕</button>
       </header>
-      <input type="search" id="q" name="bt-songsuche" placeholder="Song oder Interpret suchen" value="${esc(App.query)}" aria-label="Suche" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore readonly>
-      <div class="chips" role="group" aria-label="Filter" id="chipBox"></div><div class="chips sub" id="listBar"></div>
+      <div class="sbtabs" role="tablist"><button role="tab" data-act="sbTab" data-t="songs" id="tabSongs">Songs</button><button role="tab" data-act="sbTab" data-t="lists" id="tabLists">Listen</button></div>
+      <div class="sbsearch">
+        <input type="search" id="q" name="bt-songsuche" placeholder="Suchen (Titel, Interpret) …" value="${esc(App.query)}" aria-label="Suche" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore readonly>
+        <div class="sbrow" id="sbFilter"></div>
+      </div>
+      <div id="chipBox" class="sblists"></div><div class="sbbar" id="listBar"></div>
       <ul class="songs" id="songList"></ul>
       <div class="sbfoot">
         <button data-act="lexicon" title="Akkord-Lexikon: Töne aller Akkorde">♫ Akkord-Lexikon</button>
@@ -2740,7 +2783,6 @@ const UI = {
         <button data-act="menu" title="Daten, Sicherungen, Google Drive, Spotify, Hinweise">⋯ Mehr</button>
       </div>
       <div class="verline" id="sideVer" title="App-Version">Band-Trainer v${APP_VERSION}</div>
-      <button class="fab primary" data-act="add" aria-label="Neuen Song hinzufügen">+ Neuer Song</button>
       <input type="file" id="importFile" accept="application/json,.json" class="hidden">
       <input type="file" id="chordFile" accept="application/json,.json" class="hidden">`;
     this.counts(); this.listItems(); this.sync();
@@ -2749,20 +2791,32 @@ const UI = {
     $('#main').innerHTML = `<div class="emptymain"><div><div class="big">♪</div><p>Song links in der Liste wählen – oder <button class="linkish" data-act="add">neuen Song anlegen</button>.</p>
       <p class="small muted">Akkord-Lexikon, Einstellungen und Daten findest du unten in der Seitenleiste («♫ Akkord-Lexikon», «⋯ Mehr»).</p></div></div>`;
   },
+  // Seitenleiste (v1.11.0, wie Gesangs-App): Reiter Songs/Listen, Filterzeile (Sortierung, Interpret, ★), Listen-Übersicht
   counts() {
     const box = $('#chipBox'); if (!box) return;
-    const songs = Store.data.songs, L = Store.list(App.filter);
-    if (!['all', 'fav'].includes(App.filter) && !L) App.filter = 'all';
-    const chip = (f, l, n) => `<button class="chip ${App.filter === f ? 'on' : ''}" data-act="filter" data-f="${esc(f)}">${l} · ${n}</button>`;
-    box.innerHTML = chip('all', 'Alle', songs.length) + chip('fav', '★ Favoriten', songs.filter(s => s.fav).length)
-      + Store.data.lists.map(l => chip(l.id, esc(l.name), Store.listSongs(l).length)).join('')
-      + '<button class="chip" data-act="listNew" title="Neue Liste anlegen">+ Liste</button>';
+    const songs = Store.data.songs, L = Store.list(App.filter), lists = App.filter === 'lists' || !!L;
+    if (!['all', 'fav', 'lists'].includes(App.filter) && !L) App.filter = 'all';
+    const ts = $('#tabSongs'), tl = $('#tabLists'); if (ts) { ts.classList.toggle('on', !lists); tl.classList.toggle('on', lists); ts.setAttribute('aria-selected', !lists); tl.setAttribute('aria-selected', lists); }
+    const sr = $('.sbsearch'); if (sr) sr.hidden = App.filter === 'lists';
+    const f = $('#sbFilter');
+    if (f) {
+      const arts = [...new Set(songs.filter(x => !x.isDemo && x.artist).map(x => x.artist))].sort((a, b) => a.localeCompare(b, 'de'));
+      if (App.artist && !arts.includes(App.artist)) App.artist = '';
+      setHtml(f, lists ? '' : `<select id="sortSel" aria-label="Sortierung"><option value="title">Titel A–Z</option><option value="artist">Interpret A–Z</option><option value="recent">Zuletzt geändert</option></select>
+        <select id="artistSel" aria-label="Nach Interpret filtern"><option value="">Alle Interpreten</option>${arts.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('')}</select>
+        <button class="favf ${App.filter === 'fav' ? 'on' : ''}" data-act="filter" data-f="${App.filter === 'fav' ? 'all' : 'fav'}" aria-pressed="${App.filter === 'fav'}" title="Nur Favoriten (${songs.filter(x => x.fav).length})">★</button>`);
+      const ss = $('#sortSel'); if (ss) ss.value = App.sort || 'title'; const as = $('#artistSel'); if (as) as.value = App.artist || '';
+    }
+    if (App.filter === 'lists') setHtml(box, Store.data.lists.map(l => `<button class="lcard" data-act="filter" data-f="${esc(l.id)}"><span class="ln">${esc(l.name)}</span><span class="lc">${Store.listSongs(l).length} Songs</span><span class="chev">›</span></button>`).join('')
+      + '<button class="lcard new" data-act="listNew">+ Neue Liste</button>');
+    else if (L) setHtml(box, `<div class="lhead"><button class="ghost lback" data-act="filter" data-f="lists" aria-label="Zurück zu allen Listen">‹ Listen</button><b>${esc(L.name)}</b><span class="muted small">${Store.listSongs(L).length} Songs</span></div>`);
+    else setHtml(box, '');
     const tb = $('#listBar');
     if (tb) setHtml(tb, L ? `<button class="chip ${App.reorder ? 'on' : ''}" data-act="reorder" aria-pressed="${App.reorder}">Reihenfolge</button>
         <button class="chip" data-act="listPick">Songs wählen</button><button class="chip" data-act="listShare">Teilen / PDF</button><button class="chip" data-act="listRename">Umbenennen</button>
-        <button class="chip ghost danger" data-act="listDel">Liste löschen</button><span class="sep"></span>
-        <button class="chip" data-act="stage" title="Auftrittsmodus: diese Liste im Vollbild">▶ Auftritt</button>`
-      : '<span class="sep"></span><button class="chip" data-act="stage" title="Auftrittsmodus: erste Liste im Vollbild">▶ Auftritt</button>');
+        <button class="chip ghost danger" data-act="listDel">Löschen</button>
+        <button class="chip primary" data-act="stage" title="Auftrittsmodus: diese Liste im Vollbild">▶ Auftritt</button>` : '');
+    const ul = $('#songList'); if (ul) ul.hidden = App.filter === 'lists';
   },
   listItems() {
     const el = $('#songList'); if (!el) return;
@@ -2781,8 +2835,9 @@ const UI = {
         </div></li>`).join('') : '<li class="empty">Die Liste ist leer – «Songs wählen».</li>';
       return;
     }
-    const byTitle = (a, b) => (a.isDemo - b.isDemo) || a.title.localeCompare(b.title, 'de');
-    const list = L ? Store.listSongs(L).filter(match) : Store.data.songs.filter(s => App.filter !== 'fav' || s.fav).filter(match).sort(byTitle);
+    const so = App.sort || 'title', cmp = (a, b) => (a.isDemo - b.isDemo) || (so === 'artist' ? a.artist.localeCompare(b.artist, 'de') || a.title.localeCompare(b.title, 'de') : so === 'recent' ? (b.updatedAt || 0) - (a.updatedAt || 0) : a.title.localeCompare(b.title, 'de'));
+    if (App.filter === 'lists') { el.innerHTML = ''; return; }
+    const list = L ? Store.listSongs(L).filter(match) : Store.data.songs.filter(s => App.filter !== 'fav' || s.fav).filter(s => !App.artist || s.artist === App.artist).filter(match).sort(cmp);
     const pos = L ? new Map(Store.listSongs(L).map((s, i) => [s.id, i + 1])) : null;
     // Ab v1.3.0 kompakt: zwei Zeilen (Titel / Interpret) + Favoriten-Stern; Details stehen in der Song-Ansicht
     el.innerHTML = list.length ? list.map(s => `

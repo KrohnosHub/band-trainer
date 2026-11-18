@@ -7,7 +7,7 @@ module.exports = async () => {
     await test('Setlist teilen: Text mit Tonart (transponiert), BPM, Sound; Druckansicht mit Akkordblättern', async () => {
       const pg = await open(b, D, { init: () => { Object.defineProperty(navigator, 'share', { value: undefined, configurable: true }); window.__clip = ''; Object.defineProperty(navigator, 'clipboard', { value: { writeText: t => { window.__clip = t; return Promise.resolve(); } }, configurable: true }); window.print = () => { window.__printed = document.querySelector('#printArea').innerText; }; } });
       await pg.evaluate(() => { const s = Store.get('seed-03'); s.transpose = 2; s.sound.split = 'C3'; s.sound.right = 'Hammond-Orgel'; Store.touch(s); });
-      await pg.click('[data-act=filter][data-f=list-setlist]'); await pg.click('[data-act=listShare]'); await pg.waitForSelector('#shareForm');
+      await pg.click('#tabLists').then(() => pg.click('[data-act=filter][data-f=list-setlist]')); await pg.click('[data-act=listShare]'); await pg.waitForSelector('#shareForm');
       await pg.click('[data-act=shareText]'); await pg.waitForFunction(() => window.__clip);
       const txt = await pg.evaluate(() => window.__clip);
       ok(/^Setlist\n1\. Blackwater Swagger – Blackwater Conspiracy \(85 BPM\)/.test(txt), txt.slice(0, 120));

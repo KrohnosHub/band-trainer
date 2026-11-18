@@ -49,7 +49,7 @@ module.exports = async () => {
     await test('Auftrittsmodus: Vollbild-Akkordraster, Tasten und Wischen, Bildschirm wach, Beenden', async () => {
       const pg = await open(b, D);
       const order = await pg.evaluate(() => { const s = Store.get('seed-02'); s.chords = '| C | G |'; s.transpose = 2; s.notes = 'Orgel'; Store.touch(s); return Store.setlist().map(x => x.title); });
-      await pg.click('#listBar [data-act=stage]'); await pg.waitForSelector('.stage');
+      await pg.click('#tabLists'); await pg.click('[data-act=filter][data-f=list-setlist]'); await pg.click('#listBar [data-act=stage]'); await pg.waitForSelector('.stage');
       const st = () => pg.evaluate(() => [document.querySelector('#stagePos').textContent, document.querySelector('.stage h1').textContent]);
       eq(await st(), ['1 / 12', order[0]]);
       ok(await pg.evaluate(() => window.__wake.req >= 1 && document.body.classList.contains('stage-on')), 'Wake Lock angefordert');

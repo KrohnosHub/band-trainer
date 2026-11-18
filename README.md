@@ -112,6 +112,11 @@ Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): e
 
 ## Änderungslog
 
+### v1.11.0 – Seitenleiste wie Gesangs-App: fixierte Fusszeile, Reiter, Filter, kompakte Einträge
+- **Fusszeile fixiert:** «♫ Akkord-Lexikon», Hell/Dunkel, «⋯ Mehr» und die Version stehen immer unten; nur die Song-Einträge scrollen.
+- **Reiter «Songs» / «Listen»:** Songs mit Suche und Filterzeile – Sortierung (Titel A–Z, Interpret A–Z, zuletzt geändert, gemerkt), Interpret-Filter, ★ nur Favoriten. Listen als Übersicht (Name, Anzahl) mit «+ Neue Liste»; in einer Liste «‹ Listen» zurück und die Werkzeuge (Reihenfolge, Songs wählen, Teilen/PDF, Umbenennen, Löschen, ▶ Auftritt).
+- **Kompakter:** Seitenleiste etwas breiter (360 px), Song-Einträge kleiner (Titel/Interpret einzeilig, kleinere Schrift), aktiver Song farbig markiert. Gilt auch für die Liste am Handy.
+
 ### v1.10.0 – Seitenleiste wie in der Gesangs-App, Doppelseite ganz
 - **Seitenleiste:** Auf breiten Bildschirmen (ab 900 px: Desktop, Tablet quer) bleibt die Songliste mit Suche, Favoriten und Listen immer links sichtbar; der geöffnete Song ist markiert. Unten: «♫ Akkord-Lexikon», Hell/Dunkel und «⋯ Mehr» (Daten, Sicherungen, Google Drive, Spotify, Hinweise) – darunter die App-Version. Am Handy ist die Liste die Startseite; im Song öffnet ☰ die Seitenleiste als Schublade (damit ist «Mehr» auch im Song erreichbar).
 - **Zwei-Seiten-Ansicht:** beide Seiten jetzt standardmässig ganz sichtbar (wie Gesangs-App, «Ganze Seiten»); per Knopf auf Seitenbreite umstellbar, pro Blatt gemerkt. Einzelseite weiterhin Seitenbreite als Standard.

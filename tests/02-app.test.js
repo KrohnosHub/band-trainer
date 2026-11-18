@@ -19,9 +19,9 @@ module.exports = async () => {
       await pg.click('#q');
       await pg.fill('#q', 'hotel'); eq(await count(pg), 1);
       await pg.fill('#q', '');
-      await pg.click('[data-act=filter][data-f=list-setlist]'); eq(await count(pg), 12);
+      await pg.click('#tabLists').then(() => pg.click('[data-act=filter][data-f=list-setlist]')); eq(await count(pg), 12);
       ok(/^1\./.test(await pg.locator('#songList li .t').first().innerText()), 'Setlist nummeriert');
-      await pg.click('[data-act=filter][data-f=list-todo]'); eq(await count(pg), 11);
+      await pg.click('#tabLists').then(() => pg.click('[data-act=filter][data-f=list-todo]')); eq(await count(pg), 11);
       eq(pg.errs, []); eq(pg.csp, []); await pg.context().close();
     });
     await test('Song anlegen, bearbeiten, löschen (Löschmarke); Daten überstehen Neuladen; HTML wird nicht ausgeführt', async () => {
@@ -49,7 +49,7 @@ module.exports = async () => {
     });
     await test('Setlist-Reihenfolge: Hoch/Runter und Ziehen, bleibt gespeichert', async () => {
       const pg = await open(b, D);
-      await pg.click('[data-act=filter][data-f=list-setlist]'); await pg.click('[data-act=reorder]');
+      await pg.click('#tabLists').then(() => pg.click('[data-act=filter][data-f=list-setlist]')); await pg.click('[data-act=reorder]');
       const ids = () => pg.evaluate(() => Store.setlist().map(s => s.id));
       const a = await ids();
       await pg.click(`[data-act=down][data-id="${a[0]}"]`);
@@ -87,32 +87,32 @@ module.exports = async () => {
       await pg.context().close();
       pg = await open(b, D);
       // Neue Liste: anlegen → Auswahl öffnet sich direkt
-      await pg.click('[data-act=listNew]'); await pg.fill('#listForm [name=name]', 'Probe Freitag'); await pg.click('#listForm [type=submit]');
+      await pg.click('#tabLists'); await pg.click('[data-act=listNew]'); await pg.fill('#listForm [name=name]', 'Probe Freitag'); await pg.click('#listForm [type=submit]');
       await pg.waitForSelector('#pickForm');
       await pg.fill('#pickQ', 'hotel'); ok(await pg.locator('#pickForm label[data-t*="hotel"]').isVisible() && !(await pg.locator('#pickForm label[data-t*="wicked"]').isVisible()), 'Filter in der Auswahl');
       await pg.check('#pickForm [value=seed-05]'); await pg.fill('#pickQ', ''); await pg.check('#pickForm [value=seed-12]'); await pg.click('#pickForm [type=submit]');
       const lid = await pg.evaluate(() => App.filter);
       eq(await pg.evaluate(i => Store.list(i).songs, lid), ['seed-05', 'seed-12']); eq(await count(pg), 2);
-      ok(/Probe Freitag · 2/.test(await pg.locator('#chipBox').innerText()));
+      ok(/Probe Freitag\s*2 Songs/.test(await pg.locator('#chipBox').innerText()));
       // Entfernen über Reihenfolge-Ansicht (✕), umbenennen, Song-Dialog zeigt Listen-Häkchen
       await pg.click('[data-act=reorder]'); await pg.click('[data-act=listOut][data-id=seed-05]'); eq(await pg.evaluate(i => Store.list(i).songs, lid), ['seed-12']);
       await pg.click('[data-act=listRename]'); await pg.fill('#listForm [name=name]', 'Probe Sa'); await pg.click('#listForm [type=submit]');
-      ok(/Probe Sa · 1/.test(await pg.locator('#chipBox').innerText()));
+      ok(/Probe Sa\s*1 Songs/.test(await pg.locator('#chipBox').innerText()));
       await pg.click('[data-act=reorder]'); await pg.click('[data-act=open][data-id=seed-12]'); await pg.waitForSelector('#sTitle'); await pg.click('header [data-act=edit]');
       ok(await pg.locator(`#songForm [name=lst][value="${lid}"]`).isChecked() && await pg.locator('#songForm [name=lst][value=list-setlist]').isChecked(), 'Listen-Häkchen');
       await pg.uncheck(`#songForm [name=lst][value="${lid}"]`); await pg.click('#songForm [type=submit]'); eq(await pg.evaluate(i => Store.list(i).songs, lid), []);
       // Favorit: Stern in der Song-Ansicht und in der Liste, Filter «Favoriten»
       await pg.click('#sFav'); eq(await pg.evaluate(() => [Store.get('seed-12').fav, document.querySelector('#sFav').textContent]), [true, '★']);
       await pg.evaluate(() => { location.hash = '#/'; }); await pg.waitForSelector('#songList');
-      await pg.click('[data-act=filter][data-f=all]'); await pg.click('#songList [data-act=fav][data-id=seed-01]');
+      await pg.click('#tabSongs'); if (await pg.evaluate(() => App.filter === 'fav')) await pg.click('[data-act=filter][data-f=all]'); await pg.click('#songList [data-act=fav][data-id=seed-01]');
       await pg.click('[data-act=filter][data-f=fav]'); eq(await count(pg), 2);
       ok(await pg.locator('#songList li[data-id=seed-01] .favb.on').isVisible());
       eq(await pg.evaluate(() => { const c = getComputedStyle(document.querySelector('#songList li[data-id=seed-01] .favb.on')); return [c.backgroundColor, c.color !== c.backgroundColor]; }), ['rgba(0, 0, 0, 0)', true], 'nur Stern, kein farbiger Kasten');
       // Zwei Zeilen pro Titel, keine Indikatoren
       eq(await pg.evaluate(() => [document.querySelectorAll('#songList .m').length, document.querySelectorAll('#songList .song .badge').length]), [0, 0]);
       // Liste löschen (Songs bleiben); Löschmarke gesetzt; nach Neuladen weg
-      await pg.click(`[data-act=filter][data-f="${lid}"]`); pg.once('dialog', d => d.accept()); await pg.click('[data-act=listDel]');
-      eq(await pg.evaluate(i => [!!Store.list(i), Store.data.deleted['list:' + i] > 0, Store.data.songs.length, App.filter], lid), [false, true, 24, 'all']);
+      await pg.click("#tabLists"); if (await pg.evaluate(() => App.filter !== "lists")) await pg.click("#tabLists"); await pg.click(`[data-act=filter][data-f="${lid}"]`); pg.once('dialog', d => d.accept()); await pg.click('[data-act=listDel]');
+      eq(await pg.evaluate(i => [!!Store.list(i), Store.data.deleted['list:' + i] > 0, Store.data.songs.length, App.filter], lid), [false, true, 24, 'lists'], 'zurück zur Listen-Übersicht');
       await pg.reload(); await pg.waitForSelector('#songList'); eq(await pg.evaluate(i => !!Store.list(i), lid), false);
       eq(pg.errs, []); eq(pg.csp, []); await pg.context().close();
     });
@@ -132,8 +132,8 @@ module.exports = async () => {
       const pg = await open(b, M);
       const over = () => pg.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       ok(await over() <= 0, 'Liste zu breit: ' + await over());
-      await pg.click('[data-act=filter][data-f=list-setlist]'); await pg.click('[data-act=reorder]'); ok(await over() <= 0, 'Reihenfolge zu breit');
-      await pg.click('[data-act=filter][data-f=all]');
+      await pg.click('#tabLists').then(() => pg.click('[data-act=filter][data-f=list-setlist]')); await pg.click('[data-act=reorder]'); ok(await over() <= 0, 'Reihenfolge zu breit');
+      await pg.click('#tabSongs'); if (await pg.evaluate(() => App.filter === 'fav')) await pg.click('[data-act=filter][data-f=all]');
       await pg.click('[data-act=open][data-id="demo-blues"]'); await pg.waitForSelector('#abcOut svg');
       for (const t of ['noten', 'audio', 'videos', 'info']) { await pg.click(`[data-act=tab][data-tab=${t}]`); ok(await over() <= 0, 'Tab ' + t + ' zu breit: ' + await over()); }
       ok(await pg.locator('#bPlay').isVisible(), 'Play sichtbar');
