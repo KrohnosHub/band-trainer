@@ -38,7 +38,7 @@ module.exports = async () => {
       await pg.click('[data-act=tab][data-tab=info]'); await pg.fill('#notesIn', 'Orgel-Sound, Split bei C3'); await pg.waitForTimeout(700);
       await pg.reload(); await pg.waitForSelector('#sTitle');
       eq(await pg.evaluate(i => [Store.get(i).notes, Store.get(i).key], id), ['Orgel-Sound, Split bei C3', 'Em']);
-      await pg.click('[data-act=back]'); await pg.waitForSelector('#songList'); eq(await count(pg), 25);
+      await pg.evaluate(() => { location.hash = '#/'; }); await pg.waitForSelector('#songList'); eq(await count(pg), 25);
       eq(await pg.evaluate(() => window.__xss), undefined, 'kein XSS über den Titel');
       await pg.click(`[data-act=open][data-id="${id}"]`); await pg.waitForSelector('#sTitle');
       pg.once('dialog', d => d.accept());
@@ -103,7 +103,7 @@ module.exports = async () => {
       await pg.uncheck(`#songForm [name=lst][value="${lid}"]`); await pg.click('#songForm [type=submit]'); eq(await pg.evaluate(i => Store.list(i).songs, lid), []);
       // Favorit: Stern in der Song-Ansicht und in der Liste, Filter «Favoriten»
       await pg.click('#sFav'); eq(await pg.evaluate(() => [Store.get('seed-12').fav, document.querySelector('#sFav').textContent]), [true, '★']);
-      await pg.click('[data-act=back]'); await pg.waitForSelector('#songList');
+      await pg.evaluate(() => { location.hash = '#/'; }); await pg.waitForSelector('#songList');
       await pg.click('[data-act=filter][data-f=all]'); await pg.click('#songList [data-act=fav][data-id=seed-01]');
       await pg.click('[data-act=filter][data-f=fav]'); eq(await count(pg), 2);
       ok(await pg.locator('#songList li[data-id=seed-01] .favb.on').isVisible());

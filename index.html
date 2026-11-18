@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-P7eGnKGELrOFGfEQ0cC4/uEj3CrnhrHp/gTJGGeLdno='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-Qlo0D6f95l6a8A/KjjD7IbHyhsGb19OwqyELAosvQ68='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -69,6 +69,42 @@ body{margin:0;background:var(--bg);color:var(--fg);
   font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   -webkit-tap-highlight-color:transparent}
 #app{max-width:980px;margin:0 auto;padding:0 14px calc(24px + env(safe-area-inset-bottom))}
+/* Seitenleiste (v1.10.0) */
+#side{display:flex;flex-direction:column}
+.sbfoot{display:flex;gap:6px;margin:14px 0 4px;flex-wrap:wrap}
+.sbfoot button{flex:1;min-height:38px;padding:0 10px;font-size:.88rem;white-space:nowrap}
+.sbfoot button[data-act=theme]{flex:0 0 auto}
+.verline{font-size:.74rem;color:var(--muted);text-align:center;padding:4px 0 10px}
+.sideclose,.sidebtn{display:none}
+.sidetop h1{font-size:1.15rem;white-space:nowrap}
+#side .sidetop .sub{display:none}
+#side .sidetop{gap:6px}
+#sideScrim{display:none}
+.songs li.cur .song{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.emptymain{min-height:70vh;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);padding:20px}
+.emptymain .big{font-size:3rem;opacity:.4}
+.linkish{background:none;border:0;padding:0;min-height:0;color:var(--accent);text-decoration:underline;font:inherit;cursor:pointer}
+@media (min-width:900px){
+  #app{display:grid;grid-template-columns:330px minmax(0,1fr);max-width:none;padding:0;align-items:start}
+  #side{position:sticky;top:0;height:100vh;overflow-y:auto;border-right:1px solid var(--border);padding:0 12px;background:var(--surface);box-sizing:border-box;overscroll-behavior:contain}
+  #side .songs{flex:1}
+  #main{min-width:0;padding:0 18px calc(24px + env(safe-area-inset-bottom));max-width:1000px;width:100%;margin:0 auto;box-sizing:border-box}
+  .backbtn{display:none}
+  #side .fab{display:none}
+  #side .top{position:sticky;top:0;z-index:5;background:var(--surface)}
+}
+@media (max-width:899.98px){
+  body:not(.has-main) #main{display:none}
+  body.has-main #side{display:none}
+  body.has-main .sidebtn{display:inline-flex}
+  body.has-main.side-open #side{display:flex;position:fixed;top:0;bottom:0;left:0;width:min(88vw,360px);z-index:70;overflow-y:auto;background:var(--bg);padding:0 12px;box-shadow:4px 0 16px rgba(0,0,0,.35);box-sizing:border-box}
+  body.has-main.side-open #sideScrim{display:block;position:fixed;inset:0;z-index:65;background:rgba(0,0,0,.45)}
+  body.has-main.side-open .sideclose{display:inline-flex}
+  body.has-main #side .fab{display:none}
+}
+body.stage-on #side,body.stage-on #sideScrim{display:none!important}
+body.stage-on #app{display:block}
+body.stage-on #main{padding:0;max-width:none;margin:0}
 h1{font-size:1.35rem;margin:0;letter-spacing:.01em}
 h2{font-size:1.05rem;margin:0 0 10px}
 h3{font-size:.8rem;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
@@ -399,7 +435,7 @@ body.stage-on #app{max-width:none;padding:0}
 </style>
 </head>
 <body>
-<div id="app"></div>
+<div id="app"><aside id="side" aria-label="Songs und Listen"></aside><main id="main"></main></div><div id="sideScrim" data-act="sideClose"></div>
 <dialog id="dlg"></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -418,7 +454,7 @@ for (const C of [Map, WeakMap]) {
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.9.1';
+const APP_VERSION = '1.10.0';
 const SCHEMA = 4;   // 4 (v1.3.0): eigene Listen (lists) + Favoriten (fav) statt fester Status Setlist/To Do
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
@@ -1765,7 +1801,8 @@ const Viewer = {
       <div class="vwrap" id="vWrap"><div class="vpages"><div class="vstack" id="vStack"><canvas id="vBase"></canvas><canvas id="vInk"></canvas></div><div class="vstack vstack2" id="vStack2" hidden><canvas id="vBase2"></canvas></div></div><div class="vmsg" id="vMsg" role="status">Lade Notenblatt …</div></div>`;
     (opts.host || document.body).append(el);
     Object.assign(this, { el, song, meta, stage, ready:false, pages:1, page:1, zoom:1, tool:'view', undo:[], live:null, erased:null, pid:null, pageCv:null, ann:cleanAnn(null), unsaved:false });
-    const ff = LS.get((stage ? 'fitS:' : 'fit:') + meta.id); this.fit = ff === 'page' || ff === 'width' ? ff : 'width'; this.spreadPref = LS.get('spread') === '1'; this.pageCv2 = null;   // v1.9.1: «Lesen» + Seitenbreite als Standard (auch im Auftritt); eine Umstellung wird pro Blatt gemerkt (Auftritt separat)
+    const ff = LS.get((stage ? 'fitS:' : 'fit:') + meta.id); this.fit = ff === 'page' || ff === 'width' ? ff : 'width'; this.spreadPref = LS.get('spread') === '1'; this.pageCv2 = null;
+    const fd = LS.get('fitD:' + meta.id); this.fitSp = fd === 'width' || fd === 'page' ? fd : 'page';   // v1.10.0: Doppelseite standardmässig ganz (wie Gesangs-App), pro Blatt gemerkt   // v1.9.1: «Lesen» + Seitenbreite als Standard (auch im Auftritt); eine Umstellung wird pro Blatt gemerkt (Auftritt separat)
     const stack = this.q('#vStack'), wrap = this.q('#vWrap');
     stack.addEventListener('pointerdown', e => this.down(e));
     stack.addEventListener('pointermove', e => this.move(e));
@@ -1826,7 +1863,7 @@ const Viewer = {
     this.q('#vPos').textContent = this.ready ? (last > this.page ? this.page + '–' + last : this.page) + ' / ' + this.pages : '–';
     this.q('#vPrev').disabled = !this.ready || this.page <= 1; this.q('#vNext').disabled = !this.ready || last >= this.pages;
     const sb = this.q('#vSpread'); if (sb) { sb.classList.toggle('on', !!this.spreadPref); sb.setAttribute('aria-pressed', !!this.spreadPref); sb.disabled = this.ready && this.pages < 2; sb.setAttribute('aria-label', 'Zwei Seiten nebeneinander' + (this.spreadPref ? ' (an)' : ' (aus)')); }
-    const fb = this.q('#vFit'); fb.textContent = this.fit === 'page' ? 'Ganze Seite' : 'Seitenbreite'; fb.setAttribute('aria-label', 'Anzeige: ' + fb.textContent + ' – antippen zum Wechseln');
+    const fb = this.q('#vFit'); fb.textContent = this.curFit() === 'page' ? (this.spreadOn() ? 'Ganze Seiten' : 'Ganze Seite') : 'Seitenbreite'; fb.setAttribute('aria-label', 'Anzeige: ' + fb.textContent + ' – antippen zum Wechseln');
     this.q('#vStack').classList.toggle('draw', this.tool !== 'view');
     if (this.stage) return;
     this.el.querySelectorAll('[data-act=vTool]').forEach(b => { const on = b.dataset.tool === this.tool; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
@@ -1837,7 +1874,7 @@ const Viewer = {
   scrollableX() { const w = this.q('#vWrap'); return !!w && w.scrollWidth > w.clientWidth + 4; },
   cssWidth(aspect, spread) {
     const wrap = this.q('#vWrap'), cw = Math.max(120, spread ? (wrap.clientWidth - 12) / 2 : wrap.clientWidth), ch = Math.max(120, wrap.clientHeight);
-    let w = cw; if (this.fit === 'page') w = Math.min(w, ch / aspect);
+    let w = cw; if (this.curFit() === 'page') w = Math.min(w, ch / aspect);
     return Math.max(120, Math.round(w * this.zoom));
   },
   pixelWidth(cssW, aspect) {   // Speicherbudget wie in der Gesangs-App: auf Handy/Tablet deutlich kleiner
@@ -1871,7 +1908,7 @@ const Viewer = {
       if (this.pageCv2) { this.pageCv2.width = this.pageCv2.height = 0; this.pageCv2 = null; }
       if (sp && p2 <= this.pages && this.doc) {
         const pgB = await this.doc.getPage(p2); if (seq !== this.seq) return; const vpB = pgB.getViewport({ scale:1 }), aB = vpB.height / vpB.width;
-        const wB = this.fit === 'page' ? this.cssWidth(aB, true) : cssW, pxB = this.pixelWidth(wB, aB), offB = document.createElement('canvas'); offB.width = pxB; offB.height = Math.max(1, Math.round(pxB * aB));
+        const wB = this.curFit() === 'page' ? this.cssWidth(aB, true) : cssW, pxB = this.pixelWidth(wB, aB), offB = document.createElement('canvas'); offB.width = pxB; offB.height = Math.max(1, Math.round(pxB * aB));
         const gB = offB.getContext('2d'); gB.fillStyle = '#fff'; gB.fillRect(0, 0, offB.width, offB.height);
         const taskB = pgB.render({ canvasContext:gB, viewport:pgB.getViewport({ scale:pxB / vpB.width }) }); this.task = taskB; await taskB.promise; if (this.task === taskB) this.task = null;
         if (seq !== this.seq || !this.el) { offB.width = offB.height = 0; return; }
@@ -1957,7 +1994,12 @@ const Viewer = {
     this.commit(); this.page = n; this.bar(); this.q('#vWrap').scrollTop = 0; this.render(); return true;
   },
   setZoom(d) { this.zoom = Math.min(4, Math.max(0.5, +(this.zoom * (d > 0 ? 1.25 : 0.8)).toFixed(3))); this.render(); },
-  toggleFit() { this.fit = this.fit === 'page' ? 'width' : 'page'; this.zoom = 1; if (this.meta) LS.set((this.stage ? 'fitS:' : 'fit:') + this.meta.id, this.fit); this.bar(); this.render(); },
+  curFit() { return this.spreadOn() ? this.fitSp : this.fit; },
+  toggleFit() {
+    if (this.spreadOn()) { this.fitSp = this.fitSp === 'page' ? 'width' : 'page'; if (this.meta) LS.set('fitD:' + this.meta.id, this.fitSp); }
+    else { this.fit = this.fit === 'page' ? 'width' : 'page'; if (this.meta) LS.set((this.stage ? 'fitS:' : 'fit:') + this.meta.id, this.fit); }
+    this.zoom = 1; this.bar(); this.render();
+  },
   setTool(t) { if (!['view', 'pen', 'hl', 'eraser'].includes(t)) return; const was = this.spreadOn(); this.commit(); this.tool = t; this.bar(); if (was !== this.spreadOn()) this.render(); },
   setColor(c) { if (this.tool === 'pen' || this.tool === 'hl') { this.colors[this.tool] = c; this.bar(); } }
 };
@@ -2304,7 +2346,7 @@ const App = {
     let lastW = window.innerWidth;
     window.addEventListener('resize', debounce(() => { if (window.innerWidth === lastW) return; lastW = window.innerWidth; const s = this.current(); if (s && !this.stage && !Bass.playing) Bass.render(s); }, 300));
     window.addEventListener('resize', debounce(() => Viewer.render(), 200));
-    window.addEventListener('resize', debounce(() => { const t = $('#app .top'); if (t) document.documentElement.style.setProperty('--hh', t.offsetHeight + 'px'); }, 150));   // Notenblatt an neue Fenstergrösse/Drehung anpassen
+    window.addEventListener('resize', debounce(() => { const t = $('#main .top'); if (t) document.documentElement.style.setProperty('--hh', t.offsetHeight + 'px'); }, 150));   // Notenblatt an neue Fenstergrösse/Drehung anpassen
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Viewer.flush(); });
     window.addEventListener('pagehide', () => Viewer.flush());
     this.route();
@@ -2315,7 +2357,9 @@ const App = {
   applyTheme() { document.documentElement.dataset.theme = Store.data.settings.theme; const m = $('meta[name=theme-color]'); if (m) m.content = Store.data.settings.theme === 'light' ? '#f4f2ec' : '#121416'; },
   route() {
     const pp = $('#chordPop'); if (pp) pp.remove();
-    if (location.hash === '#/akkorde') { Viewer.close(); Bass.stop(); Metro.stop(); Player.unload(); this.songId = null; this.stage = false; document.body.classList.remove('stage-on'); UI.lexicon(); window.scrollTo(0, 0); return; }
+    document.body.classList.remove('side-open');
+    if (!$('#songList')) UI.list();
+    if (location.hash === '#/akkorde') { Viewer.close(); Bass.stop(); Metro.stop(); Player.unload(); this.songId = null; this.stage = false; document.body.classList.remove('stage-on'); document.body.classList.add('has-main'); UI.lexicon(); UI.listItems(); window.scrollTo(0, 0); return; }
     const m = location.hash.match(/^#\/(song|stage)\/(.+)$/); const id = m ? decodeURIComponent(m[2]) : null;
     const wasStage = this.stage;
     Viewer.close(); Bass.stop(); Metro.stop();
@@ -2325,8 +2369,10 @@ const App = {
     else {
       if (wasStage) { this.setWake(false); try { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch (e) {} }
       if (id && Store.get(id)) { this.songId = id; this.embedUrl = null; UI.song(); Player.load(Store.get(id)); }
-      else { Player.unload(); this.songId = null; this.setWake(false); document.title = 'Band-Trainer'; UI.list(); }
+      else { Player.unload(); this.songId = null; this.setWake(false); document.title = 'Band-Trainer'; UI.empty(); }
     }
+    document.body.classList.toggle('has-main', !!(this.stage || this.songId));
+    UI.listItems();   // aktuellen Song in der Seitenleiste markieren
     window.scrollTo(0, 0);
   },
   // Nach einem Abgleich mit Drive: Anzeige auffrischen, ohne laufende Eingaben oder Wiedergabe zu stören
@@ -2334,7 +2380,7 @@ const App = {
     this.applyTheme();
     if (this.songId && !Store.get(this.songId)) { location.hash = '#/'; toast('Dieser Song wurde auf einem anderen Gerät gelöscht.'); return; }
     if (this.stage) { if (!(Viewer.el && Viewer.alive())) UI.stage(); return; }   // ein offenes Notenblatt bleibt auf seiner Seite stehen
-    const s = this.current(); if (!s) { UI.listItems(); UI.counts(); return; }
+    const s = this.current(); UI.listItems(); UI.counts(); if (!s) return;
     if (Viewer.el && !Viewer.alive()) { Viewer.close(); toast('Dieses Blatt wurde auf einem anderen Gerät entfernt.'); }
     UI.header(); UI.chords(); UI.links(); UI.suggest(); UI.info(); UI.stems(); UI.loop(); UI.sheets();
     for (const [id, v] of [['chordsIn', s.chords], ['abcIn', s.bassAbc], ['notesIn', s.notes], ['ytUrl', s.youtubeUrl]]) { const el = $('#' + id); if (el && document.activeElement !== el && el.value !== v) { el.value = v; if (id === 'abcIn' && !Bass.playing) Bass.render(s); } }
@@ -2421,7 +2467,9 @@ const App = {
       case 'inst': Sound.setInst(el.dataset.i); $$('[data-act=inst]').forEach(b => b.classList.toggle('on', b.dataset.i === el.dataset.i)); Sound.chord([60, 64, 67], { arp:false }); break;
       case 'lexRow': { const r = el.closest('tr'); r.classList.toggle('open'); break; }
       case 'filter': this.filter = el.dataset.f; this.reorder = false; UI.list(); break;
-      case 'fav': { const x = Store.get(el.dataset.id) || song; if (!x) break; x.fav = !x.fav; Store.touch(x); if ($('#songList')) { UI.counts(); UI.listItems(); } else UI.header(); break; }
+      case 'fav': { const x = Store.get(el.dataset.id) || song; if (!x) break; x.fav = !x.fav; Store.touch(x); UI.counts(); UI.listItems(); if (App.current() === x && $('#sFav')) UI.header(); break; }
+      case 'sideOpen': document.body.classList.add('side-open'); { const q = $('#songList .cur'); if (q) q.scrollIntoView({ block:'center' }); } break;
+      case 'sideClose': document.body.classList.remove('side-open'); break;
       case 'listNew': Dialogs.listName(null); break;
       case 'listRename': { const l = Store.list(this.filter); if (l) Dialogs.listName(l); break; }
       case 'listPick': { const l = Store.list(this.filter); if (l) Dialogs.listPick(l); break; }
@@ -2674,23 +2722,32 @@ const UI = {
     el.textContent = s.t; el.className = 'syncchip ' + s.c; el.title = s.long + ' Antippen = jetzt abgleichen.';
   },
   /* ----- Songliste ----- */
+  // Ab v1.10.0: Songliste als Seitenleiste (wie Gesangs-App) – breit immer links sichtbar, am Handy eigene Seite bzw. ausklappbar (☰)
   list() {
-    $('#app').innerHTML = `
-      <header class="top">
+    $('#side').innerHTML = `
+      <header class="top sidetop">
         <div class="grow"><h1>Band-Trainer</h1><div class="sub">Keyboard · Akkorde rechts, Bass links</div></div>
         <button class="primary addtop" data-act="add" aria-label="Neuen Song hinzufügen">+ Song</button>
         <button class="syncchip" id="syncState" data-act="sync" aria-label="Abgleich mit Google Drive"></button>
-        <button class="icon ghost lexbtn" data-act="lexicon" aria-label="Akkord-Lexikon" title="Akkord-Lexikon">♫</button>
-        <button class="icon ghost" data-act="theme" aria-label="Hell/Dunkel umschalten" title="Hell/Dunkel">${ICON.theme}</button>
-        <button class="icon ghost" data-act="menu" aria-label="Menü" title="Menü">${ICON.menu}</button>
+        <button class="icon ghost sideclose" data-act="sideClose" aria-label="Seitenleiste schliessen">✕</button>
       </header>
       <input type="search" id="q" name="bt-songsuche" placeholder="Song oder Interpret suchen" value="${esc(App.query)}" aria-label="Suche" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore readonly>
       <div class="chips" role="group" aria-label="Filter" id="chipBox"></div><div class="chips sub" id="listBar"></div>
       <ul class="songs" id="songList"></ul>
+      <div class="sbfoot">
+        <button data-act="lexicon" title="Akkord-Lexikon: Töne aller Akkorde">♫ Akkord-Lexikon</button>
+        <button data-act="theme" title="Hell/Dunkel umschalten" aria-label="Hell/Dunkel">${ICON.theme}</button>
+        <button data-act="menu" title="Daten, Sicherungen, Google Drive, Spotify, Hinweise">⋯ Mehr</button>
+      </div>
+      <div class="verline" id="sideVer" title="App-Version">Band-Trainer v${APP_VERSION}</div>
       <button class="fab primary" data-act="add" aria-label="Neuen Song hinzufügen">+ Neuer Song</button>
       <input type="file" id="importFile" accept="application/json,.json" class="hidden">
       <input type="file" id="chordFile" accept="application/json,.json" class="hidden">`;
     this.counts(); this.listItems(); this.sync();
+  },
+  empty() {   // breiter Bildschirm ohne gewählten Song
+    $('#main').innerHTML = `<div class="emptymain"><div><div class="big">♪</div><p>Song links in der Liste wählen – oder <button class="linkish" data-act="add">neuen Song anlegen</button>.</p>
+      <p class="small muted">Akkord-Lexikon, Einstellungen und Daten findest du unten in der Seitenleiste («♫ Akkord-Lexikon», «⋯ Mehr»).</p></div></div>`;
   },
   counts() {
     const box = $('#chipBox'); if (!box) return;
@@ -2729,7 +2786,7 @@ const UI = {
     const pos = L ? new Map(Store.listSongs(L).map((s, i) => [s.id, i + 1])) : null;
     // Ab v1.3.0 kompakt: zwei Zeilen (Titel / Interpret) + Favoriten-Stern; Details stehen in der Song-Ansicht
     el.innerHTML = list.length ? list.map(s => `
-      <li data-id="${esc(s.id)}"><div class="songrow"><button class="song" data-act="open" data-id="${esc(s.id)}"><div>
+      <li data-id="${esc(s.id)}" class="${s.id === App.songId ? 'cur' : ''}"><div class="songrow"><button class="song" data-act="open" data-id="${esc(s.id)}"><div>
         <div class="t">${pos ? `<span class="n">${pos.get(s.id)}.</span>` : ''}${esc(s.title)}${s.isDemo ? ' <span class="badge demo">Demo</span>' : ''}</div><div class="a">${esc(s.artist)}</div>
         </div></button><button class="favb ${s.fav ? 'on' : ''}" data-act="fav" data-id="${esc(s.id)}" aria-pressed="${s.fav}" aria-label="${s.fav ? 'Favorit entfernen' : 'Als Favorit markieren'}">${s.fav ? '★' : '☆'}</button></div></li>`).join('')
       : `<li class="empty">${App.filter === 'fav' && !q ? 'Noch keine Favoriten – tippe beim Song auf ☆.' : L && !q ? 'Die Liste ist leer – «Songs wählen».' : 'Keine Songs gefunden.'}</li>`;
@@ -2738,9 +2795,10 @@ const UI = {
   /* ----- Songansicht ----- */
   song() {
     const s = App.current(), st = Store.data.settings;
-    $('#app').innerHTML = `
+    $('#main').innerHTML = `
       <header class="top">
-        <button class="icon ghost" data-act="back" aria-label="Zurück zur Liste">${ICON.back}</button>
+        <button class="icon ghost sidebtn" data-act="sideOpen" aria-label="Songliste und Menü" title="Songliste und Menü">☰</button>
+        <button class="icon ghost backbtn" data-act="back" aria-label="Zurück zur Liste">${ICON.back}</button>
         <div class="grow"><h1 id="sTitle"></h1><div class="sub" id="sSub"></div></div>
         <button class="favb" id="sFav" data-act="fav" aria-label="Favorit"></button>
         <button class="ghost" data-act="edit">Bearbeiten</button>
@@ -2928,7 +2986,7 @@ const UI = {
           </div>
         </div>
       </div>`;
-    const hh = () => { const t = $('#app .top'); if (t) document.documentElement.style.setProperty('--hh', t.offsetHeight + 'px'); };
+    const hh = () => { const t = $('#main .top'); if (t) document.documentElement.style.setProperty('--hh', t.offsetHeight + 'px'); };
     hh(); requestAnimationFrame(hh);
     this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.spotify(); this.suggest(); this.info(); this.transport(); this.marks(); this.grid(); this.shift(); this.sound(); this.sheets();
     const vd = $('#vDet'); if (vd) vd.addEventListener('toggle', () => this.voicings());
@@ -3073,7 +3131,7 @@ const UI = {
   lexicon() {
     const roots = ['C','C#','Db','D','Eb','E','F','F#','Gb','G','Ab','A','Bb','B'], r = App.lexRoot || 'C', disp = x => x.replace('#', '♯').replace('b', '♭');
     document.title = 'Akkord-Lexikon – Band-Trainer';
-    $('#app').innerHTML = `<header class="top"><button class="icon ghost" data-act="back" aria-label="Zurück">${ICON.back}</button>
+    $('#main').innerHTML = `<header class="top"><button class="icon ghost sidebtn" data-act="sideOpen" aria-label="Songliste und Menü">☰</button><button class="icon ghost backbtn" data-act="back" aria-label="Zurück">${ICON.back}</button>
         <div class="grow"><h1>Akkord-Lexikon</h1><div class="sub">Welche Töne stecken in welchem Akkord?</div></div></header>
       <div class="card"><h3>Grundton</h3><div class="lexroots">${roots.map(x => `<button class="${x === r ? 'on' : ''}" data-act="lexRoot" data-r="${x}">${disp(x)}</button>`).join('')}</div>
         <h3 style="margin-top:12px">Klang</h3><div class="lexroots">${Object.entries(SND_INST).map(([k, v]) => `<button class="${k === Sound.inst() ? 'on' : ''}" data-act="inst" data-i="${k}">${v}</button>`).join('')}</div>
@@ -3152,7 +3210,7 @@ const UI = {
     const shs = liveSheets(s), sh = shs.find(x => x.id === s.stageSheet) || null, unchecked = !s.isDemo && s.chords.trim() && s.chordStatus !== 'checked';
     document.title = s.title + ' – Auftritt';
     Viewer.close();
-    $('#app').innerHTML = `<div class="stage ${sh ? 'has-sheet' : ''}" id="stage">
+    $('#main').innerHTML = `<div class="stage ${sh ? 'has-sheet' : ''}" id="stage">
       <div class="shead">
         <button class="icon ghost" data-act="stageExit" aria-label="Auftrittsmodus beenden">✕</button>
         <div class="grow"><h1>${esc(s.title)}</h1></div>

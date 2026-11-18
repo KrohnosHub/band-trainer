@@ -42,6 +42,9 @@ module.exports = async () => {
       await openSheet(pg);
       await pg.click('#vSpread'); await pg.waitForFunction(() => !document.querySelector('#vStack2').hidden);
       eq(await pg.locator('#vPos').innerText(), '1–2 / 3');
+      eq(await pg.evaluate(() => [Viewer.curFit(), document.querySelector('#vFit').textContent]), ['page', 'Ganze Seiten'], 'Doppelseite standardmässig ganz');
+      ok(await pg.evaluate(() => document.querySelector('#vStack').getBoundingClientRect().height <= document.querySelector('#vWrap').clientHeight + 1), 'beide Seiten ganz sichtbar');
+      await pg.click('#vFit'); await pg.waitForTimeout(300); eq(await pg.evaluate(() => Viewer.curFit()), 'width');
       const r = await pg.evaluate(() => { const a = document.querySelector('#vStack').getBoundingClientRect(), b2 = document.querySelector('#vStack2').getBoundingClientRect(); return [Math.abs(a.top - b2.top) < 2, b2.left > a.right, b2.right <= innerWidth + 1]; });
       eq(r, [true, true, true], 'nebeneinander, passt in die Breite');
       await pg.click('#vNext'); await pg.waitForFunction(() => Viewer.page === 3 && document.querySelector('#vStack2').hidden); eq(await pg.locator('#vPos').innerText(), '3 / 3');

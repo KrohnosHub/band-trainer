@@ -94,7 +94,7 @@ async function open(b, vp, { drive, yt, sp, cfg, sw = false, init, hash = '', lo
     try { Object.defineProperty(navigator, 'wakeLock', { configurable: true, value: { request: async () => { window.__wake.req++; return { release: async () => { window.__wake.rel++; }, addEventListener() {} }; } } }); } catch (e) {}
   }, cfg);
   if (init) await pg.addInitScript(init);
-  await pg.goto(BASE + hash); await pg.waitForSelector('#app > *');
+  await pg.goto(BASE + hash); await pg.waitForSelector('#songList', { state: 'attached' });
   pg.settle = async (ms = 8000) => { await pg.waitForFunction(() => Cloud.syncing === 0 && !Cloud.busy, null, { timeout: ms }); };
   pg.syncNow = async () => { await pg.evaluate(() => Cloud.syncAll(true)); await pg.settle(); };
   return pg;

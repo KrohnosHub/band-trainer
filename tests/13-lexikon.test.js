@@ -13,7 +13,7 @@ module.exports = async () => {
     });
     await test('Lexikon: aus der Liste erreichbar, alle Akkordtypen, Grundton wechseln, Klaviatur per Antippen, zurück', async () => {
       const pg = await open(b, { width: 390, height: 844 });
-      await pg.click('header [data-act=lexicon]'); await pg.waitForSelector('table.lex');
+      await pg.click('.sbfoot [data-act=lexicon]'); await pg.waitForSelector('table.lex');
       eq(await pg.evaluate(() => document.querySelectorAll('table.lex tr[data-act=lexRow]').length), await pg.evaluate(() => CHORD_TYPES.length));
       const row = name => pg.evaluate(n => { const tr = [...document.querySelectorAll('table.lex tr[data-act=lexRow]')].find(t => t.querySelector('.small').textContent === n); return tr && [tr.querySelector('b').textContent, tr.querySelector('.ln').textContent]; }, name);
       eq(await row('Dur'), ['C', 'C E G']); eq(await row('vermindert'), ['Cdim', 'C E♭ G♭']); eq(await row('halbvermindert'), ['Cm7b5', 'C E♭ G♭ B♭']);
@@ -21,7 +21,7 @@ module.exports = async () => {
       ok(!(await pg.locator('table.lex tr.lexk').first().isVisible()), 'Klaviatur zu'); await pg.click('table.lex tr[data-act=lexRow] >> nth=0');
       ok(await pg.locator('table.lex tr.lexk').first().isVisible(), 'Klaviatur offen'); eq(await pg.locator('table.lex tr.lexk >> nth=0 >> .k.on').count(), 3);
       eq(await pg.evaluate(() => document.documentElement.scrollWidth - innerWidth <= 0), true, 'nichts läuft seitlich über');
-      await pg.click('[data-act=back]'); await pg.waitForSelector('#songList');
+      await pg.evaluate(() => { location.hash = '#/'; }); await pg.waitForSelector('#songList');
       eq(pg.errs, []); eq(pg.csp, []); await pg.context().close();
     });
     await test('Akkord-Kacheln: Tooltip mit Tönen (Maus), Antippen zeigt Töne + Klaviatur, auch transponiert und bei Folgen ohne Taktstriche; zweiter Tipp schliesst', async () => {
