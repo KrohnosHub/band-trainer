@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-0LxkOvFoksne6hfIQzx6F6r2n+E6I32wr7sD5xYqzSE='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-sM3uHklJrA171ZUBNTWa3cLRmPFmfbOqAiQ+H5ktLxw='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -382,6 +382,11 @@ body.stage-on #app{max-width:none;padding:0}
 .vbar .col.on{border-color:var(--fg);box-shadow:0 0 0 2px var(--bg) inset}
 .vwrap{flex:1;min-height:0;overflow:auto;background:#3a3d42;text-align:center;position:relative;overscroll-behavior:contain}
 .vstack{position:relative;display:inline-block;vertical-align:top;background:#fff;touch-action:pan-x pan-y}
+.vpages{display:flex;gap:12px;justify-content:center;align-items:flex-start;width:max-content;min-width:100%}
+.vwrap:not(.spread) .vpages{display:block;width:auto}
+.vstack2 canvas{width:100%;height:100%;display:block}
+.vstack[hidden]{display:none}
+#vSpread.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 .vstack.draw{touch-action:none;cursor:crosshair}
 .vstack canvas{position:absolute;left:0;top:0;width:100%;height:100%}
 .vmsg{position:absolute;left:0;right:0;top:30%;color:#fff;padding:0 16px}
@@ -413,7 +418,7 @@ for (const C of [Map, WeakMap]) {
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.8.2';
+const APP_VERSION = '1.9.0';
 const SCHEMA = 4;   // 4 (v1.3.0): eigene Listen (lists) + Favoriten (fav) statt fester Status Setlist/To Do
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
@@ -1751,15 +1756,16 @@ const Viewer = {
         <button data-act="vPage" data-d="-1" id="vPrev" aria-label="Vorherige Seite">‹</button><span class="vpos" id="vPos">–</span><button data-act="vPage" data-d="1" id="vNext" aria-label="Nächste Seite">›</button>
         <button data-act="vZoom" data-d="-1" aria-label="Verkleinern">−</button><button data-act="vZoom" data-d="1" aria-label="Vergrössern">+</button>
         <button data-act="vFit" id="vFit" title="Zwischen Seitenbreite und ganzer Seite wechseln"></button>
+        <button data-act="vSpread" id="vSpread" title="Zwei Seiten nebeneinander (im Querformat; beim Zeichnen automatisch eine Seite)">▯▯</button>
         ${stage ? '' : `<div class="vtools" role="group" aria-label="Werkzeuge">
           <button data-act="vTool" data-tool="view" title="Lesen: Finger/Maus scrollt und blättert">Lesen</button><button data-act="vTool" data-tool="pen">Stift</button><button data-act="vTool" data-tool="hl">Marker</button><button data-act="vTool" data-tool="eraser" title="Radierer: löscht ganze Striche">Radierer</button>
           <span class="vtools" id="vCols"></span>
           <button data-act="vUndo" id="vUndo" aria-label="Rückgängig" title="Rückgängig">↶</button></div>`}
       </div>
-      <div class="vwrap" id="vWrap"><div class="vstack" id="vStack"><canvas id="vBase"></canvas><canvas id="vInk"></canvas></div><div class="vmsg" id="vMsg" role="status">Lade Notenblatt …</div></div>`;
+      <div class="vwrap" id="vWrap"><div class="vpages"><div class="vstack" id="vStack"><canvas id="vBase"></canvas><canvas id="vInk"></canvas></div><div class="vstack vstack2" id="vStack2" hidden><canvas id="vBase2"></canvas></div></div><div class="vmsg" id="vMsg" role="status">Lade Notenblatt …</div></div>`;
     (opts.host || document.body).append(el);
     Object.assign(this, { el, song, meta, stage, ready:false, pages:1, page:1, zoom:1, tool:'view', undo:[], live:null, erased:null, pid:null, pageCv:null, ann:cleanAnn(null), unsaved:false });
-    const f = LS.get(stage ? 'fitStage' : 'fit'); this.fit = f === 'page' || f === 'width' ? f : (stage ? 'page' : 'width');
+    this.fit = stage ? 'page' : 'width'; this.spreadPref = LS.get('spread') === '1'; this.pageCv2 = null;   // v1.9.0: immer «Lesen» + Seitenbreite (Auftrittsmodus: ganze Seite, damit nichts gescrollt werden muss); 2-Seiten-Wunsch gemerkt
     const stack = this.q('#vStack'), wrap = this.q('#vWrap');
     stack.addEventListener('pointerdown', e => this.down(e));
     stack.addEventListener('pointermove', e => this.move(e));
@@ -1810,10 +1816,16 @@ const Viewer = {
     const s = this.song && Store.get(this.song.id), m = s && liveSheets(s).find(x => x.id === this.meta.id);
     return !!m && (!this.stage || s.stageSheet === m.id);
   },
+  // Zwei Seiten nebeneinander (wie Gesangs-App): nur im Querformat, mit mehr als einer Seite und im Lesemodus; Paare 1–2, 3–4 …
+  spreadOn() { const w = this.q('#vWrap'); return !!(this.spreadPref && this.ready && this.pages > 1 && this.tool === 'view' && w && w.clientWidth > w.clientHeight * 1.05); },
+  spreadStart(p) { return p - ((p - 1) % 2); },
+  toggleSpread() { this.spreadPref = !this.spreadPref; LS.set('spread', this.spreadPref ? '1' : '0'); this.zoom = 1; this.bar(); this.render(); if (this.spreadPref && !this.spreadOn() && this.pages > 1) toast(this.tool !== 'view' ? 'Zwei Seiten nur im Lesemodus.' : 'Zwei Seiten erscheinen im Querformat (Gerät drehen oder Fenster breiter ziehen).'); },
   bar() {
     if (!this.el) return;
-    this.q('#vPos').textContent = this.ready ? this.page + ' / ' + this.pages : '–';
-    this.q('#vPrev').disabled = !this.ready || this.page <= 1; this.q('#vNext').disabled = !this.ready || this.page >= this.pages;
+    const sp = this.spreadOn(), last = sp ? Math.min(this.pages, this.page + 1) : this.page;
+    this.q('#vPos').textContent = this.ready ? (last > this.page ? this.page + '–' + last : this.page) + ' / ' + this.pages : '–';
+    this.q('#vPrev').disabled = !this.ready || this.page <= 1; this.q('#vNext').disabled = !this.ready || last >= this.pages;
+    const sb = this.q('#vSpread'); if (sb) { sb.classList.toggle('on', !!this.spreadPref); sb.setAttribute('aria-pressed', !!this.spreadPref); sb.disabled = this.ready && this.pages < 2; sb.setAttribute('aria-label', 'Zwei Seiten nebeneinander' + (this.spreadPref ? ' (an)' : ' (aus)')); }
     const fb = this.q('#vFit'); fb.textContent = this.fit === 'page' ? 'Ganze Seite' : 'Seitenbreite'; fb.setAttribute('aria-label', 'Anzeige: ' + fb.textContent + ' – antippen zum Wechseln');
     this.q('#vStack').classList.toggle('draw', this.tool !== 'view');
     if (this.stage) return;
@@ -1823,8 +1835,8 @@ const Viewer = {
     this.q('#vUndo').disabled = !this.undo.length;
   },
   scrollableX() { const w = this.q('#vWrap'); return !!w && w.scrollWidth > w.clientWidth + 4; },
-  cssWidth(aspect) {
-    const wrap = this.q('#vWrap'), cw = Math.max(120, wrap.clientWidth), ch = Math.max(120, wrap.clientHeight);
+  cssWidth(aspect, spread) {
+    const wrap = this.q('#vWrap'), cw = Math.max(120, spread ? (wrap.clientWidth - 12) / 2 : wrap.clientWidth), ch = Math.max(120, wrap.clientHeight);
     let w = cw; if (this.fit === 'page') w = Math.min(w, ch / aspect);
     return Math.max(120, Math.round(w * this.zoom));
   },
@@ -1840,10 +1852,11 @@ const Viewer = {
     const seq = ++this.seq;
     try { if (this.task) this.task.cancel(); } catch (e) {} this.task = null;
     try {
+      const sp = this.spreadOn(); if (sp) this.page = this.spreadStart(this.page);
       let aspect, pg = null, vp1 = null;
       if (this.doc) { pg = await this.doc.getPage(this.page); if (seq !== this.seq) return; vp1 = pg.getViewport({ scale:1 }); aspect = vp1.height / vp1.width; }
       else aspect = this.img.naturalHeight / this.img.naturalWidth;
-      const cssW = this.cssWidth(aspect), px = this.pixelWidth(cssW, aspect);
+      const cssW = this.cssWidth(aspect, sp), px = this.pixelWidth(cssW, aspect);
       const off = document.createElement('canvas'); off.width = px; off.height = Math.max(1, Math.round(px * aspect));
       const g = off.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, off.width, off.height);
       if (pg) { const task = pg.render({ canvasContext:g, viewport:pg.getViewport({ scale:px / vp1.width }) }); this.task = task; await task.promise; if (this.task === task) this.task = null; }
@@ -1853,7 +1866,19 @@ const Viewer = {
       this.pageCv = off;
       const stack = this.q('#vStack'); stack.style.width = cssW + 'px'; stack.style.height = Math.round(cssW * aspect) + 'px';
       for (const id of ['#vBase', '#vInk']) { const c = this.q(id); c.width = off.width; c.height = off.height; }
-      this.paint(); this.el.dataset.page = String(this.page);
+      // zweite Seite (nur Anzeige inkl. Notizen – gezeichnet wird immer einseitig)
+      const s2 = this.q('#vStack2'), p2 = this.page + 1;
+      if (this.pageCv2) { this.pageCv2.width = this.pageCv2.height = 0; this.pageCv2 = null; }
+      if (sp && p2 <= this.pages && this.doc) {
+        const pgB = await this.doc.getPage(p2); if (seq !== this.seq) return; const vpB = pgB.getViewport({ scale:1 }), aB = vpB.height / vpB.width;
+        const wB = this.fit === 'page' ? this.cssWidth(aB, true) : cssW, pxB = this.pixelWidth(wB, aB), offB = document.createElement('canvas'); offB.width = pxB; offB.height = Math.max(1, Math.round(pxB * aB));
+        const gB = offB.getContext('2d'); gB.fillStyle = '#fff'; gB.fillRect(0, 0, offB.width, offB.height);
+        const taskB = pgB.render({ canvasContext:gB, viewport:pgB.getViewport({ scale:pxB / vpB.width }) }); this.task = taskB; await taskB.promise; if (this.task === taskB) this.task = null;
+        if (seq !== this.seq || !this.el) { offB.width = offB.height = 0; return; }
+        this.pageCv2 = offB; s2.style.width = wB + 'px'; s2.style.height = Math.round(wB * aB) + 'px'; const c2 = this.q('#vBase2'); c2.width = offB.width; c2.height = offB.height; s2.hidden = false;
+      } else { s2.hidden = true; const c2 = this.q('#vBase2'); c2.width = c2.height = 0; }
+      this.q('#vWrap').classList.toggle('spread', !s2.hidden);
+      this.paint(); this.el.dataset.page = String(this.page); this.bar();
     } catch (e) {
       if (seq !== this.seq || (e && e.name === 'RenderingCancelledException')) return;
       console.error(e); if (this.el) this.q('#vMsg').textContent = 'Seite kann nicht dargestellt werden: ' + (e && e.message || e);
@@ -1867,6 +1892,12 @@ const Viewer = {
     b.globalCompositeOperation = 'source-over'; b.clearRect(0, 0, W, H); b.drawImage(this.pageCv, 0, 0);
     if (hls.length || liveHl) { b.globalCompositeOperation = 'multiply'; hls.forEach(o => drawStroke(b, o, W)); if (liveHl) drawStroke(b, this.live, W); b.globalCompositeOperation = 'source-over'; }
     i.clearRect(0, 0, W, H); objs.forEach(o => { if (!o.hl) drawStroke(i, o, W); }); if (this.live && !liveHl) drawStroke(i, this.live, W);
+    const c2 = this.q('#vBase2');
+    if (this.pageCv2 && c2 && c2.width) {   // zweite Seite: Blatt, Marker und Stift auf einer Ebene
+      const g = c2.getContext('2d'), W2 = c2.width, o2 = this.ann.pages[String(this.page + 1)] || [];
+      g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W2, c2.height); g.drawImage(this.pageCv2, 0, 0);
+      g.globalCompositeOperation = 'multiply'; o2.filter(o => o.hl).forEach(o => drawStroke(g, o, W2)); g.globalCompositeOperation = 'source-over'; o2.filter(o => !o.hl).forEach(o => drawStroke(g, o, W2));
+    }
   },
   requestPaint() { cancelAnimationFrame(this.raf); this.raf = requestAnimationFrame(() => this.paint()); },
   pt(e) { const r = this.q('#vInk').getBoundingClientRect(), w = r.width || 1; return [r5((e.clientX - r.left) / w), r5((e.clientY - r.top) / w)]; },
@@ -1921,12 +1952,13 @@ const Viewer = {
     Sheets.loadAnn(this.song, id).then(a => { if (this.el && this.meta && this.meta.id === id) { this.ann = a; this.undo = []; this.paint(); this.bar(); } });
   },
   go(d) {
-    const n = this.page + d; if (!this.el || !this.ready || n < 1 || n > this.pages) return false;
+    const sp = this.spreadOn(); let n = this.page + d * (sp ? 2 : 1); if (sp && n < 1 && this.page > 1) n = 1;
+    if (!this.el || !this.ready || n < 1 || n > this.pages) return false;
     this.commit(); this.page = n; this.bar(); this.q('#vWrap').scrollTop = 0; this.render(); return true;
   },
   setZoom(d) { this.zoom = Math.min(4, Math.max(0.5, +(this.zoom * (d > 0 ? 1.25 : 0.8)).toFixed(3))); this.render(); },
-  toggleFit() { this.fit = this.fit === 'page' ? 'width' : 'page'; this.zoom = 1; LS.set(this.stage ? 'fitStage' : 'fit', this.fit); this.bar(); this.render(); },
-  setTool(t) { if (!['view', 'pen', 'hl', 'eraser'].includes(t)) return; this.commit(); this.tool = t; this.bar(); },
+  toggleFit() { this.fit = this.fit === 'page' ? 'width' : 'page'; this.zoom = 1; this.bar(); this.render(); },
+  setTool(t) { if (!['view', 'pen', 'hl', 'eraser'].includes(t)) return; const was = this.spreadOn(); this.commit(); this.tool = t; this.bar(); if (was !== this.spreadOn()) this.render(); },
   setColor(c) { if (this.tool === 'pen' || this.tool === 'hl') { this.colors[this.tool] = c; this.bar(); } }
 };
 
@@ -2416,6 +2448,7 @@ const App = {
       case 'vPage': Viewer.go(Number(el.dataset.d)); break;
       case 'vZoom': Viewer.setZoom(Number(el.dataset.d)); break;
       case 'vFit': Viewer.toggleFit(); break;
+      case 'vSpread': Viewer.toggleSpread(); break;
       case 'vTool': Viewer.setTool(el.dataset.tool); break;
       case 'vColor': Viewer.setColor(el.dataset.c); break;
       case 'vUndo': Viewer.undoLast(); break;

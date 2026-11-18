@@ -112,6 +112,10 @@ Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): e
 
 ## Änderungslog
 
+### v1.9.0 – Notenblätter: Seitenbreite als Standard, Zwei-Seiten-Ansicht
+- Hochgeladene Blätter öffnen immer im Modus «Lesen» und in **Seitenbreite** (vorher wurde die zuletzt gewählte Ansicht gemerkt). Im Auftrittsmodus weiterhin ganze Seite, damit beim Spielen nichts gescrollt werden muss. Umschalten wie bisher per Knopf.
+- **Zwei Seiten nebeneinander** (Knopf ▯▯, wie in der Gesangs-App): im Querformat (Tablet quer, Desktop) Seiten paarweise 1–2, 3–4 …; Blättern springt um zwei Seiten, Notizen sind auf beiden Seiten sichtbar. Beim Zeichnen (Stift/Marker/Radierer) automatisch einseitig. Die Einstellung wird gemerkt und gilt auch im Auftrittsmodus.
+
 ### v1.8.2 – Akkorde auf Tablet und Desktop kleiner
 - Standardgrösse der Akkorde in der Song-Ansicht und im Auftrittsmodus ab 600 px Breite um zwei A−-Stufen verkleinert (×0,7). Handy unverändert (v1.8.1); A−/A+ wie bisher.
 
