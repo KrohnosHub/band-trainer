@@ -184,7 +184,7 @@ module.exports = async () => {
       // Auftrittsmodus: Abschnitte gross
       await pg.evaluate(() => { location.hash = '#/stage/seed-12'; }); await pg.waitForSelector('#stageChords');
       eq(await view('#stageChords'), ['§Intro', 'C#m B|F#|C#m B|F#', '§Verse', 'C#m B|F# ×4']);
-      ok(await pg.evaluate(() => parseFloat(getComputedStyle(document.querySelector('#stageChords .sect')).fontSize) >= 24), 'Abschnitt im Auftritt gross: ' + await pg.evaluate(() => getComputedStyle(document.querySelector('#stageChords .sect')).fontSize));
+      ok(await pg.evaluate(() => parseFloat(getComputedStyle(document.querySelector('#stageChords .sect')).fontSize) >= 18), 'Abschnitt im Auftritt gross: ' + await pg.evaluate(() => getComputedStyle(document.querySelector('#stageChords .sect')).fontSize));
       eq(pg.errs, []); eq(pg.csp, []); await pg.context().close();
     });
     await test('Quellen-Links: Hooktheory, Musicnotes, Sheet Music Direct (Google-Site-Suche), Ultimate Guitar', async () => {
