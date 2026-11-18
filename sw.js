@@ -1,6 +1,6 @@
 // Service Worker des Band-Trainers – hält Programm, abcjs und pdf.js (Notenblätter) offline bereit.
 // Songs liegen in localStorage, Audiodateien und Notenblätter in IndexedDB (nicht hier).
-const VERSION = '1.8.1-7ec52d9e';
+const VERSION = '1.8.2-02606cb4';
 const CACHE = 'band-trainer-' + VERSION;
 // vendor/ und icons/ ändern sich selten: eigener Cache, dessen Name nur wechselt, wenn sich der Inhalt
 // dieser Dateien ändert (Hash von tools/finalize.py) – sie werden nicht bei jeder Version neu geladen.

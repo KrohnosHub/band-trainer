@@ -112,6 +112,9 @@ Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): e
 
 ## Änderungslog
 
+### v1.8.2 – Akkorde auf Tablet und Desktop kleiner
+- Standardgrösse der Akkorde in der Song-Ansicht und im Auftrittsmodus ab 600 px Breite um zwei A−-Stufen verkleinert (×0,7). Handy unverändert (v1.8.1); A−/A+ wie bisher.
+
 ### v1.8.1 – Akkorde am Handy kompakter
 - In der Akkordansicht und im Auftrittsmodus sind Schrift, Kacheln, Abstände und Abschnittstitel unter 600 px Breite deutlich kleiner (Auftrittsmodus ca. ⅓ kleiner). Mit A−/A+ lässt sich weiter verkleinern (bis 50 %) oder vergrössern.
 

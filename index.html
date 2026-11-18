@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-rF5eGSoUPLRUizLVzNNPph7gszDOeZPfhLmgjkn56Yc='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-0LxkOvFoksne6hfIQzx6F6r2n+E6I32wr7sD5xYqzSE='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -138,7 +138,7 @@ label.chk{display:inline-flex;align-items:center;gap:8px;min-height:var(--tap);c
 .tabs button{flex:1;border:0;background:transparent;border-radius:10px;padding:0 6px;min-width:0}
 .tabs button.on{background:var(--accent);color:var(--accent-fg);font-weight:650}
 
-.chordview{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:calc(1.15rem * var(--cs,1));line-height:1.25}
+.chordview{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:calc(.8rem * var(--cs,1));line-height:1.25}   /* v1.8.2: Tablet/Desktop Standard = früher 2× A− (×0,7) */
 .chordview .sect{font-family:system-ui,sans-serif;font-size:.6em;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:14px 0 6px}
 .chordview .sect:first-child{margin-top:0}
 .chordview .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px;flex:1;min-width:0}
@@ -202,7 +202,7 @@ dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;fl
 .notice{border-left:3px solid var(--warn);padding:8px 12px;background:var(--surface2);border-radius:0 10px 10px 0;margin-bottom:12px;font-size:.92rem}
 
 @media (min-width:760px){
-  .chordview{font-size:calc(1.4rem * var(--cs,1))}
+  .chordview{font-size:calc(.98rem * var(--cs,1))}
   .transport .rows{display:grid;grid-template-columns:1.2fr 1fr;gap:0 18px;align-items:center}
   .transport .extra{display:block}
   #bMore{display:none}
@@ -335,12 +335,12 @@ body.stage-on #app{max-width:none;padding:0}
 .stage .ssub{color:var(--muted);font-size:.95rem;margin-top:4px}
 .stage .spos{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .stage .sbody{flex:1;padding:12px 0;overflow:auto}
-.stage .chordview{font-size:calc(1.9rem * var(--cs,1))}
+.stage .chordview{font-size:calc(1.33rem * var(--cs,1))}
 .stage .snotes{white-space:pre-wrap;color:var(--muted);margin-top:14px;font-size:1rem}
 .stage .snav{display:flex;gap:8px}
 .stage .snav button{flex:1;min-height:60px;white-space:normal;line-height:1.2;overflow:hidden}
 .stage .snav .nx{flex:2}
-@media (min-width:760px){ .stage .chordview{font-size:calc(2.6rem * var(--cs,1))} .stage .shead h1{font-size:1.9rem} }
+@media (min-width:760px){ .stage .chordview{font-size:calc(1.82rem * var(--cs,1))} .stage .shead h1{font-size:1.9rem} }
 /* ----- v1.1.0: Abschnitte im Akkordraster, Akkord-Status, Notenblätter (PDF/Bild) mit Freihand-Notizen, Akkord-Import ----- */
 .chordview .sect{font-size:.62em;color:var(--accent);font-weight:700;border-left:3px solid var(--accent);padding-left:.5em;margin:16px 0 6px}
 .chordview .barrow{display:flex;gap:6px;align-items:center;margin-bottom:6px}
@@ -413,7 +413,7 @@ for (const C of [Map, WeakMap]) {
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.8.1';
+const APP_VERSION = '1.8.2';
 const SCHEMA = 4;   // 4 (v1.3.0): eigene Listen (lists) + Favoriten (fav) statt fester Status Setlist/To Do
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
