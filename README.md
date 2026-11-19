@@ -112,6 +112,11 @@ Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): e
 
 ## Änderungslog
 
+### v1.12.0 – Drum-Groove, Ablaufplan, Probennotizen
+- **Drum-Groove** (Player → «Tempo»): synthetisches Schlagzeug im Songtempo zum Üben der linken Hand auf die Bassdrum – Rock (Achtel), Rock treibend, Ballade (Halftime), Blues-Shuffle, Country (Train-Beat), Four-on-the-Floor, Soul/Funk; Stil pro Song gemerkt, eigene Lautstärke. Folgt dem Takt-Raster, wenn eine Aufnahme mit Raster läuft; sonst frei nach BPM × Tempo %.
+- **Ablauf** (Tab «Noten»): Songteile in Reihenfolge mit Takten, Dynamik (leise/mittel/voll), Rolle der rechten Hand (Akkorde, Fläche, Stabs, Hook/Riff, Fills, Solo, Pause) und Notiz; dazu «Einzählen» und «Schluss». «Aus Akkordblatt» übernimmt die Abschnitte. Mit Takt-Raster läuft das Akkordraster dem Ablauf nach (aktueller Teil markiert). Im Auftrittsmodus als farbige Leiste sichtbar.
+- **Probennotizen** (Tab «Info»): datierte Notizen pro Song, abhakbar; im Auftrittsmodus mit «✎» direkt notieren (Zahl = offene Notizen). In geöffneten Listen zeigt ✎n offene Punkte.
+
 ### v1.11.0 – Seitenleiste wie Gesangs-App: fixierte Fusszeile, Reiter, Filter, kompakte Einträge
 - **Fusszeile fixiert:** «♫ Akkord-Lexikon», Hell/Dunkel, «⋯ Mehr» und die Version stehen immer unten; nur die Song-Einträge scrollen.
 - **Reiter «Songs» / «Listen»:** Songs mit Suche und Filterzeile – Sortierung (Titel A–Z, Interpret A–Z, zuletzt geändert, gemerkt), Interpret-Filter, ★ nur Favoriten. Listen als Übersicht (Name, Anzahl) mit «+ Neue Liste»; in einer Liste «‹ Listen» zurück und die Werkzeuge (Reihenfolge, Songs wählen, Teilen/PDF, Umbenennen, Löschen, ▶ Auftritt).

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-50jQObO8VWzCAKBBae/kl+WLHGtIvC61QMDLovLcIIE='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-aeoxyNKFe+0fo2TohH4bykWmcEhTSmBFAoBa3sHwVV0='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -340,6 +340,23 @@ table.lex tr.lexk td{border-top:0;padding-top:0}
   #printArea .chordview{font-size:13pt} #printArea .chordview .bar,#printArea .chordview .fc{background:#eee;color:#000}
   #printArea .chordview .sect{color:#444}
 }
+.formlist{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.frow{display:grid;grid-template-columns:22px minmax(90px,1.2fr) 64px 84px minmax(90px,1fr) minmax(80px,1.4fr) auto;gap:6px;align-items:center;padding:4px;border-radius:8px}
+.frow.cur{background:color-mix(in srgb, var(--accent) 22%, transparent)}
+.frow .fn{color:var(--muted);font-size:.8rem;text-align:right}
+.frow input,.frow select{min-height:34px;padding:4px 6px;font-size:.84rem;margin:0;min-width:0}
+.frow .fbtn{display:flex}.frow .fbtn .icon{min-width:30px;width:30px;min-height:30px}
+.fdyn.d-leise{color:#6fa8dc}.fdyn.d-mittel{color:var(--accent)}.fdyn.d-voll{color:#e06666}
+@media (max-width:700px){ .frow{grid-template-columns:22px 1fr 60px 1fr;grid-auto-rows:auto} .frow .fnote{grid-column:2 / 4} .frow .fbtn{grid-column:4;justify-content:flex-end} .frow select[data-k=role]{grid-column:2 / 4} .frow .fdyn{grid-column:4;grid-row:1 / 2} }
+.rn{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--border)}.rn:first-child{border-top:0}
+.rn.done .grow>div:first-child{text-decoration:line-through;color:var(--muted)}
+.rnb{font-size:.7rem;color:var(--warn);font-weight:600;margin-left:4px}
+.scount{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.92rem;color:var(--muted);margin:0 0 6px}.scount b{color:var(--fg)}
+.sform{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:0 0 10px}
+.fc2{display:inline-flex;align-items:baseline;gap:4px;padding:3px 8px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);font-size:.86rem}
+.fc2 i{font-style:normal;color:var(--muted);font-size:.75rem}.fc2 em{font-style:normal;color:var(--accent);font-size:.75rem}
+.fc2.d-leise{border-color:#6fa8dc}.fc2.d-voll{border-color:#e06666;box-shadow:inset 0 -2px 0 #e06666}.fc2.d-mittel{border-color:var(--accent)}
+.farr{color:var(--muted)}
 .vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .vc{background:var(--surface2);border-radius:10px;padding:6px 8px}
 .vn{font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
@@ -489,7 +506,7 @@ for (const C of [Map, WeakMap]) {
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.11.0';
+const APP_VERSION = '1.12.0';
 const SCHEMA = 4;   // 4 (v1.3.0): eigene Listen (lists) + Favoriten (fav) statt fester Status Setlist/To Do
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
@@ -607,7 +624,11 @@ function newSong(p = {}) {
     loop:{ a:null, b:null },
     grid:{ offset:null, beats:4 },   // Takt-Raster (v1.4.0): Zeitpunkt der ersten «1» im Audio (s) + Schläge pro Takt; Tempo = BPM
     sound:{ split:'', left:'', right:'', drawbars:'', notes:'' },
-    audioShift:0,            // Tonhöhe des Playbacks in Halbtönen (v1.6.0)   // Sound-Setup am Keyboard (v1.5.0)
+    audioShift:0,            // Tonhöhe des Playbacks in Halbtönen (v1.6.0)
+    groove:'rock',           // Drum-Groove zum Mitspielen (v1.12.0)
+    form:[],                 // Ablaufplan (v1.12.0): [{id, sect, bars, dyn, role, note}]
+    countBy:'', ending:'',   // wer zählt ein, wie endet der Song
+    rnotes:[],               // Probennotizen (v1.12.0): [{id, d, text, done}]   // Sound-Setup am Keyboard (v1.5.0)
     marks:[],                // Abschnitte im Audio (v1.4.0): [{id, name, t}] – Sprungmarken und Abschnitts-Loops
     isDemo:false, updatedAt: Date.now()
   }, p);
@@ -663,6 +684,11 @@ function cleanSong(r) {
     loop: { a: r.loop && num(r.loop.a), b: r.loop && num(r.loop.b) },
     grid: { offset: r.grid && typeof r.grid.offset === 'number' && isFinite(r.grid.offset) && r.grid.offset >= 0 ? r.grid.offset : null, beats: r.grid && [2,3,4,5,6,7,8,9,10,11,12].includes(r.grid.beats) ? r.grid.beats : 4 },
     audioShift: Number.isInteger(r.audioShift) && Math.abs(r.audioShift) <= 12 ? r.audioShift : 0,
+    groove: Object.prototype.hasOwnProperty.call(GROOVES, r.groove) ? r.groove : 'rock',
+    form: (Array.isArray(r.form) ? r.form : []).filter(x => x && typeof x === 'object').slice(0, 60).map(x => ({ id: typeof x.id === 'string' && /^[\w-]{1,40}$/.test(x.id) ? x.id : uid(), sect:str(x.sect, 40), bars: Number.isInteger(x.bars) && x.bars > 0 && x.bars <= 256 ? x.bars : null,
+      dyn: ['', 'leise', 'mittel', 'voll'].includes(x.dyn) ? x.dyn : '', role: FORM_ROLES.includes(x.role) ? x.role : '', note:str(x.note, 120) })),
+    countBy: str(r.countBy, 60), ending: str(r.ending, 120),
+    rnotes: (Array.isArray(r.rnotes) ? r.rnotes : []).filter(x => x && typeof x === 'object' && x.text).slice(0, 200).map(x => ({ id: typeof x.id === 'string' && /^[\w-]{1,40}$/.test(x.id) ? x.id : uid(), d: /^\d{4}-\d{2}-\d{2}$/.test(x.d) ? x.d : new Date().toISOString().slice(0, 10), text:str(x.text, 500), done:!!x.done })),
     sound: { split:str(r.sound && r.sound.split, 12), left:str(r.sound && r.sound.left, 60), right:str(r.sound && r.sound.right, 60), drawbars:String((r.sound && r.sound.drawbars) || '').replace(/[^0-8]/g, '').slice(0, 9), notes:str(r.sound && r.sound.notes, 300) },
     marks: (Array.isArray(r.marks) ? r.marks : []).filter(m => m && typeof m.t === 'number' && isFinite(m.t) && m.t >= 0).slice(0, 60)
       .map(m => ({ id: typeof m.id === 'string' && /^[\w-]{1,40}$/.test(m.id) ? m.id : uid(), name: str(m.name, 40) || 'Abschnitt', t: m.t })).sort((a, b) => a.t - b.t),
@@ -1435,6 +1461,18 @@ function followCell(song, t) {
       return { cell:sec.bars[((n % sec.bars.length) + sec.bars.length) % sec.bars.length], sect:mk.name, bar:Grid.bar(song, t) + 1 };
     }
   }
+  // Ablaufplan (v1.12.0): Teile nacheinander, Länge = eingetragene Takte oder Länge des Abschnitts im Akkordblatt
+  if (!mk && song.form && song.form.length) {
+    const n0 = Grid.bar(song, t); let start = 0;
+    for (let fi = 0; fi < song.form.length; fi++) {
+      const fx = song.form[fi], key = sectKey(fx.sect), nth = song.form.slice(0, fi).filter(y => sectKey(y.sect) === key).length;
+      const cands = tl.sects.filter(x => x.key === key && x.bars.length), sec = cands.length ? cands[Math.min(nth, cands.length - 1)] : null;
+      const len = fx.bars || (sec ? sec.bars.length : 0); if (!len) continue;
+      if (n0 < start + len) return { cell:sec ? sec.bars[(n0 - start) % sec.bars.length] : null, sect:fx.sect, bar:n0 + 1, form:fi };
+      start += len;
+    }
+    return { cell:null, sect:'', bar:n0 + 1 };
+  }
   const n = Grid.bar(song, t); if (n < 0 || n >= tl.all.length) return { cell:null, sect:mk ? mk.name : '', bar:n + 1 };
   return { cell:tl.all[n], sect:mk ? mk.name : '', bar:n + 1 };
 }
@@ -1666,6 +1704,56 @@ const Sound = {
     if (o.arp) ms.forEach((m, i) => this.note(o.inst, m, t + 1.9 + i * 0.42, 0.5, 0.3));
   }
 };
+
+/* ---------- Drum-Groove zum Mitspielen (v1.12.0) ----------
+   Synthetisches Schlagzeug (Bassdrum, Snare, Hi-Hat) im Songtempo – zum Üben der linken Hand «auf die Bassdrum».
+   Pattern: 16 Schritte pro 4/4-Takt (bzw. 12 bei Shuffle). k = Kick, s = Snare (S = Akzent, g = Ghost), h = Hi-Hat (o = offen).
+   Läuft frei nach BPM × Tempo %; ist Audio mit Takt-Raster geladen und spielt, folgt der Groove dem Raster (wie das Metronom). */
+const GROOVES = {
+  rock:    { name:'Rock (Achtel)', steps:16, k:'x.......x.x.....', s:'....x.......x...', h:'x.x.x.x.x.x.x.x.' },
+  rock2:   { name:'Rock treibend', steps:16, k:'x.....x.x.x.....', s:'....x.......x...', h:'xxxxxxxxxxxxxxxx' },
+  ballad:  { name:'Ballade (Halftime)', steps:16, k:'x.........x.....', s:'........x.......', h:'x.x.x.x.x.x.x.x.' },
+  shuffle: { name:'Blues-Shuffle', steps:12, k:'x.....x.....', s:'...x.....x..', h:'x.xx.xx.xx.x' },
+  country: { name:'Country (Train-Beat)', steps:16, k:'x.......x.......', s:'ggSgggSgggSgggSg'.replace(/S/g, 'S'), h:'................' },
+  four:    { name:'Four-on-the-Floor', steps:16, k:'x...x...x...x...', s:'....x.......x...', h:'..o...o...o...o.' },
+  soul:    { name:'Soul / Funk', steps:16, k:'x.....x...x..x..', s:'....x..g.g..x...', h:'xxxxxxxxxxxxxxxx' }
+};
+const Drums = {
+  on:false, timer:null, vol:0.8,
+  ac() { return AC.get(); },
+  out() { const c = this.ac(); if (!this._g || this._g.context !== c) { this._g = c.createGain(); this._g.connect(c.destination); } this._g.gain.value = this.vol; return this._g; },
+  noise(c) { if (this._nb && this._nb.sampleRate === c.sampleRate) return this._nb; const b = c.createBuffer(1, c.sampleRate, c.sampleRate), d = b.getChannelData(0); let x = 1; for (let i = 0; i < d.length; i++) { x = (x * 16807) % 2147483647; d[i] = x / 1073741823.5 - 1; } return (this._nb = b); },
+  kick(t, v) { const c = this.ac(), o = c.createOscillator(), g = c.createGain(); o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.35); o.connect(g).connect(this.out()); o.start(t); o.stop(t + 0.4); },
+  snare(t, v) { const c = this.ac(), n = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); n.buffer = this.noise(c); f.type = 'highpass'; f.frequency.value = 1400;
+    g.gain.setValueAtTime(v * 0.7, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18); n.connect(f).connect(g).connect(this.out()); n.start(t, Math.random() * 0.5); n.stop(t + 0.2);
+    const o = c.createOscillator(), og = c.createGain(); o.frequency.value = 190; og.gain.setValueAtTime(v * 0.5, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.08); o.connect(og).connect(this.out()); o.start(t); o.stop(t + 0.1); },
+  hat(t, v, open) { const c = this.ac(), n = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), len = open ? 0.25 : 0.045; n.buffer = this.noise(c); f.type = 'highpass'; f.frequency.value = 7500;
+    g.gain.setValueAtTime(v * 0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + len); n.connect(f).connect(g).connect(this.out()); n.start(t, Math.random() * 0.5); n.stop(t + len + 0.02); },
+  hit(p, i, t) { const k = p.k[i], sn = p.s[i], h = p.h[i];
+    if (k === 'x') this.kick(t, 0.9);
+    if (sn === 'x' || sn === 'S') this.snare(t, sn === 'S' ? 0.9 : 0.75); else if (sn === 'g') this.snare(t, 0.22);
+    if (h === 'x') this.hat(t, i % (p.steps / 4) === 0 ? 0.8 : 0.55, false); else if (h === 'o') this.hat(t, 0.6, true); },
+  start(song) {
+    this.stop(); const c = this.ac(); if (!c || !song.bpm) return false; const p = GROOVES[song.groove] || GROOVES.rock;
+    this.on = true; this.song = song; let next = c.currentTime + 0.08, step = 0, last = -1e9, lastT = -1;
+    this.timer = setInterval(() => {
+      const per = p.steps / 4, rate = Player.rate || 1;
+      if (Player.playing && Grid.ok(song)) {   // im Takt-Raster der Aufnahme
+        const t = Player.time(), sd = Grid.beatDur(song) / per; if (t < lastT - 0.05) last = -1e9; lastT = t;
+        let i = Math.max(last + 1, Math.ceil((t - song.grid.offset) / sd - 1e-6));
+        for (;; i++) { const dt = (song.grid.offset + i * sd - t) / rate; if (dt > 0.15) break; if (dt >= -0.01 && i >= 0) this.hit(p, ((i % p.steps) + p.steps) % p.steps, c.currentTime + Math.max(0, dt)); last = i; }
+        next = c.currentTime + 0.05; step = 0; return;
+      }
+      const sd = 60 / (song.bpm * rate) / per;
+      while (next < c.currentTime + 0.12) { this.hit(p, step, next); step = (step + 1) % p.steps; next += sd; }
+    }, 25);
+    return true;
+  },
+  stop() { clearInterval(this.timer); this.timer = null; this.on = false; }
+};
+const FORM_ROLES = ['', 'Akkorde', 'Fläche', 'Stabs', 'Hook/Riff', 'Fills', 'Solo', 'Pause'];
+const FORM_DYN = { '':'–', leise:'leise', mittel:'mittel', voll:'voll' };
 
 /* ---------- Bassline: ABC-Rendering und Wiedergabe ---------- */
 const Bass = {
@@ -2395,6 +2483,7 @@ const App = {
     const pp = $('#chordPop'); if (pp) pp.remove();
     document.body.classList.remove('side-open');
     if (!$('#songList')) UI.list();
+    Drums.stop();
     if (location.hash === '#/akkorde') { Viewer.close(); Bass.stop(); Metro.stop(); Player.unload(); this.songId = null; this.stage = false; document.body.classList.remove('stage-on'); document.body.classList.add('has-main'); UI.lexicon(); UI.listItems(); window.scrollTo(0, 0); return; }
     const m = location.hash.match(/^#\/(song|stage)\/(.+)$/); const id = m ? decodeURIComponent(m[2]) : null;
     const wasStage = this.stage;
@@ -2448,6 +2537,7 @@ const App = {
   stageStep(d) { if (Viewer.el && Viewer.stage && Viewer.go(d)) return; this.stageGo(d, d < 0); },
   stageExit() { location.hash = this.stageFrom === 'list' ? '#/' : '#/song/' + encodeURIComponent(this.songId); },
   onKey(e) {
+    if (e.key === 'Enter' && e.target && e.target.id === 'rnIn') { e.preventDefault(); const b = $('[data-act=rnAdd]'); if (b) b.click(); return; }
     if ($('#dlg').open) return;
     if (!this.stage) {   // geöffnetes Notenblatt: Pfeiltasten/Bild↑↓ blättern, Esc schliesst
       if (!Viewer.el) return;
@@ -2616,6 +2706,25 @@ const App = {
       case 'sheetDrive': Picker.pick({ kind:'sheet', multi:true }).then(async docs => { if (!docs.length) return; toast(docs.length === 1 ? 'Wird geladen …' : docs.length + ' Dateien werden geladen …');
         const files = []; for (const d of docs) { try { files.push(await Picker.download(d)); } catch (e) { console.warn(e); toast('«' + d.name + '» konnte nicht geladen werden.'); } }
         App.addSheets(song, files); }); break;
+      case 'groove':
+        if (Drums.on) Drums.stop(); else if (!song.bpm) { toast('Für den Groove zuerst BPM beim Song eintragen.'); break; } else Drums.start(song);
+        UI.groove(); break;
+      case 'formAdd': song.form.push({ id:uid(), sect:'', bars:null, dyn:'', role:'', note:'' }); Store.touch(song); UI.form(); setTimeout(() => { const r = $$('#formOut .fsect'); if (r.length) r[r.length - 1].focus(); }, 30); break;
+      case 'formFromSheet': {
+        const secs = parseChords(song.chords).filter(r => r.t === 'sect').map(r => r.text); if (!secs.length) { toast('Im Akkordblatt sind keine Abschnitte ([Intro], [Verse] …).'); break; }
+        if (song.form.length && !confirm('Vorhandenen Ablauf durch die Abschnitte des Akkordblatts ersetzen?')) break;
+        song.form = secs.map(n => ({ id:uid(), sect:n, bars:null, dyn:'', role:'', note:'' })); Store.touch(song); UI.form(); UI.follow(true); break;
+      }
+      case 'formUp': case 'formDown': case 'formDel': {
+        const id = el.closest('.frow').dataset.id, i = song.form.findIndex(x => x.id === id); if (i < 0) break;
+        if (act === 'formDel') song.form.splice(i, 1); else { const j = act === 'formUp' ? i - 1 : i + 1; if (j < 0 || j >= song.form.length) break; [song.form[i], song.form[j]] = [song.form[j], song.form[i]]; }
+        Store.touch(song); UI.form(); UI.follow(true); break;
+      }
+      case 'rnAdd': { const inp = $('#rnIn'), t = (inp ? inp.value : '').trim(); if (!t) { toast('Bitte zuerst eine Notiz eingeben.'); break; }
+        song.rnotes.push({ id:uid(), d:new Date().toISOString().slice(0, 10), text:t.slice(0, 500), done:false }); inp.value = ''; Store.touch(song); UI.rnotes(); UI.listItems(); break; }
+      case 'rnDone': { const n = song.rnotes.find(x => x.id === el.closest('.rn').dataset.id); if (n) { n.done = el.checked; Store.touch(song); UI.rnotes(); UI.listItems(); } return; }
+      case 'rnDel': { const id = el.closest('.rn').dataset.id; song.rnotes = song.rnotes.filter(x => x.id !== id); Store.touch(song); UI.rnotes(); UI.listItems(); break; }
+      case 'stageNote': Dialogs.stageNote(this.current()); break;
       case 'shift': { const v = el.dataset.v === 'chords' ? (song.transpose || 0) : el.dataset.v === '0' ? 0 : (song.audioShift || 0) + Number(el.dataset.d);
         song.audioShift = Math.max(-12, Math.min(12, v)); Store.touch(song); Player.ensureGraph(); Player.applyShift(); UI.shift(); break; }
       case 'listShare': { const l = Store.list(this.filter); if (l) Dialogs.share(l); break; }
@@ -2698,6 +2807,15 @@ const App = {
     else if (t.id === 'chordsIn') { song.chords = t.value; UI.chords(); edit(); }
     else if (t.id === 'abcIn') { song.bassAbc = t.value; renderAbcSoon(song); edit(); }
     else if (t.id === 'notesIn') { song.notes = t.value; edit(); }
+    else if (t.id === 'grooveSel') { song.groove = t.value; edit(); if (Drums.on) Drums.start(song); }
+    else if (t.id === 'grooveVol') { Drums.vol = Number(t.value); if (Drums._g) Drums._g.gain.value = Drums.vol; }
+    else if (t.id === 'fCount') { song.countBy = t.value.trim(); edit(); }
+    else if (t.id === 'fEnd') { song.ending = t.value.trim(); edit(); }
+    else if (t.dataset.k && t.closest('.frow')) {
+      const x = song.form.find(f => f.id === t.closest('.frow').dataset.id); if (!x) return; const k = t.dataset.k;
+      x[k] = k === 'bars' ? (parseInt(t.value, 10) > 0 ? Math.min(256, parseInt(t.value, 10)) : null) : t.value; if (k === 'dyn') t.className = 'fdyn d-' + (t.value || 'x');
+      edit(); if (k === 'sect') { const sm = $('#formSum'); if (sm) sm.textContent = '· ' + song.form.map(f => f.sect || '?').join(' – '); } if (k === 'sect' || k === 'bars') UI.follow(true);
+    }
     else if (['sdSplit', 'sdLeft', 'sdRight', 'sdDraw', 'sdNotes'].includes(t.id)) {
       const k = { sdSplit:'split', sdLeft:'left', sdRight:'right', sdDraw:'drawbars', sdNotes:'notes' }[t.id];
       if (k === 'drawbars') { const v = t.value.replace(/[^0-8]/g, '').slice(0, 9); if (v !== t.value) t.value = v; }
@@ -2842,7 +2960,7 @@ const UI = {
     // Ab v1.3.0 kompakt: zwei Zeilen (Titel / Interpret) + Favoriten-Stern; Details stehen in der Song-Ansicht
     el.innerHTML = list.length ? list.map(s => `
       <li data-id="${esc(s.id)}" class="${s.id === App.songId ? 'cur' : ''}"><div class="songrow"><button class="song" data-act="open" data-id="${esc(s.id)}"><div>
-        <div class="t">${pos ? `<span class="n">${pos.get(s.id)}.</span>` : ''}${esc(s.title)}${s.isDemo ? ' <span class="badge demo">Demo</span>' : ''}</div><div class="a">${esc(s.artist)}</div>
+        <div class="t">${pos ? `<span class="n">${pos.get(s.id)}.</span>` : ''}${esc(s.title)}${s.isDemo ? ' <span class="badge demo">Demo</span>' : ''}${pos && s.rnotes.some(n => !n.done) ? ` <span class="rnb" title="Offene Probennotizen">✎${s.rnotes.filter(n => !n.done).length}</span>` : ''}</div><div class="a">${esc(s.artist)}</div>
         </div></button><button class="favb ${s.fav ? 'on' : ''}" data-act="fav" data-id="${esc(s.id)}" aria-pressed="${s.fav}" aria-label="${s.fav ? 'Favorit entfernen' : 'Als Favorit markieren'}">${s.fav ? '★' : '☆'}</button></div></li>`).join('')
       : `<li class="empty">${App.filter === 'fav' && !q ? 'Noch keine Favoriten – tippe beim Song auf ☆.' : L && !q ? 'Die Liste ist leer – «Songs wählen».' : 'Keine Songs gefunden.'}</li>`;
   },
@@ -2887,6 +3005,18 @@ const UI = {
               <label class="f"><span>Akkord-Quelle (URL)</span><input type="url" id="chordSrc" inputmode="url" placeholder="https://…" value="${esc(s.chordSource)}" autocomplete="off"></label>
               <label class="f"><span>Status der Akkorde</span><select id="chordStatus"><option value="unchecked">ungeprüft</option><option value="checked" ${s.chordStatus === 'checked' ? 'selected' : ''}>geprüft</option></select></label>
             </div>
+          </details>
+        </div>
+        <div class="card">
+          <details id="fDet" ${s.form.length ? 'open' : ''}><summary><h3 style="display:inline;margin:0">Ablauf</h3> <span class="small muted" id="formSum"></span></summary>
+            <div class="grid2" style="margin-top:8px">
+              <label class="f"><span>Einzählen</span><input type="text" id="fCount" list="countList" maxlength="60" placeholder="z. B. Drummer, 4 Sticks" value="${esc(s.countBy)}" autocomplete="off"></label>
+              <label class="f"><span>Schluss</span><input type="text" id="fEnd" maxlength="120" placeholder="z. B. Ritardando, Schlag auf 1" value="${esc(s.ending)}" autocomplete="off"></label>
+            </div>
+            <datalist id="countList"><option value="Drummer (4 Sticks)"><option value="Drummer (Hi-Hat)"><option value="Gitarre beginnt"><option value="Keyboard beginnt"><option value="Gesang beginnt"></datalist>
+            <div id="formOut"></div>
+            <div class="row" style="margin-top:8px"><button data-act="formAdd">+ Teil</button><button data-act="formFromSheet" title="Abschnitte aus dem Akkordblatt übernehmen">Aus Akkordblatt</button></div>
+            <p class="small muted" style="margin-top:6px">Reihenfolge der Songteile mit Dynamik und deiner Rolle rechts. Mit Takt-Raster läuft das Akkordraster diesem Ablauf nach (Takte pro Teil leer = wie im Akkordblatt). Im Auftrittsmodus sichtbar.</p>
           </details>
         </div>
         <div class="card">
@@ -3011,6 +3141,11 @@ const UI = {
       <section data-pane="info">
         <div class="card" id="infoBox"></div>
         <div class="card">
+          <h3>Probennotizen</h3>
+          <div class="row nowrap" style="margin-bottom:8px"><input type="text" id="rnIn" maxlength="500" placeholder="z. B. Bridge wackelt, Schluss zu früh" autocomplete="off"><button class="primary" data-act="rnAdd">Notieren</button></div>
+          <div id="rnOut"></div>
+        </div>
+        <div class="card">
           <h3>Notizen</h3>
           <textarea id="notesIn" placeholder="Sound, Split-Punkt, Ablauf, Absprachen mit der Band …" aria-label="Notizen">${esc(s.notes)}</textarea>
         </div>
@@ -3038,12 +3173,13 @@ const UI = {
               <label class="chk"><input type="checkbox" id="countIn" ${st.countIn ? 'checked' : ''}> Einzähler</label></div>
             <div class="temporow gridrow" id="gridBox"></div>
             <div class="temporow gridrow" id="shiftBox"></div>
+            <div class="temporow gridrow" id="grooveBox"></div>
           </div>
         </div>
       </div>`;
     const hh = () => { const t = $('#main .top'); if (t) document.documentElement.style.setProperty('--hh', t.offsetHeight + 'px'); };
     hh(); requestAnimationFrame(hh);
-    this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.spotify(); this.suggest(); this.info(); this.transport(); this.marks(); this.grid(); this.shift(); this.sound(); this.sheets();
+    this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.spotify(); this.suggest(); this.info(); this.transport(); this.marks(); this.grid(); this.shift(); this.groove(); this.form(); this.rnotes(); this.sound(); this.sheets();
     const vd = $('#vDet'); if (vd) vd.addEventListener('toggle', () => this.voicings());
     if (liveSheets(s).length) Sheets.scan(s);
     const bw = $('#bWake'); if (bw) bw.classList.toggle('on', !!App.wake);
@@ -3216,6 +3352,33 @@ const UI = {
     const el = $('#soundSum'); if (el) el.textContent = sum ? '· ' + sum : '';
     const d = $('#drawOut'); if (d) setHtml(d, /^[0-8]{9}$/.test(s.sound.drawbars) ? drawbarsHtml(s.sound.drawbars) : '');
   },
+  form() {
+    const s = App.current(), box = $('#formOut'); if (!s || !box) return;
+    const names = [...new Set([...parseChords(s.chords).filter(r => r.t === 'sect').map(r => r.text), 'Intro', 'Strophe', 'Pre-Chorus', 'Refrain', 'Bridge', 'Solo', 'Zwischenspiel', 'Outro'])];
+    const sum = $('#formSum'); if (sum) sum.textContent = s.form.length ? '· ' + s.form.map(x => x.sect || '?').join(' – ') : '';
+    setHtml(box, s.form.length ? '<div class="formlist">' + s.form.map((x, i) => `<div class="frow" data-id="${esc(x.id)}">
+        <span class="fn">${i + 1}</span>
+        <input type="text" class="fsect" data-k="sect" list="sectList" maxlength="40" value="${esc(x.sect)}" placeholder="Teil" aria-label="Songteil">
+        <input type="number" class="fbars" data-k="bars" min="1" max="256" value="${x.bars || ''}" placeholder="Takte" aria-label="Takte">
+        <select data-k="dyn" aria-label="Dynamik" class="fdyn d-${esc(x.dyn || 'x')}">${Object.entries(FORM_DYN).map(([k, v]) => `<option value="${k}" ${x.dyn === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+        <select data-k="role" aria-label="Rolle rechte Hand">${FORM_ROLES.map(r => `<option value="${esc(r)}" ${x.role === r ? 'selected' : ''}>${r || 'Rolle …'}</option>`).join('')}</select>
+        <input type="text" class="fnote" data-k="note" maxlength="120" value="${esc(x.note)}" placeholder="Notiz" aria-label="Notiz">
+        <span class="fbtn"><button class="icon ghost" data-act="formUp" ${i ? '' : 'disabled'} aria-label="nach oben">▲</button><button class="icon ghost" data-act="formDown" ${i < s.form.length - 1 ? '' : 'disabled'} aria-label="nach unten">▼</button><button class="icon ghost danger" data-act="formDel" aria-label="Teil entfernen">✕</button></span>
+      </div>`).join('') + `</div><datalist id="sectList">${names.map(n => `<option value="${esc(n)}">`).join('')}</datalist>` : '<p class="small muted" style="margin:8px 0 0">Noch kein Ablauf – «+ Teil» oder «Aus Akkordblatt».</p>');
+  },
+  rnotes() {
+    const s = App.current(), box = $('#rnOut'); if (!s || !box) return;
+    const list = s.rnotes.slice().sort((a, b) => (a.done - b.done) || b.d.localeCompare(a.d));
+    setHtml(box, list.length ? list.map(n => `<div class="rn ${n.done ? 'done' : ''}" data-id="${esc(n.id)}"><label class="chk"><input type="checkbox" data-act="rnDone" ${n.done ? 'checked' : ''} aria-label="erledigt"></label>
+      <div class="grow"><div>${esc(n.text)}</div><div class="small muted">${esc(new Date(n.d + 'T12:00').toLocaleDateString('de-CH'))}</div></div><button class="icon ghost danger" data-act="rnDel" aria-label="Notiz löschen">✕</button></div>`).join('')
+      : '<p class="small muted">Noch keine Notizen. Tipp: Im Auftrittsmodus mit «✎» direkt notieren.</p>');
+  },
+  groove() {
+    const s = App.current(), box = $('#grooveBox'); if (!s || !box) return;
+    setHtml(box, `<span class="lab">Drum-Groove</span><select id="grooveSel" aria-label="Groove-Stil">${Object.entries(GROOVES).map(([k, g]) => `<option value="${k}" ${s.groove === k ? 'selected' : ''}>${g.name}</option>`).join('')}</select>
+      <button data-act="groove" class="${Drums.on ? 'on' : ''}" aria-pressed="${Drums.on}">${Drums.on ? '■ Stopp' : '▶ Groove'}</button>
+      <input type="range" id="grooveVol" min="0" max="1.2" step="0.05" value="${Drums.vol}" aria-label="Lautstärke Groove" style="max-width:110px">`);
+  },
   shift() {
     const s = App.current(), box = $('#shiftBox'); if (!s || !box) return; const v = s.audioShift || 0;
     setHtml(box, `<span class="lab">Tonhöhe Audio <b>${v > 0 ? '+' + v : v} HT</b></span><button data-act="shift" data-d="-1" aria-label="Audio einen Halbton tiefer">−</button><button data-act="shift" data-d="1" aria-label="Audio einen Halbton höher">+</button>
@@ -3243,6 +3406,7 @@ const UI = {
     const s = App.current(), out = $('#chordOut'); if (!s || !out) return;
     const f = Store.data.settings.follow && Player.master() ? followCell(s, Player.time()) : null, key = f && f.cell ? f.cell.r + ':' + f.cell.c : '';
     const info = $('#followInfo'); if (info) info.textContent = f ? 'Takt ' + f.bar + (f.sect ? ' · ' + f.sect : '') : '';
+    $$('#formOut .frow').forEach((r, i) => r.classList.toggle('cur', !!f && f.form === i));
     if (!force && key === this._fk) return; this._fk = key;
     out.querySelectorAll('.bar.cur').forEach(x => x.classList.remove('cur'));
     if (!key) return;
@@ -3270,11 +3434,14 @@ const UI = {
         <button class="icon ghost" data-act="stageExit" aria-label="Auftrittsmodus beenden">✕</button>
         <div class="grow"><h1>${esc(s.title)}</h1></div>
         <span class="spos" id="stagePos">${i + 1} / ${l.length}</span>
+        <button data-act="stageNote" aria-label="Probennotiz zu diesem Song" title="Probennotiz">✎${s.rnotes.filter(n => !n.done).length ? ' ' + s.rnotes.filter(n => !n.done).length : ''}</button>
         ${shs.length ? `<select id="stageView" aria-label="Anzeige: Akkordraster oder Notenblatt"><option value="">Akkordraster</option>${shs.map(m => `<option value="${esc(m.id)}" ${sh === m ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select>` : ''}
         ${sh ? '' : '<button data-act="stageZoom" data-d="-0.15" aria-label="Akkorde kleiner">A−</button><button data-act="stageZoom" data-d="0.15" aria-label="Akkorde grösser">A+</button>'}
       </div>
       <div class="ssub">${esc([s.artist, s.bpm ? s.bpm + ' BPM' : '', s.key ? 'Tonart ' + keyLabel(s) : '', s.transpose ? trLabel(s.transpose) : '', unchecked && !sh ? 'Akkorde ungeprüft' : ''].filter(Boolean).join(' · '))}</div>
       ${soundSummary(s) || s.sound.notes ? `<div class="ssound">${esc(soundSummary(s))}${s.sound.notes ? `<span>${esc(s.sound.notes)}</span>` : ''}</div>` : ''}
+      ${s.countBy || s.ending ? `<div class="scount">${s.countBy ? `<span>Einzählen: <b>${esc(s.countBy)}</b></span>` : ''}${s.ending ? `<span>Schluss: <b>${esc(s.ending)}</b></span>` : ''}</div>` : ''}
+      ${s.form.length ? `<div class="sform">${s.form.map(x => `<span class="fc2 d-${esc(x.dyn || 'x')}" title="${esc([x.dyn, x.role, x.note].filter(Boolean).join(' · '))}"><b>${esc(x.sect || '?')}</b>${x.bars ? `<i>${x.bars}</i>` : ''}${x.role ? `<em>${esc(x.role)}</em>` : ''}</span>`).join('<span class="farr">›</span>')}</div>` : ''}
       <div class="sbody">${sh ? '<div class="vembed" id="stageSheet"></div>' : `
         <div class="chordview" id="stageChords" style="--cs:${Number(Store.data.settings.stageSize) || 1}">${chordsHtml(s) || '<div class="muted small" style="font-family:system-ui,sans-serif">Für diesen Song sind noch keine Akkorde eingetragen.</div>'}</div>
         ${s.notes.trim() ? `<div class="snotes">${esc(s.notes)}</div>` : ''}`}
@@ -3299,6 +3466,16 @@ function statusBadge(s) {
 /* ---------- Dialoge ---------- */
 const Dialogs = {
   taps:[],
+  stageNote(song) {
+    if (!song) return; const d = $('#dlg'), open = song.rnotes.filter(n => !n.done);
+    d.innerHTML = `<form id="rnForm" novalidate><h2>Probennotiz · ${esc(song.title)}</h2>
+      ${open.length ? `<ul class="small" style="margin:0 0 10px;padding-left:18px">${open.map(n => `<li>${esc(n.text)}</li>`).join('')}</ul>` : ''}
+      <label class="f"><span>Neue Notiz</span><input type="text" name="t" maxlength="500" placeholder="z. B. Refrain-Einsatz zu spät" autocomplete="off"></label>
+      <div class="actions"><button type="button" data-act="close">Schliessen</button><button type="submit" class="primary">Notieren</button></div></form>`;
+    $('#rnForm').addEventListener('submit', e => { e.preventDefault(); const t = String(new FormData(e.target).get('t') || '').trim(); if (!t) { toast('Bitte eine Notiz eingeben.'); return; }
+      song.rnotes.push({ id:uid(), d:new Date().toISOString().slice(0, 10), text:t.slice(0, 500), done:false }); Store.touch(song); d.close(); toast('Notiert.'); if (App.stage) UI.stage(); });
+    if (!d.open) d.showModal(); setTimeout(() => { const i = $('#rnForm [name=t]'); if (i) i.focus(); }, 30);
+  },
   mark(song, m, t) {   // Abschnitt setzen/umbenennen/verschieben/löschen; Namensvorschläge aus dem Akkordblatt
     const d = $('#dlg'), names = [...new Set([...parseChords(song.chords).filter(r => r.t === 'sect').map(r => r.text), 'Intro', 'Strophe', 'Refrain', 'Bridge', 'Solo', 'Outro'])].slice(0, 12);
     d.innerHTML = `<form id="markForm" novalidate><h2>${m ? 'Abschnitt bearbeiten' : 'Abschnitt setzen'}</h2>
