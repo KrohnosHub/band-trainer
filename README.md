@@ -112,6 +112,11 @@ Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): e
 
 ## Änderungslog
 
+### v1.13.0 – Bassline kleiner/einstellbar und mitverfolgbar, Player einklappbar
+- **Bassline-Noten:** standardmässig deutlich kleiner (mehr Takte pro Zeile, kleinere Überschrift); mit A−/A+ in der Karte «Linke Hand · Bassline» frei einstellbar (gemerkt).
+- **Bassline mitverfolgen:** Beim «Bass anhören» wird die aktuelle Note farbig markiert (bei Bedarf ins Bild gescrollt). Note antippen = ab dieser Note abspielen (blau markiert, «Start ab Takt n»; «von vorne» setzt zurück) – auch mit «Wiederholen».
+- **Player einklappen:** Knopf ▾ oben am Player klappt ihn auf eine schmale Leiste (Play, Zeit, Position) zusammen, ▴ klappt wieder auf; der Zustand wird gemerkt.
+
 ### v1.12.0 – Drum-Groove, Ablaufplan, Probennotizen
 - **Drum-Groove** (Player → «Tempo»): synthetisches Schlagzeug im Songtempo zum Üben der linken Hand auf die Bassdrum – Rock (Achtel), Rock treibend, Ballade (Halftime), Blues-Shuffle, Country (Train-Beat), Four-on-the-Floor, Soul/Funk; Stil pro Song gemerkt, eigene Lautstärke. Folgt dem Takt-Raster, wenn eine Aufnahme mit Raster läuft; sonst frei nach BPM × Tempo %.
 - **Ablauf** (Tab «Noten»): Songteile in Reihenfolge mit Takten, Dynamik (leise/mittel/voll), Rolle der rechten Hand (Akkorde, Fläche, Stabs, Hook/Riff, Fills, Solo, Pause) und Notiz; dazu «Einzählen» und «Schluss». «Aus Akkordblatt» übernimmt die Abschnitte. Mit Takt-Raster läuft das Akkordraster dem Ablauf nach (aktueller Teil markiert). Im Auftrittsmodus als farbige Leiste sichtbar.
