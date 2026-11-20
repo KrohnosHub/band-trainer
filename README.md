@@ -112,6 +112,10 @@ Nicht automatisiert prüfbar (einmal von Hand auf den echten Geräten testen): e
 
 ## Änderungslog
 
+### v1.14.0 – Ultimate-Guitar-Link pro Song
+- Pro Song lässt sich der eigene Ultimate-Guitar-Link hinterlegen (z. B. die «Official»-Version aus dem Pro-Abo): «UG-Link hinterlegen» unter dem Akkordraster oder im Song-Dialog. Danach öffnet «Ultimate Guitar öffnen ↗» die Seite direkt – am Handy mit installierter App in der Ultimate-Guitar-App (sofern das Gerät UG-Links der App zuordnet). Im Auftrittsmodus Knopf «UG ↗». Ohne Link: «Auf Ultimate Guitar suchen».
+- Inhalte von UG werden nicht in die App kopiert oder eingebettet (Login/Abo bei UG); für eine Offline-Kopie im eigenen Gebrauch kann ein Blatt als PDF unter «Blätter» abgelegt werden.
+
 ### v1.13.0 – Bassline kleiner/einstellbar und mitverfolgbar, Player einklappbar
 - **Bassline-Noten:** standardmässig deutlich kleiner (mehr Takte pro Zeile, kleinere Überschrift); mit A−/A+ in der Karte «Linke Hand · Bassline» frei einstellbar (gemerkt).
 - **Bassline mitverfolgen:** Beim «Bass anhören» wird die aktuelle Note farbig markiert (bei Bedarf ins Bild gescrollt). Note antippen = ab dieser Note abspielen (blau markiert, «Start ab Takt n»; «von vorne» setzt zurück) – auch mit «Wiederholen».

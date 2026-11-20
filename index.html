@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-IHCd2CPlXvjcCMPlrKKiTHjLAQ8la/e0sOA6xn23HXM='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com 'sha256-3u+NsNwuzmPpwTgnPLtAz+sheDW7obp4b3mIrB5mdyg=' 'sha256-igjFKWfhrz1sBLTIGMo2/H6+LmiPwQOwGshR2f52k9k='; style-src 'self' 'unsafe-inline' https://apis.google.com; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://paulrosen.github.io https://accounts.spotify.com https://api.spotify.com blob: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://open.spotify.com https://docs.google.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="theme-color" content="#121416">
 <meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -382,6 +382,8 @@ table.lex tr.lexk td{border-top:0;padding-top:0}
 #abcOut .bcur,#abcOut .bcur path{fill:var(--accent)!important;stroke:var(--accent)}
 #abcOut .bsel,#abcOut .bsel path{fill:#2b7bd8!important}
 #abcOut .abcjs-note,#abcOut .abcjs-rest{cursor:pointer}
+.ugrow{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}.ugrow .btn,.ugrow button{min-height:34px;font-size:.86rem}
+.btn.ug{background:#ffc600;color:#1a1a1a;border-color:#ffc600;font-weight:600}
 .marks{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-top:6px}
 .marks::-webkit-scrollbar{display:none}
 .marks .mk{display:inline-flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;flex:none}
@@ -516,7 +518,7 @@ for (const C of [Map, WeakMap]) {
    (localStorage + IndexedDB), Abgleich über Google Drive (Scope drive.file).
    Inhalte (Akkorde, Basslines, Audio, Links) trägst du selbst ein.
    ===================================================================== */
-const APP_VERSION = '1.13.0';
+const APP_VERSION = '1.14.0';
 const SCHEMA = 4;   // 4 (v1.3.0): eigene Listen (lists) + Favoriten (fav) statt fester Status Setlist/To Do
 const LS_KEY = 'bandtrainer.data.v1';
 const ABCJS_VERSION = '6.7.2';
@@ -636,6 +638,7 @@ function newSong(p = {}) {
     sound:{ split:'', left:'', right:'', drawbars:'', notes:'' },
     audioShift:0,            // Tonhöhe des Playbacks in Halbtönen (v1.6.0)
     groove:'rock',           // Drum-Groove zum Mitspielen (v1.12.0)
+    ugUrl:'',                // eigener Ultimate-Guitar-Link (v1.14.0), z. B. Pro-/Official-Tab
     form:[],                 // Ablaufplan (v1.12.0): [{id, sect, bars, dyn, role, note}]
     countBy:'', ending:'',   // wer zählt ein, wie endet der Song
     rnotes:[],               // Probennotizen (v1.12.0): [{id, d, text, done}]   // Sound-Setup am Keyboard (v1.5.0)
@@ -695,6 +698,7 @@ function cleanSong(r) {
     grid: { offset: r.grid && typeof r.grid.offset === 'number' && isFinite(r.grid.offset) && r.grid.offset >= 0 ? r.grid.offset : null, beats: r.grid && [2,3,4,5,6,7,8,9,10,11,12].includes(r.grid.beats) ? r.grid.beats : 4 },
     audioShift: Number.isInteger(r.audioShift) && Math.abs(r.audioShift) <= 12 ? r.audioShift : 0,
     groove: Object.prototype.hasOwnProperty.call(GROOVES, r.groove) ? r.groove : 'rock',
+    ugUrl: ugUrl(r.ugUrl),
     form: (Array.isArray(r.form) ? r.form : []).filter(x => x && typeof x === 'object').slice(0, 60).map(x => ({ id: typeof x.id === 'string' && /^[\w-]{1,40}$/.test(x.id) ? x.id : uid(), sect:str(x.sect, 40), bars: Number.isInteger(x.bars) && x.bars > 0 && x.bars <= 256 ? x.bars : null,
       dyn: ['', 'leise', 'mittel', 'voll'].includes(x.dyn) ? x.dyn : '', role: FORM_ROLES.includes(x.role) ? x.role : '', note:str(x.note, 120) })),
     countBy: str(r.countBy, 60), ending: str(r.ending, 120),
@@ -1762,6 +1766,9 @@ const Drums = {
   },
   stop() { clearInterval(this.timer); this.timer = null; this.on = false; }
 };
+// Ultimate Guitar (v1.14.0): nur Links auf ultimate-guitar.com (inkl. tabs./www./Pro-Seiten); Inhalte bleiben bei UG (Login/Abo dort)
+function ugUrl(u) { try { const x = new URL(String(u || '').trim()); return x.protocol === 'https:' && /(^|\.)ultimate-guitar\.com$/.test(x.hostname) ? x.href.slice(0, 600) : ''; } catch (e) { return ''; } }
+const ugSearch = s => 'https://www.ultimate-guitar.com/search.php?search_type=title&value=' + encodeURIComponent((s.artist + ' ' + s.title).trim());
 const FORM_ROLES = ['', 'Akkorde', 'Fläche', 'Stabs', 'Hook/Riff', 'Fills', 'Solo', 'Pause'];
 const FORM_DYN = { '':'–', leise:'leise', mittel:'mittel', voll:'voll' };
 
@@ -2753,6 +2760,7 @@ const App = {
       case 'sheetDrive': Picker.pick({ kind:'sheet', multi:true }).then(async docs => { if (!docs.length) return; toast(docs.length === 1 ? 'Wird geladen …' : docs.length + ' Dateien werden geladen …');
         const files = []; for (const d of docs) { try { files.push(await Picker.download(d)); } catch (e) { console.warn(e); toast('«' + d.name + '» konnte nicht geladen werden.'); } }
         App.addSheets(song, files); }); break;
+      case 'ugEdit': Dialogs.ug(song); break;
       case 'bassFromStart': Bass.setStart(null); if (Bass.playing) Bass.play(); break;
       case 'bassZoom': { const st = Store.data.settings; st.bassSize = Math.min(1.6, Math.max(0.4, +((st.bassSize || 0.7) + Number(el.dataset.d)).toFixed(2))); Store.saveSettings(); Bass.render(song); break; }
       case 'tpMin': { const t = $('.transport'), m = !t.classList.contains('min'); t.classList.toggle('min', m); LS.set('tpMin', m ? '1' : '0'); el.setAttribute('aria-expanded', !m); el.textContent = m ? '▴' : '▾'; el.title = m ? 'Player aufklappen' : 'Player einklappen'; break; }
@@ -3047,6 +3055,7 @@ const UI = {
           </div>
           <div class="followinfo" id="followInfo" aria-live="off"></div><div class="chordview" id="chordOut"></div>
           <div class="small muted" id="chordMeta"></div>
+          <div class="ugrow" id="ugBox"></div>
           <p class="small muted" style="margin:4px 0 0">Akkord antippen (oder mit der Maus darauf zeigen) = enthaltene Töne · <a href="#/akkorde" data-act="lexicon">Akkord-Lexikon</a></p>
           <details><summary>Akkorde bearbeiten</summary>
             <textarea id="chordsIn" class="mono" spellcheck="false" placeholder="[Intro]&#10;| A7 | D7 | A7 | A7 |&#10;[Strophe]&#10;| A7 | D7 |  (x4)">${esc(s.chords)}</textarea>
@@ -3232,7 +3241,7 @@ const UI = {
       </div>`;
     const hh = () => { const t = $('#main .top'); if (t) document.documentElement.style.setProperty('--hh', t.offsetHeight + 'px'); };
     hh(); requestAnimationFrame(hh);
-    this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.spotify(); this.suggest(); this.info(); this.transport(); this.marks(); this.grid(); this.shift(); this.groove(); this.form(); this.rnotes(); this.sound(); this.sheets();
+    this.header(); this.tabs(); this.chords(); Bass.render(s); this.stems(); this.links(); this.spotify(); this.suggest(); this.info(); this.transport(); this.marks(); this.grid(); this.shift(); this.groove(); this.ug(); this.form(); this.rnotes(); this.sound(); this.sheets();
     const vd = $('#vDet'); if (vd) vd.addEventListener('toggle', () => this.voicings());
     if (liveSheets(s).length) Sheets.scan(s);
     const bw = $('#bWake'); if (bw) bw.classList.toggle('on', !!App.wake);
@@ -3405,6 +3414,11 @@ const UI = {
     const el = $('#soundSum'); if (el) el.textContent = sum ? '· ' + sum : '';
     const d = $('#drawOut'); if (d) setHtml(d, /^[0-8]{9}$/.test(s.sound.drawbars) ? drawbarsHtml(s.sound.drawbars) : '');
   },
+  ug() {
+    const s = App.current(), box = $('#ugBox'); if (!s || !box || s.isDemo) { if (box) box.innerHTML = ''; return; }
+    setHtml(box, s.ugUrl ? `<a class="btn ug" href="${esc(s.ugUrl)}" target="_blank" rel="noopener noreferrer" title="Öffnet die hinterlegte Seite – am Handy mit installierter App in der Ultimate-Guitar-App">Ultimate Guitar öffnen ↗</a><button class="ghost small" data-act="ugEdit">Link ändern</button>`
+      : `<a class="btn" href="${esc(ugSearch(s))}" target="_blank" rel="noopener noreferrer">Auf Ultimate Guitar suchen ↗</a><button class="ghost" data-act="ugEdit">UG-Link hinterlegen</button>`);
+  },
   form() {
     const s = App.current(), box = $('#formOut'); if (!s || !box) return;
     const names = [...new Set([...parseChords(s.chords).filter(r => r.t === 'sect').map(r => r.text), 'Intro', 'Strophe', 'Pre-Chorus', 'Refrain', 'Bridge', 'Solo', 'Zwischenspiel', 'Outro'])];
@@ -3487,6 +3501,7 @@ const UI = {
         <button class="icon ghost" data-act="stageExit" aria-label="Auftrittsmodus beenden">✕</button>
         <div class="grow"><h1>${esc(s.title)}</h1></div>
         <span class="spos" id="stagePos">${i + 1} / ${l.length}</span>
+        ${s.ugUrl ? `<a class="btn" href="${esc(s.ugUrl)}" target="_blank" rel="noopener noreferrer" aria-label="In Ultimate Guitar öffnen" title="Ultimate Guitar">UG ↗</a>` : ''}
         <button data-act="stageNote" aria-label="Probennotiz zu diesem Song" title="Probennotiz">✎${s.rnotes.filter(n => !n.done).length ? ' ' + s.rnotes.filter(n => !n.done).length : ''}</button>
         ${shs.length ? `<select id="stageView" aria-label="Anzeige: Akkordraster oder Notenblatt"><option value="">Akkordraster</option>${shs.map(m => `<option value="${esc(m.id)}" ${sh === m ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select>` : ''}
         ${sh ? '' : '<button data-act="stageZoom" data-d="-0.15" aria-label="Akkorde kleiner">A−</button><button data-act="stageZoom" data-d="0.15" aria-label="Akkorde grösser">A+</button>'}
@@ -3519,6 +3534,20 @@ function statusBadge(s) {
 /* ---------- Dialoge ---------- */
 const Dialogs = {
   taps:[],
+  ug(song) {
+    const d = $('#dlg');
+    d.innerHTML = `<form id="ugForm" novalidate><h2>Ultimate-Guitar-Link · ${esc(song.title)}</h2>
+      <p class="small muted">Öffne den Song bei Ultimate Guitar (z. B. «Official»-Version mit deinem Pro-Abo), kopiere die Adresse aus dem Browser bzw. «Teilen → Link kopieren» in der UG-App und füge sie hier ein.</p>
+      <label class="f"><span>Link</span><input type="url" name="u" inputmode="url" placeholder="https://tabs.ultimate-guitar.com/tab/…" value="${esc(song.ugUrl)}" autocomplete="off"></label>
+      <p class="small"><a href="${esc(ugSearch(song))}" target="_blank" rel="noopener noreferrer">Song auf Ultimate Guitar suchen ↗</a></p>
+      <div class="actions">${song.ugUrl ? '<button type="button" class="ghost danger" data-act="ugDel" style="margin-right:auto">Entfernen</button>' : ''}<button type="button" data-act="close">Abbrechen</button><button type="submit" class="primary">Speichern</button></div></form>`;
+    const f = $('#ugForm');
+    f.addEventListener('click', e => { if (e.target.closest('[data-act=ugDel]')) { song.ugUrl = ''; Store.touch(song); d.close(); UI.ug(); } });
+    f.addEventListener('submit', e => { e.preventDefault(); const v = String(f.u.value || '').trim(), u = ugUrl(v);
+      if (v && !u) { toast('Bitte einen Link auf ultimate-guitar.com einfügen.'); return; }
+      song.ugUrl = u; Store.touch(song); d.close(); UI.ug(); if (App.stage) UI.stage(); });
+    if (!d.open) d.showModal(); setTimeout(() => f.u.focus(), 30);
+  },
   stageNote(song) {
     if (!song) return; const d = $('#dlg'), open = song.rnotes.filter(n => !n.done);
     d.innerHTML = `<form id="rnForm" novalidate><h2>Probennotiz · ${esc(song.title)}</h2>
@@ -3598,6 +3627,7 @@ const Dialogs = {
     d.innerHTML = `<form id="songForm" novalidate>
       <h2>${isNew ? 'Song hinzufügen' : 'Song bearbeiten'}</h2>
       <label class="f"><span>Spotify-Link (optional – füllt Titel und Interpret)</span><div class="row nowrap"><input type="url" name="spurl" id="spLinkIn" inputmode="url" placeholder="https://open.spotify.com/track/…" value="${s.spotify && !s.spotify.auto ? 'https://open.spotify.com/track/' + esc(s.spotify.id) : ''}" autocomplete="off"><button type="button" data-act="spLookup">Übernehmen</button></div></label>
+      <label class="f"><span>Ultimate-Guitar-Link (optional)</span><input type="url" name="ugurl" inputmode="url" placeholder="https://tabs.ultimate-guitar.com/tab/…" value="${esc(s.ugUrl || '')}" autocomplete="off"></label>
       <label class="f"><span>Titel *</span><input type="text" name="title" required value="${esc(s.title)}" autocomplete="off"></label>
       <label class="f"><span>Interpret</span><input type="text" name="artist" value="${esc(s.artist)}" autocomplete="off"></label>
       <div class="grid2">
@@ -3616,17 +3646,19 @@ const Dialogs = {
     $('#songForm').addEventListener('submit', e => {
       e.preventDefault(); const f = new FormData(e.target), title = String(f.get('title')).trim();
       if (!title) { toast('Bitte einen Titel eingeben.'); return; }
+      const ugv = String(f.get('ugurl') || '').trim(); if (ugv && !ugUrl(ugv)) { toast('Ultimate-Guitar-Link: bitte eine Adresse auf ultimate-guitar.com.'); return; }
       const oldKey = s.title + '|' + s.artist;
       const bpm = parseInt(f.get('bpm'), 10);
       Object.assign(s, { title, artist:String(f.get('artist')).trim(), bpm:bpm >= 30 && bpm <= 260 ? bpm : null, key:String(f.get('key')).trim(), fav:!!f.get('fav'), uncertain:String(f.get('uncertain')).trim() });
       if (isNew) Store.data.songs.push(s);
       const inL = new Set(f.getAll('lst')); for (const l of Store.data.lists) Store.inList(l, s.id, inL.has(l.id));
+      s.ugUrl = ugUrl(ugv);
       const spid = spId(String(f.get('spurl') || ''));
       if (spid) { if (!s.spotify || s.spotify.id !== spid) s.spotify = { id:spid, name:this._spName || '', artists:this._spArt || '', auto:false }; s.spTried = s.spTried || Date.now(); }
       else if (oldKey !== s.title + '|' + s.artist && (!s.spotify || s.spotify.auto)) { s.spotify = null; s.spTried = 0; }
       Store.fixOrder(true); Store.touch(s); d.close();
       Spotify.run(s, false);   // neuer oder umbenannter Song: Spotify-Link gleich suchen
-      if (isNew) location.hash = '#/song/' + encodeURIComponent(s.id); else { UI.header(); UI.info(); UI.links(); UI.suggest(); UI.rate(); UI.chords(); }
+      if (isNew) location.hash = '#/song/' + encodeURIComponent(s.id); else { UI.header(); UI.info(); UI.links(); UI.suggest(); UI.rate(); UI.chords(); UI.ug(); }
     });
     this.taps = []; if (!d.open) d.showModal();
   },
